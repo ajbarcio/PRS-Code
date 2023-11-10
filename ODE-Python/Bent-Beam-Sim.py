@@ -38,6 +38,15 @@ class parameters(object):
 # def ODE():
 
     def generate_ctrl_points(self):
+        # Points predefined by parameters and arbitrary constraints:
+
+        # p9 on outer radius at angle
+        # p8 radial with p9, 1 'rotorThickness' away (maybe a parameter gets introduced to futz with this)
+        # p6 at angle and distance parameters
+        # p3 at angle and distance parameters
+        # p0 on inner radius at horizontal 
+        # p1 radial with p0, 1 'rotorThickness' away
+
         p9 = np.array([self.outerRadius*np.cos(self.ap9), self.outerRadius*np.sin(self.ap9)])
         p8 = np.array([p9[0]-self.rotorThickness*np.cos(self.ap9),p9[1]-self.rotorThickness*np.sin(self.ap9) ])
         p6 = np.array([self.lp6*np.cos(self.ap6), self.lp6*np.sin(self.ap6)])
@@ -59,8 +68,6 @@ class parameters(object):
 
         # Boundary Conditions
 
-        # angle(P8) = angle(P9)
-
         # knowns: 0, 1, 3, 6, 8, 9
         # unknowns: 2, 4, 5, 7
 
@@ -73,19 +80,19 @@ class parameters(object):
 
 def main():
 
-    PATH = 'Spline_thickening-v3.xlsm'
-
+    #PATH = 'Spline_thickening-v3.xlsm'
+    
+    '''
     wb = load_workbook(filename = PATH)
     ws = wb.active
-    '''
-    pts = np.array([[ws['C2'].value, ws['D2'].value], \
-                    [ws['C3'].value, ws['D3'].value], \
-                    [ws['C4'].value, ws['D4'].value], \
-                    [ws['C5'].value, ws['D5'].value], \
-                    [ws['C6'].value, ws['D6'].value], \
-                    [ws['C7'].value, ws['D7'].value], \
-                    [ws['C8'].value, ws['D8'].value], \
-                    [ws['C9'].value, ws['D9'].value], \
+    pts = np.array([[ws['C2'].value,  ws['D2'].value], \
+                    [ws['C3'].value,  ws['D3'].value], \
+                    [ws['C4'].value,  ws['D4'].value], \
+                    [ws['C5'].value,  ws['D5'].value], \
+                    [ws['C6'].value,  ws['D6'].value], \
+                    [ws['C7'].value,  ws['D7'].value], \
+                    [ws['C8'].value,  ws['D8'].value], \
+                    [ws['C9'].value,  ws['D9'].value], \
                     [ws['C10'].value, ws['D10'].value], \
                     [ws['C11'].value, ws['D11'].value], \
                     ])
@@ -95,7 +102,14 @@ def main():
     startingParameters = parameters(material)
 
     u = np.linspace(0,3,3001)
-    print(startingParameters.generate_ctrl_points())
+    cart = np.empty(len(u))
+    
+    pts = startingParameters.generate_ctrl_points()
+    print(pts)
+
+    for i in len(cart):
+        cart[i] = pts[np.floor(u[i])]*(1-u[i])^3+3*()
+
 
 
 if __name__ == '__main__':
