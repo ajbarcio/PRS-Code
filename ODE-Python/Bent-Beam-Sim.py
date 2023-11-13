@@ -77,6 +77,61 @@ class parameters(object):
         result = lin.solve(A,B)
         pts = np.array([p0,p1,result[0],p3,result[1],result[2],p6,result[3],p8,p9])
         return pts
+    
+    def generate_centroidal_profile(self, pts):
+
+            u = np.linspace(0,3,3001)
+            # print(u)
+            u2 = u - np.floor(u)
+            cart = np.empty([len(u), 2])
+    
+            for i in range(len(u)):
+                ptndx = int(np.floor(u[i]))
+                t = u2[i]
+                #cart[i] = pts[3*ptndx]*(1-t)**3+3*t*pts[3*ptndx+1]*(1-t)**2+3*pts[3*ptndx+2]*(1-t)**2+pts[3*ptndx+3]*t**3
+                if (ptndx == 3):
+                    t = 1
+                    ptndx = 2
+                    U = np.array([t**3, t**2, t, 1])
+                    D = np.array([[-1,3,-3,1],[3,-6,3,0],[-3,3,0,0],[1,0,0,0]])
+                    P = np.array([pts[3*ptndx],pts[3*ptndx+1],pts[3*ptndx+2],pts[3*ptndx+3]])
+                    cart[i] = U.dot(D).dot(P)
+                else:
+                    U = np.array([t**3, t**2, t, 1])
+                    D = np.array([[-1,3,-3,1],[3,-6,3,0],[-3,3,0,0],[1,0,0,0]])
+                    P = np.array([pts[3*ptndx],pts[3*ptndx+1],pts[3*ptndx+2],pts[3*ptndx+3]])
+                    cart[i] = U.dot(D).dot(P)
+
+            return cart
+        #print(cart)
+
+    def generate_centroidal_radius(self, cartc):
+        
+        rc = np.empty([len(cartc)])
+        for i in range(len(rc)):
+            rc[i] = np.sqrt(cartc[i,0]**2+cartc[i,1]**2)
+        return rc
+    
+    def generate_thickness_profile(self):
+
+        u = np.linspace(0,3,3001)
+        # a b c d e f g
+        # self.rotorThickness = g
+        # self.ctrlThickness  = a + b + c + d + e + f + g
+        # self.minThickness   = a*1.5**6+b*1.5**5+c*1.5**4+d*1.5**3+e*1.5**2+f*1.5+g
+        # self.ctrlThickness  = a*2**6+b*2**5+c*2**4+d*2**3+e*2**2+f*2+g
+        # self.rotorThickness = a*3**6+b*3**5+c*3**4+d*3**3+e*3**2+f*3+g
+        # 0 = f
+        # 0 = a*3**5+b*3**4+c*3**3+d*3**2+e*3+f
+        REG = np.array([[0,0,0,0,0,0,1],[1,1,1,1,1,1,1], \
+                        [1.5**6,1.5**5,1.5**4,1.5**3,1.5**2,1.5,1], \
+                        [2**6,2**5,2**4,2**3,2**2,2,1], \
+                        [3**6,3**5,3**4,3**3,3**2,3,1], \
+                        [0,0,0,0,0,1,0],[3**5,3**4,3**3,3**2,3,1,0]])
+        Targ = np.array([[self.rotorThickness],[self.ctrlThickness], \
+                         [self.minThickness],[self.ctrlThickness], \
+                         [self.rotorThickness],[0]])
+
 
 def main():
 
@@ -101,15 +156,11 @@ def main():
     material = MaraginSteelC300()
     startingParameters = parameters(material)
 
-    u = np.linspace(0,3,3001)
-    cart = np.empty(len(u))
-    
     pts = startingParameters.generate_ctrl_points()
-    print(pts)
+    cartc  = startingParameters.generate_centroidal_profile(pts)
+    rc     = startingParameters.generate_centroidal_radius(cartc)
 
-    for i in len(cart):
-        cart[i] = pts[np.floor(u[i])]*(1-u[i])^3+3*()
-
+    print(rc)
 
 
 if __name__ == '__main__':
