@@ -81,9 +81,14 @@ class parameters(object):
     def generate_centroidal_profile(self, pts):
 
             u = np.linspace(0,3,3001)
+            offset = 0
             # print(u)
             u2 = u - np.floor(u)
             cart = np.empty([len(u), 2])
+            th   = np.empty(len(u))
+            norm = np.empty([len(u), 2])
+            ck = np.empty([len(u), 2])
+            rc   = np.empty(len(u))
     
             for i in range(len(u)):
                 ptndx = int(np.floor(u[i]))
@@ -95,14 +100,46 @@ class parameters(object):
                     U = np.array([t**3, t**2, t, 1])
                     D = np.array([[-1,3,-3,1],[3,-6,3,0],[-3,3,0,0],[1,0,0,0]])
                     P = np.array([pts[3*ptndx],pts[3*ptndx+1],pts[3*ptndx+2],pts[3*ptndx+3]])
-                    cart[i] = U.dot(D).dot(P)
+                    cart[i] = U.dot(D).dot(P)-[0,offset]
+                    th[i] = np.arctan2(cart[i,1],cart[i,0])
                 else:
                     U = np.array([t**3, t**2, t, 1])
                     D = np.array([[-1,3,-3,1],[3,-6,3,0],[-3,3,0,0],[1,0,0,0]])
                     P = np.array([pts[3*ptndx],pts[3*ptndx+1],pts[3*ptndx+2],pts[3*ptndx+3]])
-                    cart[i] = U.dot(D).dot(P)
+                    cart[i] = U.dot(D).dot(P)-[0,offset]
+                    th[i] = np.arctan2(cart[i,1],cart[i,0])
+                dU = np.array([3*t**2, 2*t, 1, 0])
+                ddU = np.array([6*t, 2, 0, 0])
+                coeffs = D.dot(P)
+                if i == 0: 
+                    # tan  = [cart[i+1,0]-cart[i,0],cart[i+1,1]-cart[i,1]]/np.sqrt((cart[i+1,0]-cart[i,0])**2+(cart[i+1,1]-cart[i,1])**2)
+                    dxydt = dU.dot(coeffs)
+                    dydx = dxydt[1]/dxydt[0]
+                    tan = [dxydt[0],dxydt[0]]
+                    #dydx = (cart[i+1,1]-cart[i,1])/(cart[i+1,0]-cart[i,0])
+                    # dydxprev = 0
+                elif i == 3000:
+                    # dydxprev = dydx
+                    # tan  = [cart[i,0]-cart[i-1,0],cart[i,1]-cart[i-1,1]]/np.sqrt((cart[i,0]-cart[i-1,0])**2+(cart[i,1]-cart[i-1,1])**2)
+                    dxydt = dU.dot(coeffs)
+                    dydx = dxydt[1]/dxydt[0]
+                    tan = [dxydt[0],dxydt[0]]
+                    #dydx = (cart[i,1]-cart[i-1,1])/(cart[i,0]-cart[i-1,0])
+                else:
+                    # dydxprev = dydx
+                    # tan  = [cart[i+1,0]-cart[i-1,0],cart[i+1,1]-cart[i-1,1]]/np.sqrt((cart[i+1,0]-cart[i-1,0])**2+(cart[i+1,1]-cart[i-1,1])**2)
+                    dxydt = dU.dot(coeffs)
+                    dydx = dxydt[1]/dxydt[0]
+                    tan = [dxydt[0],dxydt[0]]
+                    # dydx = (cart[i+1,1]-cart[i-1,1])/(cart[i+1,0]-cart[i-1,0])
+                norm[i] = [-tan[1],tan[0]]
+                d2xydt2 = ddU.dot(coeffs)
+                d2ydx2 = (d2xydt2[1] - dydx*d2xydt2[0])/(dxydt[0])
+                # d2ydx2 = (dydx-dydxprev)/(cart[i,0]-cart[i-1,0])
+                rc[i] = abs((1+dydx**2)**(1.5)/(d2ydx2))
+                ck[i] = cart[i]-norm[i]*rc[i]
 
-            return cart
+            return cart, norm, rc
         #print(cart)
 
     def generate_centroidal_radius(self, cartc):
@@ -127,10 +164,47 @@ class parameters(object):
                         [1.5**6,1.5**5,1.5**4,1.5**3,1.5**2,1.5,1], \
                         [2**6,2**5,2**4,2**3,2**2,2,1], \
                         [3**6,3**5,3**4,3**3,3**2,3,1], \
-                        [0,0,0,0,0,1,0],[3**5,3**4,3**3,3**2,3,1,0]])
+                        [0,0,0,0,0,1,0],[6*3**5,5*3**4,4*3**3,3*3**2,2*3,1,0]])
         Targ = np.array([[self.rotorThickness],[self.ctrlThickness], \
                          [self.minThickness],[self.ctrlThickness], \
-                         [self.rotorThickness],[0]])
+                         [self.rotorThickness],[0],[0]])
+        coeffs = lin.solve(REG,Targ)
+        u = np.linspace(0,3,3001)
+        t = coeffs[0]*u**6 + coeffs[1]*u**5 + coeffs[2]*u**4 + coeffs[3]*u**3 + coeffs[4]*u**2 + coeffs[5]*u + coeffs[6]
+        # coeffs = lin.inv(REG.T.dot(REG)).dot(REG.T).dot(Targ)
+        return t
+    
+    def generate_neutral_radius(self, rc, t):
+        rn = t/np.log((rc+.5*t)/(rc-.5*t))
+        return rn
+    
+    def generate_neutral_profile(self, rc, thks, norm, xyc):
+        u = np.linspace(0,3,3001)
+        cart = np.empty([len(u), 2])
+        for i in range(len(u)):
+            if np.isinf(rc[i]):
+                rn = rc[i]
+            else:
+                rn = thks[i]/np.log((rc[i]+.5*thks[i])/(rc[i]-.5*thks[i]))
+            diff = rc[i] - rn
+            if np.isnan(diff):
+                b = rc[i]+.5*thks[i]
+                a = rc[i]-.5*thks[i]
+                rn = (b-a)/np.log(b/a)
+            if i%50 == 0:
+                print(diff, rc[i], rn, rc[i]-.5*thks[i], .5*thks[i])
+            cart[i] = xyc[i]+norm[i]*diff
+            norm[i] = norm[i]*diff
+        return cart, norm
+    
+    def generate_neutral_profile2(self, rn, th):
+        u = np.linspace(0,3,3001)
+        cart = np.empty([len(u), 2])
+        for i in range(len(u)):
+            cart[i,0] = rn[i]*np.cos(th[i])
+            cart[i,1] = rn[i]*np.sin(th[i])
+        return cart 
+
 
 
 def main():
@@ -156,11 +230,61 @@ def main():
     material = MaraginSteelC300()
     startingParameters = parameters(material)
 
-    pts = startingParameters.generate_ctrl_points()
-    cartc  = startingParameters.generate_centroidal_profile(pts)
-    rc     = startingParameters.generate_centroidal_radius(cartc)
-
+    pts  = startingParameters.generate_ctrl_points()
+    [xyc, norm, rc]  = startingParameters.generate_centroidal_profile(pts)
+    thks = startingParameters.generate_thickness_profile()
+    [xyn, norm2] = startingParameters.generate_neutral_profile(rc, thks, norm, xyc)
     print(rc)
+    # """ rc   = startingParameters.generate_centroidal_radius(xyc)
+    # thks = startingParameters.generate_thickness_profile()
+    # rn = startingParameters.generate_neutral_radius(rc, thks)
+    # xyn  = startingParameters.generate_neutral_profile(rc, thks, xyc)
+    # xyn2 = startingParameters.generate_neutral_profile2(rn, th) """
+
+    # u = np.linspace(0,3,3001)
+    # test = np.empty([len(u), 2])
+    # for i in range(len(u)):
+    #     test[i,0] = rc[i]*np.cos(u[i]*startingParameters.ap9/u[-1])
+    #     test[i,1] = rc[i]*np.sin(u[i]*startingParameters.ap9/u[-1])
+
+    #plt.plot(np.linspace(0,3,3001), rc)
+    #plt.plot(np.linspace(0,3,3001), rn)
+    # plt.figure(1,label="xyc")
+    # plt.plot(xyc[:,0], xyc[:,1])
+    # plt.figure(2,label="xyn")
+    # plt.plot(xyn[:,0], xyn[:,1])
+    # # plt.figure(3,label="test")
+    # plt.plot(xyn[:,0], xyn[:,1])
+    
+    # plt.plot(xyn2[:,0], xyn[:,1])
+    # plt.plot(0,0)
+
+    # plt.plot(xyc[:,0],xyc[:,1])
+    # plt.plot(ck[0:1001,1],ck[0:1001,1])
+    # plt.figure(1,label="rc")
+    # plt.plot(rc)
+    # plt.plot(xyc[:,1])
+    # plt.figure(2,label="xyc")
+    plt.plot(xyc[:,0], xyc[:,1])
+    plt.plot(xyn[:,0], xyn[:,1])
+    for i in range(len(np.linspace(0,3,3001))):
+        if i%25 == 0:
+            #plt.arrow(xyc[i,0], xyc[i,1], norm2[i,0], norm2[i,1])
+            plt.arrow(xyc[i,0], xyc[i,1], norm2[i,0], norm2[i,1])
+
+    # plt.plot(ck[:,0], ck[:,1])
+
+    plt.show()
+
+    # print(rn)
+    # print(rc)
+    print("xyc:",xyc)
+    # print("angs",angs)
+    print("normdir",norm)
+    # print("center",ck)
+    print("radius",rc)
+
+
 
 
 if __name__ == '__main__':
