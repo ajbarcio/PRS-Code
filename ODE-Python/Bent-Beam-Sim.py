@@ -10,49 +10,72 @@ from openpyxl import *
 
 deg2rad = np.pi/180
 
+def deformSpring(springObject, angle):
+    stuff = things
+
 class parameters(object):
-    def __init__(self, material):
 
-        ## PARAMETERS TO ITERATE
-
+    def __init__(self, material, **kwargs):
+        ## PARAMETERS TO ITERATE:
+            # these are default values, which can be changed by passing named arguments to the class
         # Thickness parameters
 
         self.rotorThickness = .8
         self.ctrlThickness = 0.27
         self.minThickness = .23
 
-        # Spline thickness parameters
+        # Spline geometry parameters
 
-        self.lp3 = 1.9
-        self.lp6 = 1.8
-        self.ap3 = deg2rad*45
-        self.ap6 = deg2rad*110
+        self.p3radius = 1.9
+        self.p6radius = 1.8
+        self.p3angle = deg2rad*45
+        self.p6angle = deg2rad*115
+        self.p9angle = (180-10)*deg2rad
+
+        # This is a MINIMUM STARTING VALUE that MAY be updated as time goes on
+
+        self.tangentProp = 2
 
         ## INVARIANT PARAMETERS
 
-        self.material = material
         self.innerRadius = 1.62/2
         self.outerRadius = 5/2
-        self.ap9 = (180-10)*deg2rad
+        print(self.rotorThickness)
+
+        for key, value in kwargs.items():
+            keystr = str(key)
+            self.keystr = value
+            print("%s == %s" % (key, value))
+            print(self.keystr)
+            print(self.rotorThickness)
+
+        # Parameters set by req. arg or default
+
+        self.material = material
+        self.nanFlag = 1
 
 # def ODE():
 
     def generate_ctrl_points(self):
+        print("control points")
         # Points predefined by parameters and arbitrary constraints:
 
         # p9 on outer radius at angle
-        # p8 radial with p9, 1 'rotorThickness' away (maybe a parameter gets introduced to futz with this)
+        # p8 radial with p9, 1 'rotorThickness' away 
+        #       (scaled by tangent prop parameter to keep neutral radius from blowing up)
         # p6 at angle and distance parameters
         # p3 at angle and distance parameters
         # p0 on inner radius at horizontal 
         # p1 radial with p0, 1 'rotorThickness' away
+        #       (scaled by tangent prop parameter to keep neutral radius from blowing up)
 
-        p9 = np.array([self.outerRadius*np.cos(self.ap9), self.outerRadius*np.sin(self.ap9)])
-        p8 = np.array([p9[0]-self.rotorThickness*np.cos(self.ap9),p9[1]-self.rotorThickness*np.sin(self.ap9) ])
-        p6 = np.array([self.lp6*np.cos(self.ap6), self.lp6*np.sin(self.ap6)])
-        p3 = np.array([self.lp3*np.cos(self.ap3), self.lp3*np.sin(self.ap3)])
+        p9 = np.array([self.outerRadius*np.cos(self.p9angle), self.outerRadius*np.sin(self.p9angle)])
+        p8 = np.array([p9[0]-self.tangentProp*self.rotorThickness*np.cos(self.p9angle), \
+                       p9[1]-self.tangentProp*self.rotorThickness*np.sin(self.p9angle) ])
+        p6 = np.array([self.p6radius*np.cos(self.p6angle), self.p6radius*np.sin(self.p6angle)])
+        p3 = np.array([self.p3radius*np.cos(self.p3angle), self.p3radius*np.sin(self.p3angle)])
         p0 = np.array([self.innerRadius, 0])
-        p1 = np.array(p0+[self.rotorThickness,0])
+        p1 = np.array(p0+[self.tangentProp*self.rotorThickness,0])
         
         # Rules for the spline:
 
@@ -75,20 +98,22 @@ class parameters(object):
         B = np.array([4*p3+p1,2*p3,4*p6-p8,2*p6])
 
         result = lin.solve(A,B)
-        pts = np.array([p0,p1,result[0],p3,result[1],result[2],p6,result[3],p8,p9])
-        return pts
+        self.pts = np.array([p0,p1,result[0],p3,result[1],result[2],p6,result[3],p8,p9])
+        self.generate_centroidal_profile()
     
-    def generate_centroidal_profile(self, pts):
-
+    def generate_centroidal_profile(self):
+            print("profile")
             u = np.linspace(0,3,3001)
             offset = 0
             # print(u)
             u2 = u - np.floor(u)
-            cart = np.empty([len(u), 2])
-            th   = np.empty(len(u))
-            norm = np.empty([len(u), 2])
-            ck = np.empty([len(u), 2])
-            rc   = np.empty(len(u))
+            self.xyc = np.empty([len(u), 2])
+            self.ang   = np.empty(len(u))
+            self.norm = np.empty([len(u), 2])
+            self.ck = np.empty([len(u), 2])
+            self.rc   = np.empty(len(u))
+            self.d    = np.empty(len(u))
+            self.dd   = np.empty(len(u))
     
             for i in range(len(u)):
                 ptndx = int(np.floor(u[i]))
@@ -99,15 +124,15 @@ class parameters(object):
                     ptndx = 2
                     U = np.array([t**3, t**2, t, 1])
                     D = np.array([[-1,3,-3,1],[3,-6,3,0],[-3,3,0,0],[1,0,0,0]])
-                    P = np.array([pts[3*ptndx],pts[3*ptndx+1],pts[3*ptndx+2],pts[3*ptndx+3]])
-                    cart[i] = U.dot(D).dot(P)-[0,offset]
-                    th[i] = np.arctan2(cart[i,1],cart[i,0])
+                    P = np.array([self.pts[3*ptndx],self.pts[3*ptndx+1],self.pts[3*ptndx+2],self.pts[3*ptndx+3]])
+                    self.xyc[i] = U.dot(D).dot(P)-[0,offset]
+                    self.ang[i] = np.arctan2(self.xyc[i,1],self.xyc[i,0])
                 else:
                     U = np.array([t**3, t**2, t, 1])
                     D = np.array([[-1,3,-3,1],[3,-6,3,0],[-3,3,0,0],[1,0,0,0]])
-                    P = np.array([pts[3*ptndx],pts[3*ptndx+1],pts[3*ptndx+2],pts[3*ptndx+3]])
-                    cart[i] = U.dot(D).dot(P)-[0,offset]
-                    th[i] = np.arctan2(cart[i,1],cart[i,0])
+                    P = np.array([self.pts[3*ptndx],self.pts[3*ptndx+1],self.pts[3*ptndx+2],self.pts[3*ptndx+3]])
+                    self.xyc[i] = U.dot(D).dot(P)-[0,offset]
+                    self.ang[i] = np.arctan2(self.xyc[i,1],self.xyc[i,0])
                 dU = np.array([3*t**2, 2*t, 1, 0])
                 ddU = np.array([6*t, 2, 0, 0])
                 coeffs = D.dot(P)
@@ -115,7 +140,7 @@ class parameters(object):
                     # tan  = [cart[i+1,0]-cart[i,0],cart[i+1,1]-cart[i,1]]/np.sqrt((cart[i+1,0]-cart[i,0])**2+(cart[i+1,1]-cart[i,1])**2)
                     dxydt = dU.dot(coeffs)
                     dydx = dxydt[1]/dxydt[0]
-                    tan = [dxydt[0],dxydt[0]]
+                    tan = [dxydt[0],dxydt[1]]
                     #dydx = (cart[i+1,1]-cart[i,1])/(cart[i+1,0]-cart[i,0])
                     # dydxprev = 0
                 elif i == 3000:
@@ -123,34 +148,36 @@ class parameters(object):
                     # tan  = [cart[i,0]-cart[i-1,0],cart[i,1]-cart[i-1,1]]/np.sqrt((cart[i,0]-cart[i-1,0])**2+(cart[i,1]-cart[i-1,1])**2)
                     dxydt = dU.dot(coeffs)
                     dydx = dxydt[1]/dxydt[0]
-                    tan = [dxydt[0],dxydt[0]]
+                    tan = [dxydt[0],dxydt[1]]
                     #dydx = (cart[i,1]-cart[i-1,1])/(cart[i,0]-cart[i-1,0])
                 else:
                     # dydxprev = dydx
                     # tan  = [cart[i+1,0]-cart[i-1,0],cart[i+1,1]-cart[i-1,1]]/np.sqrt((cart[i+1,0]-cart[i-1,0])**2+(cart[i+1,1]-cart[i-1,1])**2)
                     dxydt = dU.dot(coeffs)
                     dydx = dxydt[1]/dxydt[0]
-                    tan = [dxydt[0],dxydt[0]]
+                    tan = [dxydt[0],dxydt[1]]
                     # dydx = (cart[i+1,1]-cart[i-1,1])/(cart[i+1,0]-cart[i-1,0])
-                norm[i] = [-tan[1],tan[0]]
+                self.norm[i] = [-tan[1],tan[0]]/lin.norm([-tan[1],tan[0]])
                 d2xydt2 = ddU.dot(coeffs)
                 d2ydx2 = (d2xydt2[1] - dydx*d2xydt2[0])/(dxydt[0])
                 # d2ydx2 = (dydx-dydxprev)/(cart[i,0]-cart[i-1,0])
-                rc[i] = abs((1+dydx**2)**(1.5)/(d2ydx2))
-                ck[i] = cart[i]-norm[i]*rc[i]
-
-            return cart, norm, rc
+                self.rc[i] = ((1+dydx**2)**(1.5)/(d2ydx2))
+                self.ck[i] = self.xyc[i]-self.norm[i]*self.rc[i]
+                self.d[i] = dydx
+                self.dd[i] = d2ydx2
+            print("about to call next")
+            self.generate_thickness_profile()
         #print(cart)
 
-    def generate_centroidal_radius(self, cartc):
+    # def generate_centroidal_radius(self, cartc):
         
-        rc = np.empty([len(cartc)])
-        for i in range(len(rc)):
-            rc[i] = np.sqrt(cartc[i,0]**2+cartc[i,1]**2)
-        return rc
+    #     rc = np.empty([len(cartc)])
+    #     for i in range(len(rc)):
+    #         rc[i] = np.sqrt(cartc[i,0]**2+cartc[i,1]**2)
+    #     return rc
     
     def generate_thickness_profile(self):
-
+        print("thickness")
         u = np.linspace(0,3,3001)
         # a b c d e f g
         # self.rotorThickness = g
@@ -170,120 +197,84 @@ class parameters(object):
                          [self.rotorThickness],[0],[0]])
         coeffs = lin.solve(REG,Targ)
         u = np.linspace(0,3,3001)
-        t = coeffs[0]*u**6 + coeffs[1]*u**5 + coeffs[2]*u**4 + coeffs[3]*u**3 + coeffs[4]*u**2 + coeffs[5]*u + coeffs[6]
+        self.thks = coeffs[0]*u**6 + coeffs[1]*u**5 + coeffs[2]*u**4 + coeffs[3]*u**3 + coeffs[4]*u**2 + coeffs[5]*u + coeffs[6]
         # coeffs = lin.inv(REG.T.dot(REG)).dot(REG.T).dot(Targ)
-        return t
+        # self.generate_neutral_profile()
     
-    def generate_neutral_radius(self, rc, t):
-        rn = t/np.log((rc+.5*t)/(rc-.5*t))
-        return rn
+    # def generate_neutral_radius(self, rc, t):
+    #     rn = t/np.log((rc+.5*t)/(rc-.5*t))
+    #     return rn
     
-    def generate_neutral_profile(self, rc, thks, norm, xyc):
+    def generate_neutral_profile(self):
+        print("neutral")
         u = np.linspace(0,3,3001)
-        cart = np.empty([len(u), 2])
+        self.xyn = np.empty([len(u), 2])
+        self.rn  = np.empty(len(u))
         for i in range(len(u)):
-            if np.isinf(rc[i]):
-                rn = rc[i]
+            if np.isinf(self.rc[i]):
+                self.rn[i] = self.rc[i]
             else:
-                rn = thks[i]/np.log((rc[i]+.5*thks[i])/(rc[i]-.5*thks[i]))
-            diff = rc[i] - rn
+                self.rn[i] = np.sign(self.rc[i])*self.thks[i]/np.log(((abs(self.rc[i])+.5*self.thks[i])/(abs(self.rc[i])-.5*self.thks[i])))
+            diff = self.rc[i] - self.rn[i]
             if np.isnan(diff):
-                b = rc[i]+.5*thks[i]
-                a = rc[i]-.5*thks[i]
-                rn = (b-a)/np.log(b/a)
-            if i%50 == 0:
-                print(diff, rc[i], rn, rc[i]-.5*thks[i], .5*thks[i])
-            cart[i] = xyc[i]+norm[i]*diff
-            norm[i] = norm[i]*diff
-        return cart, norm
+                b = self.rc[i]+.5*self.thks[i]
+                a = self.rc[i]-.5*self.thks[i]
+                self.rn[i] = (b-a)/np.log(b/a)
+            if np.isnan(self.rn[i]):
+                self.tangentProp = self.tangentProp*1.05
+                return
+            # if i%1 == 0:
+                # print(diff, self.rc[i], rn)
+            self.xyn[i] = self.xyc[i]+self.norm[i]*diff
+            self.norm[i] = self.norm[i]*diff
+            # print(lin.norm(self.norm[i]))
+        # print(self.tangentProp)
+        if(not np.isnan(self.rn).any()):
+            self.plotResults()
+            self.nanFlag = 0
+        
     
-    def generate_neutral_profile2(self, rn, th):
-        u = np.linspace(0,3,3001)
-        cart = np.empty([len(u), 2])
-        for i in range(len(u)):
-            cart[i,0] = rn[i]*np.cos(th[i])
-            cart[i,1] = rn[i]*np.sin(th[i])
-        return cart 
+    # def generate_neutral_profile2(self, rn, th):
+    #     u = np.linspace(0,3,3001)
+    #     cart = np.empty([len(u), 2])
+    #     for i in range(len(u)):
+    #         cart[i,0] = rn[i]*np.cos(th[i])
+    #         cart[i,1] = rn[i]*np.sin(th[i])
+    #     return cart 
+    
+    def plotResults(self):
+        print("plot")
+        plt.figure(1)
+        plt.clf()
+        plt.plot(self.xyc[:,0], self.xyc[:,1])
+        plt.plot(self.xyn[:,0], self.xyn[:,1])
+        for i in range(len(np.linspace(0,3,3001))):
+            if i%25 == 0:
+                #plt.arrow(xyc[i,0], xyc[i,1], norm2[i,0], norm2[i,1])
+                plt.arrow(self.xyc[i,0], self.xyc[i,1], self.norm[i,0], self.norm[i,1])
+        plt.figure(2)
+        plt.clf()
+        # plt.plot(norm[:,0],norm[:,1])
+        normnorm = np.empty(len(self.norm))
+        for i in range(len(np.linspace(0,3,3001))):
+            normnorm[i] = lin.norm(self.norm[i])
+        plt.plot(np.linspace(0,3,3001), self.rc)
+        plt.plot(np.linspace(0,3,3001), normnorm)
+        plt.plot(np.linspace(0,3,3001), self.d)
+        plt.plot(np.linspace(0,3,3001), self.thks)
 
 
 
 def main():
 
-    #PATH = 'Spline_thickening-v3.xlsm'
-    
-    '''
-    wb = load_workbook(filename = PATH)
-    ws = wb.active
-    pts = np.array([[ws['C2'].value,  ws['D2'].value], \
-                    [ws['C3'].value,  ws['D3'].value], \
-                    [ws['C4'].value,  ws['D4'].value], \
-                    [ws['C5'].value,  ws['D5'].value], \
-                    [ws['C6'].value,  ws['D6'].value], \
-                    [ws['C7'].value,  ws['D7'].value], \
-                    [ws['C8'].value,  ws['D8'].value], \
-                    [ws['C9'].value,  ws['D9'].value], \
-                    [ws['C10'].value, ws['D10'].value], \
-                    [ws['C11'].value, ws['D11'].value], \
-                    ])
-    # print(pts)
-    '''        
     material = MaraginSteelC300()
-    startingParameters = parameters(material)
-
-    pts  = startingParameters.generate_ctrl_points()
-    [xyc, norm, rc]  = startingParameters.generate_centroidal_profile(pts)
-    thks = startingParameters.generate_thickness_profile()
-    [xyn, norm2] = startingParameters.generate_neutral_profile(rc, thks, norm, xyc)
-    print(rc)
-    # """ rc   = startingParameters.generate_centroidal_radius(xyc)
-    # thks = startingParameters.generate_thickness_profile()
-    # rn = startingParameters.generate_neutral_radius(rc, thks)
-    # xyn  = startingParameters.generate_neutral_profile(rc, thks, xyc)
-    # xyn2 = startingParameters.generate_neutral_profile2(rn, th) """
-
-    # u = np.linspace(0,3,3001)
-    # test = np.empty([len(u), 2])
-    # for i in range(len(u)):
-    #     test[i,0] = rc[i]*np.cos(u[i]*startingParameters.ap9/u[-1])
-    #     test[i,1] = rc[i]*np.sin(u[i]*startingParameters.ap9/u[-1])
-
-    #plt.plot(np.linspace(0,3,3001), rc)
-    #plt.plot(np.linspace(0,3,3001), rn)
-    # plt.figure(1,label="xyc")
-    # plt.plot(xyc[:,0], xyc[:,1])
-    # plt.figure(2,label="xyn")
-    # plt.plot(xyn[:,0], xyn[:,1])
-    # # plt.figure(3,label="test")
-    # plt.plot(xyn[:,0], xyn[:,1])
-    
-    # plt.plot(xyn2[:,0], xyn[:,1])
-    # plt.plot(0,0)
-
-    # plt.plot(xyc[:,0],xyc[:,1])
-    # plt.plot(ck[0:1001,1],ck[0:1001,1])
-    # plt.figure(1,label="rc")
-    # plt.plot(rc)
-    # plt.plot(xyc[:,1])
-    # plt.figure(2,label="xyc")
-    plt.plot(xyc[:,0], xyc[:,1])
-    plt.plot(xyn[:,0], xyn[:,1])
-    for i in range(len(np.linspace(0,3,3001))):
-        if i%25 == 0:
-            #plt.arrow(xyc[i,0], xyc[i,1], norm2[i,0], norm2[i,1])
-            plt.arrow(xyc[i,0], xyc[i,1], norm2[i,0], norm2[i,1])
-
-    # plt.plot(ck[:,0], ck[:,1])
-
+    startingParameters = parameters(material, rotorThickness=.9)
+    while startingParameters.nanFlag == 1:
+        startingParameters.generate_ctrl_points()
+        startingParameters.generate_neutral_profile()
     plt.show()
-
-    # print(rn)
-    # print(rc)
-    print("xyc:",xyc)
-    # print("angs",angs)
-    print("normdir",norm)
-    # print("center",ck)
-    print("radius",rc)
-
+    print(startingParameters.tangentProp)
+    print(startingParameters.rotorThickness)
 
 
 
