@@ -1,3 +1,4 @@
+import time
 import numpy as np
 import scipy as sp
 from scipy import optimize as op
@@ -27,7 +28,7 @@ class spring(object):
                         'p6radius':       2,              \
                         'p3angle':        deg2rad*45,       \
                         'p6angle':        deg2rad*110,      \
-                        'p9angle':        (180-20)*deg2rad, \
+                        'p9angle':        (180)*deg2rad, \
                         'tangentProp':    1                 }
 
         ## INVARIANT PARAMETERS
@@ -103,8 +104,29 @@ class spring(object):
         self.pts = np.array([p0,p1,result[0],p3,result[1],result[2],p6,result[3],p8,p9])
         return self.pts
     
+    def reassign_points(self, freePts):
+        
+        #input points
+
+        p1 = freePts[0]
+        p8 = freePts[-1]
+
+        p3 = freePts[1]
+        p6 = freePts[2]
+
+        # fixed points
+
+        p0 = self.pts[0]
+        p9 = self.pts[9]
+
+        A = np.array([[4,0,1,0],[1,1,0,0],[0,-1,4,0],[0,0,1,1]])
+        B = np.array([4*p3+p1,2*p3,4*p6-p8,2*p6])
+
+        result = lin.solve(A,B)
+        self.pts = np.array([p0,p1,result[0],p3,result[1],result[2],p6,result[3],p8,p9])
+
     def generate_centroidal_profile(self):
-            print("profile")
+            # print("profile")
             u = np.linspace(0,3,3001)
             offset = 0
             # print(u)
@@ -117,7 +139,7 @@ class spring(object):
             self.d    = np.empty(len(u))
             self.dd   = np.empty(len(u))
 
-            print(self.pts)
+            #  print(self.pts)
     
             for i in range(len(u)):
                 ptndx = int(np.floor(u[i]))
@@ -165,10 +187,10 @@ class spring(object):
                 d2xydt2 = ddU.dot(coeffs)
                 d2ydx2 = (d2xydt2[1] - dydx*d2xydt2[0])/(dxydt[0])
                 # d2ydx2 = (dydx-dydxprev)/(cart[i,0]-cart[i-1,0])
-                self.rc[i] = ((1+dydx**2)**(1.5)/(d2ydx2))
+                self.rc[i] = ((1+(dydx)**2)**(1.5)/((d2ydx2)))
                 self.ck[i] = self.xyc[i]-self.norm[i]*self.rc[i]
-                self.d[i] = dydx
-                self.dd[i] = d2ydx2
+                self.d[i] = (dydx)
+                self.dd[i] = (d2ydx2)
             #print("about to call next")
             #self.generate_thickness_profile()
             return self.xyc, self.norm, self.rc
@@ -182,7 +204,7 @@ class spring(object):
     #     return rc
     
     def generate_thickness_profile(self):
-        print("thickness")
+        # print("thickness")
         u = np.linspace(0,3,3001)
         self.ttop = np.empty([len(u), 2])
         self.tbottom = np.empty([len(u), 2])
@@ -217,7 +239,7 @@ class spring(object):
     #     return rn
     
     def generate_neutral_profile(self):
-        print("neutral")
+        # print("neutral")
         u = np.linspace(0,3,3001)
         self.xyn = np.empty([len(u), 2])
         self.rn  = np.empty(len(u))
@@ -225,7 +247,7 @@ class spring(object):
             if np.isinf(self.rc[i]):
                 self.rn[i] = self.rc[i]
             else:
-                self.rn[i] = np.sign(self.rc[i])*self.thks[i]/np.log(((abs(self.rc[i])+.5*self.thks[i])/(abs(self.rc[i])-.5*self.thks[i])))
+                self.rn[i] = np.sign(self.rc[i])*self.thks[i]/np.log(abs((abs(self.rc[i])+.5*self.thks[i])/(abs(self.rc[i])-.5*self.thks[i])))
             diff = self.rc[i] - self.rn[i]
             if np.isnan(diff):
                 diff = 1
@@ -244,7 +266,7 @@ class spring(object):
         #    self.plotResults()
         #   self.nanFlag = 0
         # self.plotResults()
-        return self.norm
+        return self.norm, self.rn
         
     
     # def generate_neutral_profile2(self, rn, th):
@@ -255,13 +277,14 @@ class spring(object):
     #         cart[i,1] = rn[i]*np.sin(th[i])
     #     return cart 
     
-    def plotResults(self):
+    def plotResults(self, oldPts):
         print("plot")
         plt.figure(1)
         plt.clf()
         plt.plot(self.xyc[:,0], self.xyc[:,1])
         plt.plot(self.xyn[:,0], self.xyn[:,1])
         plt.plot(self.pts[:,0], self.pts[:,1])
+        plt.plot(oldPts[:,0], oldPts[:,1])
         plt.plot(self.ttop[:,0], self.ttop[:,1])
         plt.plot(self.tbottom[:,0], self.tbottom[:,1])
         for i in range(len(np.linspace(0,3,3001))):
@@ -274,10 +297,16 @@ class spring(object):
         normnorm = np.empty(len(self.norm))
         for i in range(len(np.linspace(0,3,3001))):
             normnorm[i] = lin.norm(self.norm[i])
-        plt.plot(np.linspace(0,3,3001), self.rc)
-        plt.plot(np.linspace(0,3,3001), normnorm)
-        plt.plot(np.linspace(0,3,3001), self.d)
-        plt.plot(np.linspace(0,3,3001), self.thks)
+        plt.plot(np.linspace(0,3,3001), (self.rn))
+        plt.plot(np.linspace(0,3,3001), (self.rc))
+        # plt.plot(np.linspace(0,3,3001), normnorm)
+        # plt.plot(np.linspace(0,3,3001), self.d)
+        # plt.plot(np.linspace(0,3,3001), self.thks)
+        plt.figure(3)
+        plt.clf()
+        # self.rc[i] = ((1+(dydx)**2)**(1.5)/((d2ydx2)))
+        plt.plot(np.linspace(0,3,3001), (1+(self.d)**2)**1.5)
+        plt.plot(np.linspace(0,3,3001), self.dd)
 
 def minimize_curvature(factors):
     #print("profile")
@@ -324,34 +353,52 @@ def minimize_curvature(factors):
 
 def main():
     def full_spline(freePts):
-        print("in full spline")
+        # print("in full spline")
         fixedPts = startingParameters.pts
-        # free points are 1, 4, 5, 8
-        stackFreePts = np.array([[freePts[0],freePts[1]],[freePts[2],freePts[3]],[freePts[4],freePts[5]],[freePts[6],freePts[7]]])
-        p2 = 2*fixedPts[3]-stackFreePts[1]
-        p7 = 2*fixedPts[6]-stackFreePts[2]
-        freePts[7] = (fixedPts[9,1]/fixedPts[9,0])*freePts[6]
-        startingParameters.pts = np.array([fixedPts[0],stackFreePts[0],p2,fixedPts[3],stackFreePts[1],stackFreePts[2],fixedPts[6],p7,stackFreePts[3],fixedPts[9]])
+        # free points are 1, 3, 6, 8
+        
+        stackFreePts = np.array([[freePts[0],0],[freePts[1],freePts[2]],[freePts[3],freePts[4]],[freePts[-1]*np.cos(startingParameters.p9angle),freePts[-1]*np.sin(startingParameters.p9angle)]])
+        # p2 = 2*fixedPts[3]-stackFreePts[1]
+        # p7 = 2*fixedPts[6]-stackFreePts[2]
+        # freePts[7] = (fixedPts[9,1]/fixedPts[9,0])*freePts[6]
+        # startingParameters.pts = np.array([fixedPts[0],stackFreePts[0],p2,fixedPts[3],stackFreePts[1],stackFreePts[2],fixedPts[6],p7,stackFreePts[3],fixedPts[9]])
+        startingParameters.reassign_points(stackFreePts)
 
         [xyc, rc, norm] = startingParameters.generate_centroidal_profile()
         thks = startingParameters.generate_thickness_profile()
-        norm = startingParameters.generate_neutral_profile()
-        print(norm)
-        return np.max(lin.norm(norm))
+        [norm, rn] = startingParameters.generate_neutral_profile()
+        # print(norm)
+        return lin.norm(abs(rn), -1)
 
     material = MaraginSteelC300()
-    startingParameters = spring(material, rotorThickness=.8, p9angle=(180-30)*deg2rad)
+    startingParameters = spring(material, rotorThickness=.75, p9angle=(180-10)*deg2rad)
     
     pts = startingParameters.generate_ctrl_points()
-    
-    Bnds = ((None,None), (0,0), (None,None), (None,None), (None,None), (None,None), (pts[8,0],None), (None,pts[8,1]))
+    [xycold, rcold, normold] = startingParameters.generate_centroidal_profile()
+    thksold = startingParameters.generate_thickness_profile()
+    [normold, rnold] = startingParameters.generate_neutral_profile()
+    #startingParameters.plotResults()
+    #plt.show(block=False)
+    #time.sleep(15)
 
-    freePts = np.array([pts[1,0],pts[1,1],pts[4,0],pts[4,1],pts[5,0],pts[5,1],pts[8,0],pts[8,1]])
+    print(startingParameters.pts)
+    oldPts = pts
+
+    # Bnds = ((np.sqrt(pts[1,0]**2+pts[1,1]**2),None), (None,None), (None,None), (None,None), (None,None), (None,np.sqrt(pts[8,0]**2+pts[8,1]**2)))
+    Bnds = ((None,None), (None,None), (None,None), (None,None), (None,None), (None,None))
+
+    freePts = np.array([np.sqrt(pts[1,0]**2+pts[1,1]**2), pts[3,0], pts[3,1], pts[6,0], pts[6,1], np.sqrt(pts[8,0]**2+pts[8,1]**2)])
     # full_spline(freePts)
     res = op.minimize(full_spline, freePts, method='Nelder-Mead', bounds=Bnds)
     print(res)
+    stackResults = np.array([[res.x[0],0],[res.x[1],res.x[2]],[res.x[3],res.x[4]],[res.x[-1]*np.cos(startingParameters.p9angle),res.x[-1]*np.sin(startingParameters.p9angle)]])
+    startingParameters.reassign_points(stackResults)
+    [xyc, rc, norm] = startingParameters.generate_centroidal_profile()
+    thks = startingParameters.generate_thickness_profile()
+    [norm, rn] = startingParameters.generate_neutral_profile()
     print(startingParameters.pts)
-    startingParameters.plotResults()
+    plt.close()
+    startingParameters.plotResults(oldPts)
     plt.show()
 
 if __name__ == '__main__':
