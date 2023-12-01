@@ -78,7 +78,7 @@ class spring(object):
         p6 = np.array([self.p6radius*np.cos(self.p6angle), self.p6radius*np.sin(self.p6angle)])
         p3 = np.array([self.p3radius*np.cos(self.p3angle), self.p3radius*np.sin(self.p3angle)])
         p0 = np.array([self.innerRadius, 0])
-        p1 = np.array(p0+[self.tangentProp*self.rotorThickness,0])
+        p1 = np.array(p0+[self.rotorThickness,0])
         
         # Rules for the spline:
 
@@ -204,10 +204,14 @@ class spring(object):
     #     return rc
     
     def generate_thickness_profile(self):
+        # u = np.linspace(0,3,3001)
+        # self.ttop = np.empty([len(u), 2])
+        # self.tbottom = np.empty([len(u), 2])
         # print("thickness")
         u = np.linspace(0,3,3001)
         self.ttop = np.empty([len(u), 2])
         self.tbottom = np.empty([len(u), 2])
+        
         # a b c d e f g
         # self.rotorThickness = g
         # self.ctrlThickness  = a + b + c + d + e + f + g
@@ -227,9 +231,13 @@ class spring(object):
         coeffs = lin.solve(REG,Targ)
         u = np.linspace(0,3,3001)
         self.thks = coeffs[0]*u**6 + coeffs[1]*u**5 + coeffs[2]*u**4 + coeffs[3]*u**3 + coeffs[4]*u**2 + coeffs[5]*u + coeffs[6]
+        # self.thks = u/u*self.ctrlThickness
         # coeffs = lin.inv(REG.T.dot(REG)).dot(REG.T).dot(Targ)
         # self.generate_neutral_profile()
         for i in range(len(u)):
+            # if abs(self.rc[i]) < .5*self.thks[i]:
+            #     self.rotorThickness = self.rotorThickness*0.99
+            #     self.generate_thickness_profile()
             self.ttop[i] = self.xyc[i]+self.norm[i]*0.5*self.thks[i]
             self.tbottom[i] = self.xyc[i]-self.norm[i]*0.5*self.thks[i]
         return self.thks
@@ -247,7 +255,12 @@ class spring(object):
             if np.isinf(self.rc[i]):
                 self.rn[i] = self.rc[i]
             else:
-                self.rn[i] = np.sign(self.rc[i])*self.thks[i]/np.log(abs((abs(self.rc[i])+.5*self.thks[i])/(abs(self.rc[i])-.5*self.thks[i])))
+                self.rn[i] = np.sign(self.rc[i])*self.thks[i]/abs(np.log(abs(self.rc[i])+.5*self.thks[i])-np.log(abs(self.rc[i])-.5*self.thks[i]))
+                # if np.isnan(self.rn[i]):
+                    # print(i, self.rn[i])
+                if not np.sign(self.rc[i])==np.sign(self.rn[i]):
+                    self.rn[i] = -1*self.rn[i]
+                    # print("tripped", i)
             diff = self.rc[i] - self.rn[i]
             if np.isnan(diff):
                 diff = 1
@@ -299,14 +312,18 @@ class spring(object):
             normnorm[i] = lin.norm(self.norm[i])
         plt.plot(np.linspace(0,3,3001), (self.rn))
         plt.plot(np.linspace(0,3,3001), (self.rc))
+        plt.plot(np.linspace(0,3,3001), -.5*(self.thks))
+        plt.plot(np.linspace(0,3,3001), .5*(self.thks))
         # plt.plot(np.linspace(0,3,3001), normnorm)
         # plt.plot(np.linspace(0,3,3001), self.d)
         # plt.plot(np.linspace(0,3,3001), self.thks)
+        #  plt.plot([-1,2])
         plt.figure(3)
         plt.clf()
         # self.rc[i] = ((1+(dydx)**2)**(1.5)/((d2ydx2)))
         plt.plot(np.linspace(0,3,3001), (1+(self.d)**2)**1.5)
         plt.plot(np.linspace(0,3,3001), self.dd)
+        plt.ylim([-15,50])
 
 def minimize_curvature(factors):
     #print("profile")
@@ -368,14 +385,27 @@ def main():
         thks = startingParameters.generate_thickness_profile()
         [norm, rn] = startingParameters.generate_neutral_profile()
         # print(norm)
-        return lin.norm(abs(rn), -1)
+        return 1/lin.norm(abs(rn), -1)
 
     material = MaraginSteelC300()
-    startingParameters = spring(material, rotorThickness=.75, p9angle=(180-10)*deg2rad)
-    
-    pts = startingParameters.generate_ctrl_points()
-    [xycold, rcold, normold] = startingParameters.generate_centroidal_profile()
-    thksold = startingParameters.generate_thickness_profile()
+    startingParameters = spring(material, rotorThickness=.88, p9angle=(180)*deg2rad)
+    exitflag = 0
+    j = 0
+    while not exitflag == 1:
+        print("entered")
+        pts = startingParameters.generate_ctrl_points()
+        [xycold, rcold, normold] = startingParameters.generate_centroidal_profile()
+        thksold = startingParameters.generate_thickness_profile()
+        for i in range(len(np.linspace(0,3,3001))):
+                if abs(startingParameters.rc[i]) < .5*startingParameters.thks[i]:
+                    exitflag = 2
+        if exitflag == 0:
+            exitflag = 1
+        if exitflag == 2:
+            startingParameters.tangentProp = startingParameters.tangentProp+0.001
+            exitflag = 0
+        j+=1
+        print(j)
     [normold, rnold] = startingParameters.generate_neutral_profile()
     #startingParameters.plotResults()
     #plt.show(block=False)
@@ -399,6 +429,7 @@ def main():
     print(startingParameters.pts)
     plt.close()
     startingParameters.plotResults(oldPts)
+    print(startingParameters.rotorThickness)
     plt.show()
 
 if __name__ == '__main__':
