@@ -62,7 +62,7 @@ class spring(object):
         self.tangentPropEnd   = self.Vparams["tangentPropEnd"]
 
     def generate_ctrl_points(self):
-        print("control points")
+        # print("control points")
         # Points predefined by parameters and arbitrary constraints:
 
         # p9 on outer radius at angle
@@ -191,7 +191,7 @@ class spring(object):
             if abs(self.rc[i]) < .5*self.thks[i]:
             #     self.rotorThickness = self.rotorThickness*0.99
             #     self.generate_thickness_profile()
-                print("nanerror")
+               print("nanerror")
             self.ttop[i] = self.xyc[i]+self.norm[i]*0.5*self.thks[i]
             self.tbottom[i] = self.xyc[i]-self.norm[i]*0.5*self.thks[i]
         return self.thks
@@ -235,32 +235,45 @@ class spring(object):
             if i%25 == 0:
                 #plt.arrow(xyc[i,0], xyc[i,1], norm2[i,0], norm2[i,1])
                 plt.arrow(self.xyc[i,0], self.xyc[i,1], self.norm[i,0], self.norm[i,1])
+                # plt.arrow(self.xyc[i,0], self.xyc[i,1], self.ck[i,0], self.ck[i,1])
+        self.stressConcentration = np.argmin(abs(self.rn))
+        plt.arrow(0,0,self.xyc[self.stressConcentration,0],self.xyc[self.stressConcentration,1])
+        plt.ylim([-1,3])
+        plt.xlim([-3,3])
         plt.figure(2)
         plt.clf()
         # plt.plot(norm[:,0],norm[:,1])
         normnorm = np.empty(len(self.norm))
         for i in range(len(np.linspace(0,3,3001))):
             normnorm[i] = lin.norm(self.norm[i])
-        plt.plot(np.linspace(0,3,3001), (self.rn))
+        plt.plot(np.linspace(0,3,3001), abs(self.rn))
         plt.plot(np.linspace(0,3,3001), (self.rc))
         plt.plot(np.linspace(0,3,3001), -.5*(self.thks))
         plt.plot(np.linspace(0,3,3001), .5*(self.thks))
+        plt.axhline(np.min(abs((self.rn))))
         # plt.plot(np.linspace(0,3,3001), normnorm)
         # plt.plot(np.linspace(0,3,3001), self.d)
         # plt.plot(np.linspace(0,3,3001), self.thks)
         #  plt.plot([-1,2])
+        plt.ylim([-1.5,1.5])
         plt.figure(3)
         plt.clf()
         # self.rc[i] = ((1+(dydx)**2)**(1.5)/((d2ydx2)))
         plt.plot(np.linspace(0,3,3001), (1+(self.d)**2)**1.5)
         plt.plot(np.linspace(0,3,3001), self.dd)
         plt.ylim([-15,50])
+        print(np.min(abs(self.rn)))
+        print(self.stressConcentration)
 
 def main():
     def drag_end_points(dragVector):
+        print("entered function")
         startingParameters.tangentPropStart = dragVector[0]
         startingParameters.tangentPropEnd = dragVector[1]   
-        startingParameters.p9angle = dragVector[2]     
+        startingParameters.p3radius = dragVector[2]
+        startingParameters.p6radius = dragVector[3]
+        startingParameters.p3angle = dragVector[4]
+        startingParameters.p6angle = dragVector[5]     
         
         startingParameters.generate_ctrl_points()
 
@@ -275,10 +288,18 @@ def main():
         [norm, rn, curveError] = startingParameters.generate_neutral_profile()
         prevDragVector = dragVector
         # print(norm)
-        return 1/lin.norm(abs(rn), -1)
+        # numberMins = np.array([i for i, x in enumerate(abs(startingParameters.rn)) if x == np.min(abs(startingParameters.rn))])
+        # print(numberMins)
+        numberMins = 0
+        for i in range(len(np.linspace(0,3,3001))):
+            if (abs(startingParameters.rn[i]) < min(abs(startingParameters.rn))+.00001):
+                numberMins+=1
+        costArray = np.array([1/lin.norm(abs(rn), ord=2), 1/lin.norm(abs(rn), ord=-np.inf), numberMins])
+        print(numberMins)
+        return lin.norm(costArray, ord=2)
 
     material = MaraginSteelC300()
-    startingParameters = spring(material, rotorThickness=.85, p9angle=(180-10)*deg2rad, tangentPropStart=1.5, tangentPropEnd=1.5)
+    startingParameters = spring(material, rotorThickness=.85, p9angle=(180-25)*deg2rad, tangentPropStart=1.5, tangentPropEnd=1.5, p6radius=1.8)
 
     startingParameters.generate_ctrl_points()
     startingParameters.generate_centroidal_profile()
@@ -290,10 +311,17 @@ def main():
     oldPts = pts
 
     # Bnds = ((np.sqrt(pts[1,0]**2+pts[1,1]**2),None), (None,None), (None,None), (None,None), (None,None), (None,np.sqrt(pts[8,0]**2+pts[8,1]**2)))
-    Bnds = ((1,2),(1,2),(startingParameters.p9angle,(180)*deg2rad))
-    dragVector = np.array([startingParameters.tangentPropStart,startingParameters.tangentPropEnd,startingParameters.p9angle])
-    
-    res = op.minimize(drag_end_points, dragVector, method='Nelder-Mead', bounds=Bnds)
+    startingP3angle = startingParameters.p3angle
+    startingP6angle = startingParameters.p6angle
+    Bnds = ((1,2),(1,2), \
+            (startingParameters.innerRadius,startingParameters.outerRadius),(startingParameters.innerRadius,startingParameters.outerRadius), \
+            (startingP3angle-deg2rad*10,startingP3angle+deg2rad*10),(startingP6angle-deg2rad*10,startingP6angle+deg2rad*10))
+    dragVector = np.array([startingParameters.tangentPropStart,startingParameters.tangentPropEnd, \
+                           startingParameters.p3radius,startingParameters.p6radius, \
+                           startingParameters.p3angle,startingParameters.p6angle])
+    print("minimizing")
+    res = op.minimize(drag_end_points, dragVector, method='Nelder-Mead', bounds=Bnds, options={'maxiter': 2000, 'adaptive': False})
+    print("done minimizing")
     print(res)
     
     startingParameters.generate_ctrl_points()
