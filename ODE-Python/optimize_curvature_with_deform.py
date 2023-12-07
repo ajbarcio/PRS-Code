@@ -1,6 +1,7 @@
 import time
 import numpy as np
 import scipy as sp
+from scipy import integrate
 from scipy import optimize as op
 import numpy.linalg as lin
 import scipy.linalg as slin
@@ -13,6 +14,17 @@ from openpyxl import *
 
 deg2rad = np.pi/180
 
+
+def get_derivative(vec1, vec2, s):
+    dv1dv2 = np.empty(len(vec1))
+    if i == 0:
+        dv1dv2[i] = 0
+    elif i == 1:
+        dv1dv2[i-1] = [(vec1(i)-vec1(i-1))/(vec2(i)-vec2(i-1))]
+    elif i == len(vec1)-1:
+        dv1dv2[i] = [(vec1(i)-vec1(i-1))/(vec2(i)-vec2(i-1))]
+    else:
+        dv1dv2[i-1] = [(vec1(i)-vec1(i-2))/(vec2(i)-vec2(i-2))]
 
 class spring(object):
 
@@ -45,6 +57,7 @@ class spring(object):
 
         self.material = material
         self.nanFlag = 1
+        self.outPlaneThickness = 0.25
 
         # This is really stupid but I started using a Dict AFTER I 
         # wrote all my code for generating geometry so this is what you get
@@ -65,9 +78,22 @@ class spring(object):
         rn = self.rn
         alpha = self.tan
         E = self.material.E
-        def dgammads(rn, alpha, gamma, A, E):
-            stuff = things
-        stuff=things
+        rc = self.rc
+        dPhi = dBetaMax
+        initial_conds = [0,dPhi]
+        def bcs(gamma0, gammaL, p):
+            F = p[0]
+            return np.array([gamma0, gammaL-dPhi]), 
+        def func(s, gamma, p):
+            F = p[0]
+            largeCouple = (self.outPlaneThickness)*self.thks*E*(self.rc-self.rn)*rn
+            dlCds = get_derivative(largeCouple, self.s, s)
+            
+            return np.vstack(gamma[1],)
+        sol = integrate.solve_bvp(func, bcs, self.s)
+        ODE = lambda s, GAMMA:  \
+                np.dot(np.array[[0,1],[0,1]],GAMMA)
+        
 
     
     def deform_torque(self, torqueIn):
@@ -205,13 +231,16 @@ class spring(object):
         # self.thks = u/u*self.ctrlThickness
         # coeffs = lin.inv(REG.T.dot(REG)).dot(REG.T).dot(Targ)
         # self.generate_neutral_profile()
+        nanerrorflag = 0
         for i in range(len(u)):
             if abs(self.rc[i]) < .5*self.thks[i]:
             #     self.rotorThickness = self.rotorThickness*0.99
             #     self.generate_thickness_profile()
-               print("nanerror")
+               nanerrorflag = 1
             self.ttop[i] = self.xyc[i]+self.norm[i]*0.5*self.thks[i]
             self.tbottom[i] = self.xyc[i]-self.norm[i]*0.5*self.thks[i]
+        if nanerrorflag == 0:
+            print("nanerror")
         return self.thks
         
     def generate_neutral_profile(self):
@@ -220,6 +249,8 @@ class spring(object):
         u = np.linspace(0,3,3001)
         self.xyn = np.empty([len(u), 2])
         self.rn  = np.empty(len(u))
+        self.s   = np.empty(len(u))
+        dxyndu   = np.empty([len(u), 2])
         for i in range(len(u)):
             if np.isinf(self.rc[i]):
                 self.rn[i] = self.rc[i]
@@ -233,10 +264,24 @@ class spring(object):
             if np.isnan(self.rn[i]):
                 self.curveError = True
             self.xyn[i] = self.xyc[i]+self.norm[i]*diff
+            if i == 0:
+                dxyndu[i] = 0
+            elif i == 1:
+                dxyndu[i-1] = [(self.xyn[i,0]-self.xyn[i-1,0])/.001,(self.xyn[i,1]-self.xyn[i-1,1])/.001]
+            elif i == 3000:
+                dxyndu[i] = [(self.xyn[i,0]-self.xyn[i-1,0])/.001,(self.xyn[i,1]-self.xyn[i-1,1])/.001]
+            else:
+                dxyndu[i-1] = [(self.xyn[i,0]-self.xyn[i-2,0])/.002,(self.xyn[i,1]-self.xyn[i-2,1])/.002]
+            if i == 0:
+                self.s[i] = 0
+            else:
+                integrand = np.sqrt(dxyndu[0:i,0]**2+dxyndu[0:i,1]**2)*.001
+                # print(integrand)
+                self.s[i] = np.sum(integrand)
             self.norm[i] = self.norm[i]*diff
-        if self.curveError == True:
-            print(self.tangentPropEnd)
-            print(self.tangentPropStart)
+        # if self.curveError == True:
+        #     print(self.tangentPropEnd)
+        #     print(self.tangentPropStart)
         return self.norm, self.rn, self.curveError
           
     def plotResults(self, oldPts):
@@ -257,6 +302,14 @@ class spring(object):
         plt.plot(-self.ttop[:,0], -self.ttop[:,1])
         plt.plot(-self.tbottom[:,0], -self.tbottom[:,1])
 
+        theta = np.linspace(0, 2*np.pi, 100)
+        outerCircleX = self.outerRadius*np.cos(theta)
+        outerCircleY = self.outerRadius*np.sin(theta)
+        innerCircleX = self.innerRadius*np.cos(theta)
+        innerCircleY = self.innerRadius*np.sin(theta)
+        plt.plot(outerCircleX,outerCircleY)
+        plt.plot(innerCircleX,innerCircleY)
+
         for i in range(len(np.linspace(0,3,3001))):
             if i%25 == 0:
                 #plt.arrow(xyc[i,0], xyc[i,1], norm2[i,0], norm2[i,1])
@@ -264,8 +317,9 @@ class spring(object):
                 # plt.arrow(self.xyc[i,0], self.xyc[i,1], self.ck[i,0], self.ck[i,1])
         self.stressConcentration = np.argmin(abs(self.rn))
         plt.arrow(0,0,self.xyc[self.stressConcentration,0],self.xyc[self.stressConcentration,1])
-        plt.ylim([-1,3])
+        # plt.ylim([-1,3])
         plt.xlim([-3,3])
+        plt.gca().set_aspect('equal')
         plt.figure(2)
         plt.clf()
         # plt.plot(norm[:,0],norm[:,1])
@@ -282,6 +336,7 @@ class spring(object):
         # plt.plot(np.linspace(0,3,3001), self.thks)
         #  plt.plot([-1,2])
         plt.ylim([-1.5,1.5])
+        plt.plot(np.linspace(0,3,3001), self.s)
         plt.figure(3)
         plt.clf()
         # self.rc[i] = ((1+(dydx)**2)**(1.5)/((d2ydx2)))
@@ -290,6 +345,7 @@ class spring(object):
         plt.ylim([-15,50])
         print(np.min(abs(self.rn)))
         print(self.stressConcentration)
+        print(self.s[-1])
 
 def main():
     def drag_end_points(dragVector):
@@ -320,12 +376,28 @@ def main():
         #     if (abs(startingParameters.rn[i]) < min(abs(startingParameters.rn))+.00001):
         #         numberMins+=1
         # localMinDiff = startingParameters.rn[1000] - np.min(abs(startingParameters.rn))
-        costArray = np.array([7/lin.norm(abs(rn[0:999]), ord=-np.inf), 10/lin.norm(abs(rn[1000:2000]), ord=-np.inf), 5/lin.norm(abs(rn[2001:3000]), ord=-np.inf)])
+        gainArray = np.array([1.5,1.5,1,2])
+        gainArray = gainArray/lin.norm(gainArray,2)
+        costArray = np.array([gainArray[0]*1/lin.norm(abs(rn[0:999]), ord=-np.inf),gainArray[1]*1/lin.norm(abs(rn[1000:2000]), ord=-np.inf),gainArray[2]*1/lin.norm(abs(rn[2001:3000]), ord=-np.inf),gainArray[3]*1/startingParameters.s[-1]])
+        
+        #
         # print(numberMins)
+        print(lin.norm(costArray, ord=2))
         return lin.norm(costArray, ord=2)
 
+        #            {'rotorThickness': 0.88,             \
+        #             'ctrlThickness':  0.27,             \
+        #             'minThickness':   0.23,             \
+        #             'p3radius':       2.13,             \
+        #             'p6radius':       2,                \
+        #             'p3angle':        deg2rad*45,       \
+        #             'p6angle':        deg2rad*110,      \
+        #             'p9angle':        (180)*deg2rad,    \
+        #             'tangentPropStart':    1,           \
+        #             'tangentPropEnd':      1 }
+
     material = MaraginSteelC300()
-    startingParameters = spring(material, rotorThickness=.85, p9angle=(180-25)*deg2rad, tangentPropStart=1.5, tangentPropEnd=1.5, p6radius=1.8)
+    startingParameters = spring(material, rotorThickness=.85, p9angle=(180-25)*deg2rad, tangentPropStart=1.5, tangentPropEnd=1.5, p6radius=1.8, ctrlThickness=.3, minThickness=.3)
 
     startingParameters.generate_ctrl_points()
     startingParameters.generate_centroidal_profile()
@@ -334,19 +406,21 @@ def main():
 
     pts = startingParameters.pts
     print(startingParameters.pts)
+    print(startingParameters.s[-1])
     oldPts = pts
+    # time.sleep(5)
 
     # Bnds = ((np.sqrt(pts[1,0]**2+pts[1,1]**2),None), (None,None), (None,None), (None,None), (None,None), (None,np.sqrt(pts[8,0]**2+pts[8,1]**2)))
     startingP3angle = startingParameters.p3angle
     startingP6angle = startingParameters.p6angle
     Bnds = ((1,2),(1,2), \
-            (startingParameters.innerRadius,startingParameters.outerRadius),(startingParameters.innerRadius,startingParameters.outerRadius), \
+            (startingParameters.innerRadius,startingParameters.outerRadius-0.5),(startingParameters.innerRadius,startingParameters.outerRadius-0.5), \
             (startingP3angle-deg2rad*10,startingP3angle+deg2rad*10),(startingP6angle-deg2rad*10,startingP6angle+deg2rad*10))
     dragVector = np.array([startingParameters.tangentPropStart,startingParameters.tangentPropEnd, \
                            startingParameters.p3radius,startingParameters.p6radius, \
                            startingParameters.p3angle,startingParameters.p6angle])
     print("minimizing")
-    res = op.minimize(drag_end_points, dragVector, method='Nelder-Mead', bounds=Bnds, options={'maxiter': 2000, 'adaptive': False})
+    res = op.minimize(drag_end_points, dragVector, method='Nelder-Mead', bounds=Bnds, options={'maxiter': 2000, 'adaptive': True, 'fatol': 0.01})
     print("done minimizing")
     print(res)
     
