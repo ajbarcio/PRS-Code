@@ -1,6 +1,7 @@
 import numpy as np
 import scipy as sp
 from scipy import optimize as op
+from scipy import interpolate as spint
 import numpy.linalg as lin
 import scipy.linalg as slin
 import matplotlib.pyplot as plt
@@ -37,21 +38,27 @@ from openpyxl import *
 # result = sp.optimize.minimize(fun, X0, constraints=cons)
 
 
-def first_function(e):
-    e = 1/e
-    e2 = second_function(e)
-    return e2
-def second_function(e):
-    e = np.sqrt(e**2+e**-2)
-    return e
+# def first_function(e):
+#     e = 1/e
+#     e2 = second_function(e)
+#     return e2
+# def second_function(e):
+#     e = np.sqrt(e**2+e**-2)
+#     return e
 
-def minimize(e):
-    result = op.minimize(first_function, e)
-    print(result)
+# def minimize(e):
+#     result = op.minimize(first_function, e)
+#     print(result)
 
-e = 0.2
-minimize(e)
+# e = 0.2
+# minimize(e)
 
 #result = lin.solve(A.dot(A.T),B.T.dot(A))
 #print(result)
 
+
+list = np.array([0, 1, 2, 3, 4, 3, 5])
+index = 3/2
+print(list[int(3/2)])
+
+sp.interpolate
