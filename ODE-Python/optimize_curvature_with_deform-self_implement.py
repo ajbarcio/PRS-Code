@@ -110,7 +110,7 @@ class spring(object):
                     farIndex = baseIndex+1
                 else:
                     farIndex = baseIndex
-                returnValue[i]=(self.tan[baseIndex]-self.tan[farIndex])*dist+self.tan[baseIndex]
+                returnValue[i]=(self.tann[baseIndex]-self.tann[farIndex])*dist+self.tann[baseIndex]
             return returnValue
         
         def get_dxdu(u):
@@ -440,6 +440,7 @@ class spring(object):
         self.rn  = np.empty(len(u))
         self.s   = np.empty(len(u))
         self.dxyndu   = np.empty([len(u), 2])
+        self.tann     = np.empty(len(u))
         for i in range(len(u)):
             if np.isinf(self.rc[i]):
                 self.rn[i] = self.rc[i]
@@ -468,6 +469,7 @@ class spring(object):
                 # print(integrand)
                 self.s[i] = np.sum(integrand)
             self.norm[i] = self.norm[i]*diff
+            self.tann[i] = np.arctan2(self.dxyndu[i,1],self.dxyndu[i,0])
         # if self.curveError == True:
         #     print(self.tangentPropEnd)
         #     print(self.tangentPropStart)
