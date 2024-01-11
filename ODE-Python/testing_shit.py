@@ -58,7 +58,22 @@ from openpyxl import *
 
 
 list = np.array([0, 1, 2, 3, 4, 3, 5])
+print(list**2)
 index = 3/2
 print(list[int(3/2)])
+print(range(len(list)-1))
 
-sp.interpolate
+EPS = np.finfo(float).eps
+print(EPS*100000)
+
+funnyNumber = np.sqrt(EPS*1000)
+i = 0
+result = 0
+while result == 0:
+    result = np.sqrt(funnyNumber**2+funnyNumber**2)
+    result2 = np.sqrt(funnyNumber**2)
+    i+=1
+    funnyNumber = np.sqrt(EPS*(1000+1000*i))
+
+print(result, result2, funnyNumber)
+
