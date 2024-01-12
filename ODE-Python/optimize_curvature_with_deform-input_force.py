@@ -16,9 +16,9 @@ from openpyxl import *
 deg2rad = np.pi/180
 
 EPS = np.finfo(float).eps
-funnyNumber = 0.00001
+funnyNumber = 1
 
-globalRes = 100
+globalRes = 10
 globalLen = 3*globalRes+1
 globalMaxIndex = 3*globalRes
 globalBCresLimit = 0.01
@@ -84,7 +84,20 @@ class spring(object):
         self.tangentPropStart = self.Vparams["tangentPropStart"]
         self.tangentPropEnd   = self.Vparams["tangentPropEnd"]
 
-    def deform_angle(self, angle):
+    def print_parameters(self):
+
+        print(self.rotorThickness  )
+        print(self.ctrlThickness   )
+        print(self.minThickness    )
+        print(self.p3radius        )
+        print(self.p6radius        )
+        print(self.p3angle         )
+        print(self.p6angle         )
+        print(self.p9angle         )
+        print(self.tangentPropStart)
+        print(self.tangentPropEnd  )
+
+    def deform_force(self, force):
         
         # ODE System
         # Parametrized version (no arc length)
@@ -92,15 +105,16 @@ class spring(object):
         # g'' = f(u)g' + h(u, g)
 
         def defomration_function(u, gamma, p):
-            Fx = p[0]
-            Fy = p[1]
+            Fx = self.Fx
+            Fy = self.Fy
+            BetaMax = p[0]
 
             leng = len(u)
 
             self.generate_ctrl_points()
-            self.generate_centroidal_profile(leng)
-            self.generate_thickness_profile(leng)
-            self.generate_neutral_profile(leng)
+            self.generate_centroidal_profile(leng, mesh=u)
+            self.generate_thickness_profile(leng, mesh=u)
+            self.generate_neutral_profile(leng, mesh=u)
 
             largeCouple = np.transpose(self.outPlaneThickness*self.thks*self.material.E*(self.rc-self.rn)*self.rn)
             dlCdu       = np.transpose(get_derivative(largeCouple, np.linspace(0,3,leng)))
@@ -119,13 +133,21 @@ class spring(object):
             # u2 = u
             # u2 = u2.astype(int)
             #  print(np.sqrt(np.square(dxdu)+np.square(dydu)))
-            print(dxdu[-2], dydu[-2])
-            if np.sqrt(np.square(dxdu)+np.square(dydu)).any == 0:
+            # print(dxdu[-2], dydu[-2])
+
+            if 0 in (np.sqrt(np.square(dxdu)+np.square(dydu))):
                 sqrt_replace = np.sqrt(np.square(dxdu)+np.square(dydu))
-                for index in np.where(sqrt_replace == 0[0]):
-                    sqrt_replace[index] = funnyNumber
+                sqrt_replace = np.where(sqrt_replace > 1, sqrt_replace, 1)
+                print("replace attempted -----------------------------------------------------------------------")
             else:
                 sqrt_replace = np.sqrt(np.square(dxdu)+np.square(dydu))
+
+            # print("denom size",sqrt_replace.size)
+            # print("num size",dlCdu.size)
+            # print("div size",(dlCdu/sqrt_replace).size)
+            # print(u)
+            # print(sqrt_replace)
+            # print("STOP")
 
             return np.vstack((gamma[1], \
                              (Fx*np.sin(self.tann+gamma[0])-Fy*np.cos(self.tann+gamma[0]))*np.sqrt(np.square(dxdu)+np.square(dydu))/largeCouple \
@@ -134,10 +156,9 @@ class spring(object):
                              np.sin(self.tann+gamma[0])))
 
         def BC_function(left, right, p):
-            Fx = p[0]
-            Fy = p[1]
+            BetaMax = p[0]
             Rn = self.rn[-1]
-            return np.array([left[0], right[0]-BetaMax, left[2], left[3], right[2]-Rn*np.cos(beta0+BetaMax), right[3]-Rn*np.sin(beta0+BetaMax)])
+            return np.array([left[0], right[0]-BetaMax, left[3], right[2]-Rn*np.cos(beta0+BetaMax), right[3]-Rn*np.sin(beta0+BetaMax)])
 
         def rk4_deform (u0, gamma0, du):
 
@@ -155,9 +176,9 @@ class spring(object):
 
             return u1
         
-        self.Fx = 1
-        self.Fy = 1
-        BetaMax = angle
+        self.Fx = force*np.sin(self.p9angle)
+        self.Fy = force*np.cos(self.p9angle)
+        BetaMax = 5*deg2rad
         beta0 = self.p9angle
         rn = self.rn
         Phi = BetaMax
@@ -168,8 +189,8 @@ class spring(object):
         
         gamma = np.ones((4, u.shape[0]))
         print("solving BVP")
-        Finitial = np.sqrt((1530/self.outerRadius*25.4)**2/2)
-        Pinitial = [Finitial,Finitial]
+        # Finitial = np.sqrt((1530/self.outerRadius*25.4)**2/2)
+        Pinitial = [BetaMax]
         flag = 1
         iterator = 0
         self.deformation = integrate.solve_bvp(defomration_function, BC_function, u, gamma, p=Pinitial, \
@@ -254,9 +275,11 @@ class spring(object):
         self.pts = np.array([p0,p1,result[0],p3,result[1],result[2],p6,result[3],p8,p9])
         return self.pts
     
-    def generate_centroidal_profile(self, leng):
+    def generate_centroidal_profile(self, leng, **kwargs):
             # print("profile")
-            u = np.linspace(0,3,leng)
+            u = kwargs.get('mesh', [None, None])
+            if np.any(u) == None:
+                u = np.linspace(0,3,leng)
             offset = 0
             # print(u)
             u2 = u - np.floor(u)
@@ -309,8 +332,11 @@ class spring(object):
             return self.xyc, self.norm, self.rc
         #print(cart)
     
-    def generate_thickness_profile(self, leng):
-        u = np.linspace(0,3,leng)
+    def generate_thickness_profile(self, leng, **kwargs):
+        
+        u = kwargs.get('mesh', [None, None])
+        if np.any(u) == None:
+            u = np.linspace(0,3,leng)
         self.ttop = np.empty([len(u), 2])
         self.tbottom = np.empty([len(u), 2])
         
@@ -348,38 +374,61 @@ class spring(object):
         #     print("nanerror")
         return self.thks
         
-    def generate_neutral_profile(self, leng):
+    def generate_neutral_profile(self, leng, **kwargs):
         # print("neutral")
         self.curveError = False
-        u = np.linspace(0,3,leng)
+        # write mesh
+        u = kwargs.get('mesh', [None, None])
+        if np.any(u) == None:
+            u = np.linspace(0,3,leng)
+        # allocate arrays for outputs: x,y coords for neutral axis, neutral radius afo time,
+        # chord length afo time, derivative of x,y of neutral axis afo time, tangent angle of neutral axis afo time
         self.xyn = np.empty([len(u), 2])
         self.rn  = np.empty(len(u))
         self.s   = np.empty(len(u))
         self.dxyndu   = np.empty([len(u), 2])
         self.tann     = np.empty(len(u))
+        # across mesh:
         for i in range(len(u)):
+            # if the centroidal axis is flat
             if np.isinf(self.rc[i]):
+                # then the neutral axis is also flat
                 self.rn[i] = self.rc[i]
+            # otherwise
             else:
+                # calculate neutral radius
                 self.rn[i] = np.sign(self.rc[i])*self.thks[i]/abs(np.log(abs(self.rc[i])+.5*self.thks[i])-np.log(abs(self.rc[i])-.5*self.thks[i]))
+                # funny stuff to make sure sign of stuff is right
                 if not np.sign(self.rc[i])==np.sign(self.rn[i]):
                     self.rn[i] = -1*self.rn[i]
+            # calculate the difference between neutral and centroidal axis
             diff = self.rc[i] - self.rn[i]
+            # get the nan error out
             if np.isnan(diff):
                 diff = 1
+            # record that a nan error occurred
             if np.isnan(self.rn[i]):
                 self.curveError = True
+            # calculate x/y coordinate of neutral axis
             self.xyn[i] = self.xyc[i]+self.norm[i]*diff
+
+            # calculate deriatives of neutral axis with time
+
             if i == 0:
                 self.dxyndu[i] = 1
+                # this is a temporary value that will be overwritten with an accurate one
             elif i == 1:
+                # calculate derivative at 0
                 self.dxyndu[i-1] = [(self.xyn[i,0]-self.xyn[i-1,0])/.001,(self.xyn[i,1]-self.xyn[i-1,1])/.001]
+
+                # error tracking: replace zeros with small numbers that aren't 0
                 if self.dxyndu[i-1,0] == 0:
                     print("zero")
                     self.dxyndu[i-1,0] = funnyNumber
                 if self.dxyndu[i-1,1] == 0:
                     print("zero")
                     self.dxyndu[i-1,1] = funnyNumber
+
             elif i == len(u)-1:
                 self.dxyndu[i] = [(self.xyn[i,0]-self.xyn[i-1,0])/.001,(self.xyn[i,1]-self.xyn[i-1,1])/.001]
                 if self.dxyndu[i,0] == 0:
@@ -522,7 +571,21 @@ def main():
         #             'tangentPropEnd':      1 }
 
     material = MaraginSteelC300()
-    startingParameters = spring(material, rotorThickness=.85, p9angle=(180-25)*deg2rad, tangentPropStart=1.5, tangentPropEnd=1.5, p6radius=1.8, ctrlThickness=.3, minThickness=.3)
+
+    initialRotorThickness   = .85
+    initialCtrlThickness    = .3
+    initialMinThickness     = .3
+    initialP3radius         = 2
+    initialP6radius         = 1.466089122536943
+    initialP3angle          = 0.6109352064805111
+    initialP6angle          = 1.745535503850574
+    initialP9angle          = 2.705260340591211
+    initialTangentPropStart = 1.1491492041951368
+    initialTangentPropEnd   = 1.2718246231042096
+
+    startingParameters = spring(material, rotorThickness=initialRotorThickness, ctrlThickness=initialCtrlThickness, minThickness=initialMinThickness, \
+                                p3radius=initialP3radius, p6radius=initialP6radius, p3angle=initialP3angle, p6angle=initialP6angle, \
+                                p9angle=initialP9angle, tangentPropStart=initialTangentPropStart, tangentPropEnd=initialTangentPropEnd)
 
     startingParameters.generate_ctrl_points()
     startingParameters.generate_centroidal_profile(globalLen)
@@ -544,10 +607,10 @@ def main():
     dragVector = np.array([startingParameters.tangentPropStart,startingParameters.tangentPropEnd, \
                            startingParameters.p3radius,startingParameters.p6radius, \
                            startingParameters.p3angle,startingParameters.p6angle])
-    print("minimizing")
-    res = op.minimize(drag_end_points, dragVector, method='Nelder-Mead', bounds=Bnds, options={'maxiter': 2000, 'adaptive': True, 'fatol': 0.01})
-    print("done minimizing")
-    print(res)
+    # print("minimizing")
+    # res = op.minimize(drag_end_points, dragVector, method='Nelder-Mead', bounds=Bnds, options={'maxiter': 2000, 'adaptive': True, 'fatol': 0.01})
+    # print("done minimizing")
+    # print(res)
     
     startingParameters.generate_ctrl_points()
     [xyc, rc, norm] = startingParameters.generate_centroidal_profile(globalLen)
@@ -555,10 +618,12 @@ def main():
     [norm, rn, curveError] = startingParameters.generate_neutral_profile(globalLen)
     print(startingParameters.pts)
     plt.close()
-    startingParameters.plotResults(oldPts)
-    plt.show()
+    # startingParameters.plotResults(oldPts)
+    # plt.show()
 
-    startingParameters.deform_angle(5*deg2rad)
+    startingParameters.print_parameters()
+
+    startingParameters.deform_force(10000)
 
 
 if __name__ == '__main__':

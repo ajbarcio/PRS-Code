@@ -57,23 +57,35 @@ from openpyxl import *
 #print(result)
 
 
-list = np.array([0, 1, 2, 3, 4, 3, 5])
-print(list**2)
-index = 3/2
-print(list[int(3/2)])
-print(range(len(list)-1))
+# list = np.array([0, 1, 2, 3, 4, 3, 5])
+# print(list**2)
+# index = 3/2
+# print(list[int(3/2)])
+# print(range(len(list)-1))
 
-EPS = np.finfo(float).eps
-print(EPS*100000)
+# EPS = np.finfo(float).eps
+# print(EPS*100000)
 
-funnyNumber = np.sqrt(EPS*1000)
-i = 0
-result = 0
-while result == 0:
-    result = np.sqrt(funnyNumber**2+funnyNumber**2)
-    result2 = np.sqrt(funnyNumber**2)
-    i+=1
-    funnyNumber = np.sqrt(EPS*(1000+1000*i))
+# funnyNumber = np.sqrt(EPS*1000)
+# i = 0
+# result = 0
+# while result == 0:
+#     result = np.sqrt(funnyNumber**2+funnyNumber**2)
+#     result2 = np.sqrt(funnyNumber**2)
+#     i+=1
+#     funnyNumber = np.sqrt(EPS*(1000+1000*i))
 
-print(result, result2, funnyNumber)
+# print(result, result2, funnyNumber)
 
+funny1 = np.array([0, 1, 2, 3])
+funny2 = np.array([0, 3, 2, 1])
+
+if 0 in funny1:
+    print("in")
+    funny3 = np.where(funny1 < 2, funny1 ,funny1*5)
+    print(funny3)
+# print(1/np.sqrt(np.square(funny1)+np.square(funny2)))
+    
+    a = np.arange(10)
+    print(a)
+    print(np.where(a < 5, a ,a+5))
