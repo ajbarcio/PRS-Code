@@ -15,10 +15,7 @@ from openpyxl import *
 
 deg2rad = np.pi/180
 
-EPS = np.finfo(float).eps
-funnyNumber = 1
-
-globalRes = 10
+globalRes = 100
 globalLen = 3*globalRes+1
 globalMaxIndex = 3*globalRes
 globalBCresLimit = 0.01
@@ -26,9 +23,9 @@ globalRelresLimit = .1
 
 def get_derivative(vec1, vec2):
     dv1dv2 = np.empty(len(vec1))
-    for i in range(len(dv1dv2)-1):
+    for i in range(len(dv1dv2)):
         if i == 0:
-            dv1dv2[i] = 1
+            dv1dv2[i] = 0
         elif i == 1:
             dv1dv2[i-1] = (vec1[i]-vec1[i-1])/(vec2[i]-vec2[i-1])
         elif i == len(vec1)-1:
@@ -84,86 +81,150 @@ class spring(object):
         self.tangentPropStart = self.Vparams["tangentPropStart"]
         self.tangentPropEnd   = self.Vparams["tangentPropEnd"]
 
-    def print_parameters(self):
-
-        print(self.rotorThickness  )
-        print(self.ctrlThickness   )
-        print(self.minThickness    )
-        print(self.p3radius        )
-        print(self.p6radius        )
-        print(self.p3angle         )
-        print(self.p6angle         )
-        print(self.p9angle         )
-        print(self.tangentPropStart)
-        print(self.tangentPropEnd  )
-
-    def deform_force(self, force):
+    def deform_angle(self, angle):
         
-        # ODE System
+        # One-Step ODE System
         # Parametrized version (no arc length)
         # g'  = g'
         # g'' = f(u)g' + h(u, g)
+        
+        largeCouple = np.transpose(self.outPlaneThickness*self.thks*self.material.E*(self.rc-self.rn)*self.rn)
+        dlCdu       = np.transpose(get_derivative(largeCouple, np.linspace(0,3,globalLen)))
+        dxdu        = np.transpose(self.dxyndu[:,0])
+        dydu        = np.transpose(self.dxyndu[:,1])
+        d2xdu2      = np.transpose(get_derivative(dxdu, np.linspace(0,3,globalLen)))
+        d2ydu2      = np.transpose(get_derivative(dydu, np.linspace(0,3,globalLen)))
+        Rn = self.rn[-1]
+        # fuckedtan = np.transpose(self.tan)
+
+        def get_tan(u):
+            uOriginal = np.linspace(0,3,globalLen)
+            uInt = np.linspace(0,len(u)-1,len(u))
+            uInt = uInt.astype(int)
+            returnValue = np.empty(len(u))
+            for i in uInt:
+                base = math.floor(u[i]*globalRes)/globalRes
+                dist = u[i]-base
+                baseIndex = int(base*globalRes)
+                if baseIndex < len(uOriginal)-1:
+                    farIndex = baseIndex+1
+                else:
+                    farIndex = baseIndex
+                returnValue[i]=(self.tan[baseIndex]-self.tan[farIndex])*dist+self.tan[baseIndex]
+            return returnValue
+        
+        def get_dxdu(u):
+            uOriginal = np.linspace(0,3,globalLen)
+            uInt = np.linspace(0,len(u)-1,len(u))
+            uInt = uInt.astype(int)
+            returnValue = np.empty(len(u))
+            for i in uInt:
+                base = math.floor(u[i]*globalRes)/globalRes
+                dist = u[i]-base
+                baseIndex = int(base*globalRes)
+                if baseIndex < len(uOriginal)-1:
+                    farIndex = baseIndex+1
+                else:
+                    farIndex = baseIndex
+                returnValue[i]=(dxdu[baseIndex]-dxdu[farIndex])*dist+dxdu[baseIndex]
+            return returnValue
+        
+        
+        def get_dydu(u):
+            uOriginal = np.linspace(0,3,globalLen)
+            uInt = np.linspace(0,len(u)-1,len(u))
+            uInt = uInt.astype(int)
+            returnValue = np.empty(len(u))
+            for i in uInt:
+                base = math.floor(u[i]*globalRes)/globalRes
+                dist = u[i]-base
+                baseIndex = int(base*globalRes)
+                if baseIndex < len(uOriginal)-1:
+                    farIndex = baseIndex+1
+                else:
+                    farIndex = baseIndex
+                returnValue[i]=(dydu[baseIndex]-dydu[farIndex])*dist+dydu[baseIndex]
+            return returnValue
+        
+        def get_d2xdu2(u):
+            uOriginal = np.linspace(0,3,globalLen)
+            uInt = np.linspace(0,len(u)-1,len(u))
+            uInt = uInt.astype(int)
+            returnValue = np.empty(len(u))
+            for i in uInt:
+                base = math.floor(u[i]*globalRes)/globalRes
+                dist = u[i]-base
+                baseIndex = int(base*globalRes)
+                if baseIndex < len(uOriginal)-1:
+                    farIndex = baseIndex+1
+                else:
+                    farIndex = baseIndex
+                returnValue[i]=(d2xdu2[baseIndex]-d2xdu2[farIndex])*dist+d2xdu2[baseIndex]
+            return returnValue
+        
+        def get_d2ydu2(u):
+            uOriginal = np.linspace(0,3,globalLen)
+            uInt = np.linspace(0,len(u)-1,len(u))
+            uInt = uInt.astype(int)
+            returnValue = np.empty(len(u))
+            for i in uInt:
+                base = math.floor(u[i]*globalRes)/globalRes
+                dist = u[i]-base
+                baseIndex = int(base*globalRes)
+                if baseIndex < len(uOriginal)-1:
+                    farIndex = baseIndex+1
+                else:
+                    farIndex = baseIndex
+                returnValue[i]=(d2ydu2[baseIndex]-d2ydu2[farIndex])*dist+d2ydu2[baseIndex]
+            return returnValue
+        
+        def get_largeCouple(u):
+            uOriginal = np.linspace(0,3,globalLen)
+            uInt = np.linspace(0,len(u)-1,len(u))
+            uInt = uInt.astype(int)
+            returnValue = np.empty(len(u))
+            for i in uInt:
+                base = math.floor(u[i]*globalRes)/globalRes
+                dist = u[i]-base
+                baseIndex = int(base*globalRes)
+                if baseIndex < len(uOriginal)-1:
+                    farIndex = baseIndex+1
+                else:
+                    farIndex = baseIndex
+                returnValue[i]=(largeCouple[baseIndex]-largeCouple[farIndex])*dist+largeCouple[baseIndex]
+            return returnValue
+        
+        def get_dlCdu(u):
+            uOriginal = np.linspace(0,3,globalLen)
+            uInt = np.linspace(0,len(u)-1,len(u))
+            uInt = uInt.astype(int)
+            returnValue = np.empty(len(u))
+            for i in uInt:
+                base = math.floor(u[i]*globalRes)/globalRes
+                dist = u[i]-base
+                baseIndex = int(base*globalRes)
+                if baseIndex < len(uOriginal)-1:
+                    farIndex = baseIndex+1
+                else:
+                    farIndex = baseIndex
+                returnValue[i]=(dlCdu[baseIndex]-dlCdu[farIndex])*dist+dlCdu[baseIndex]
+            return returnValue
 
         def defomration_function(u, gamma, p):
-            Fx = self.Fx
-            Fy = self.Fy
-            BetaMax = p[0]
-
-            leng = len(u)
-
-            self.generate_ctrl_points()
-            self.generate_centroidal_profile(leng, mesh=u)
-            self.generate_thickness_profile(leng, mesh=u)
-            self.generate_neutral_profile(leng, mesh=u)
-
-            largeCouple = np.transpose(self.outPlaneThickness*self.thks*self.material.E*(self.rc-self.rn)*self.rn)
-            dlCdu       = np.transpose(get_derivative(largeCouple, np.linspace(0,3,leng)))
-            dxdu        = np.transpose(self.dxyndu[:,0])
-            dydu        = np.transpose(self.dxyndu[:,1])
-            d2xdu2      = np.transpose(get_derivative(dxdu, np.linspace(0,3,leng)))
-            d2ydu2      = np.transpose(get_derivative(dydu, np.linspace(0,3,leng)))
-
-            # print(len(dlCdu), len(dxdu**2))
-
-            # if np.isnan(dxdu.any):
-            #     print("AAAAAA")
-            # if np.isnan(dxdu.any):
-            #     print("AAAAAA")    
-
+            Fx = p[0]
+            Fy = p[1]
             # u2 = u
             # u2 = u2.astype(int)
-            #  print(np.sqrt(np.square(dxdu)+np.square(dydu)))
-            # print(dxdu[-2], dydu[-2])
-
-            sqrt_replace = np.sqrt(np.square(dxdu)+np.square(dydu))
-
-            if 0 in sqrt_replace:
-                # print("replaced")
-                sqrt_replace = np.where(sqrt_replace != 0, sqrt_replace, .001)
-                # print(sqrt_replace)
-            if float('inf') in sqrt_replace:
-                # print(sqrt_replace)
-                sqrt_replace = np.where(sqrt_replace != float('inf'), sqrt_replace, 1.7976931348623158*10**308)
-
-
-            
-            # print("denom size",sqrt_replace.size)
-            # print("num size",dlCdu.size)
-            # print("div size",(dlCdu/sqrt_replace).size)
-            # print(u)
-           # print(sqrt_replace)
-            # print("STOP")
-
             return np.vstack((gamma[1], \
-                             (Fx*np.sin(self.tann+gamma[0])-Fy*np.cos(self.tann+gamma[0]))*np.sqrt(np.square(dxdu)+np.square(dydu))/largeCouple \
-                              +gamma[1]*((dxdu*d2xdu2+dydu*d2ydu2)-dlCdu/sqrt_replace), \
-                             np.cos(self.tann+gamma[0]), \
-                             np.sin(self.tann+gamma[0])))
+                             (Fx*np.sin(get_tan(u)+gamma[0])-Fy*np.cos(get_tan(u)+gamma[0]))*np.sqrt(get_dxdu(u)**2+get_dydu(u)**2)/get_largeCouple(u) \
+                              +gamma[1]*((get_dxdu(u)*get_d2xdu2(u)+get_dydu(u)*get_d2ydu2(u))-get_dlCdu(u)/np.sqrt(get_dxdu(u)**2+get_dydu(u)**2)), \
+                             np.cos(get_tan(u)+gamma[0]), \
+                             np.sin(get_tan(u)+gamma[0])))
 
         def BC_function(left, right, p):
-            BetaMax = p[0]
-            Rn = self.rn[-1]
-            return np.array([left[0], right[0]-BetaMax, left[2], right[2]-Rn*np.cos(beta0+BetaMax), right[3]-Rn*np.sin(beta0+BetaMax)])
+            Fx = p[0]
+            Fy = p[1]
+            return np.array([left[0], right[0]-BetaMax, left[2], left[3], right[2]-Rn*np.cos(beta0+BetaMax), right[3]-Rn*np.sin(beta0+BetaMax)])
 
         def rk4_deform (u0, gamma0, du):
 
@@ -181,9 +242,9 @@ class spring(object):
 
             return u1
         
-        self.Fx = force*np.sin(self.p9angle)
-        self.Fy = force*np.cos(self.p9angle)
-        BetaMax = 5*deg2rad
+        self.Fx = 1
+        self.Fy = 1
+        BetaMax = angle
         beta0 = self.p9angle
         rn = self.rn
         Phi = BetaMax
@@ -194,24 +255,21 @@ class spring(object):
         
         gamma = np.ones((4, u.shape[0]))
         print("solving BVP")
-        # Finitial = np.sqrt((1530/self.outerRadius*25.4)**2/2)
-        Pinitial = [BetaMax]
+        Finitial = np.sqrt((1530/self.outerRadius*25.4)**2/2)
+        Pinitial = [Finitial,Finitial]
         flag = 1
         iterator = 0
-        self.deformation = integrate.solve_bvp(defomration_function, BC_function, u, gamma, p=Pinitial, \
-                                               verbose=2, max_nodes=50000, tol=globalRelresLimit, bc_tol=globalBCresLimit)
-
-        # while flag==1:
-        #     if iterator ==0:
-        #         self.deformation = integrate.solve_bvp(defomration_function, BC_function, u, gamma, p=Pinitial, \
-        #                                             verbose=2, max_nodes=600, tol=globalRelresLimit, bc_tol=globalBCresLimit)
-        #     else:
-        #         self.deformation = integrate.solve_bvp(defomration_function, BC_function, u, gamma, p=Pinitial, \
-        #                                             verbose=2, max_nodes=100000, tol=globalRelresLimit, bc_tol=globalBCresLimit)
-        #     flag = self.deformation.status
-        #     gamma = self.deformation.sol(u0)
-        #     Pinitial = self.deformation.p
-        #     iterator+=1
+        while flag==1:
+            if iterator ==0:
+                self.deformation = integrate.solve_bvp(defomration_function, BC_function, u, gamma, p=Pinitial, \
+                                                    verbose=2, max_nodes=600, tol=globalRelresLimit, bc_tol=globalBCresLimit)
+            else:
+                self.deformation = integrate.solve_bvp(defomration_function, BC_function, u, gamma, p=Pinitial, \
+                                                    verbose=2, max_nodes=100000, tol=globalRelresLimit, bc_tol=globalBCresLimit)
+            flag = self.deformation.status
+            gamma = self.deformation.sol(u0)
+            Pinitial = self.deformation.p
+            iterator+=1
         print(flag)
 
 
@@ -226,8 +284,199 @@ class spring(object):
         #         gamma[i+1] = rk4_deform(u[i], gamma[i], .001)
         #     errorBC = gamma[-1,1]-boundConds[1]
   
-    def deform_torque(self, torqueIn):
-        pass
+    def deform_force(self, forceIn):
+
+        # One-Step ODE System
+        # Parametrized version (no arc length)
+        # g'  = g'
+        # g'' = f(u)g' + h(u, g)
+        
+        largeCouple = np.transpose(self.outPlaneThickness*self.thks*self.material.E*(self.rc-self.rn)*self.rn)
+        dlCdu       = np.transpose(get_derivative(largeCouple, np.linspace(0,3,globalLen)))
+        dxdu        = np.transpose(self.dxyndu[:,0])
+        dydu        = np.transpose(self.dxyndu[:,1])
+        d2xdu2      = np.transpose(get_derivative(dxdu, np.linspace(0,3,globalLen)))
+        d2ydu2      = np.transpose(get_derivative(dydu, np.linspace(0,3,globalLen)))
+        Rn = self.rn[-1]
+        # fuckedtan = np.transpose(self.tan)
+
+        def get_tan(u):
+            uOriginal = np.linspace(0,3,globalLen)
+            uInt = np.linspace(0,len(u)-1,len(u))
+            uInt = uInt.astype(int)
+            returnValue = np.empty(len(u))
+            for i in uInt:
+                base = math.floor(u[i]*globalRes)/globalRes
+                dist = u[i]-base
+                baseIndex = int(base*globalRes)
+                if baseIndex < len(uOriginal)-1:
+                    farIndex = baseIndex+1
+                else:
+                    farIndex = baseIndex
+                returnValue[i]=(self.tan[baseIndex]-self.tan[farIndex])*dist+self.tan[baseIndex]
+            return returnValue
+        
+        def get_dxdu(u):
+            uOriginal = np.linspace(0,3,globalLen)
+            uInt = np.linspace(0,len(u)-1,len(u))
+            uInt = uInt.astype(int)
+            returnValue = np.empty(len(u))
+            for i in uInt:
+                base = math.floor(u[i]*globalRes)/globalRes
+                dist = u[i]-base
+                baseIndex = int(base*globalRes)
+                if baseIndex < len(uOriginal)-1:
+                    farIndex = baseIndex+1
+                else:
+                    farIndex = baseIndex
+                returnValue[i]=(dxdu[baseIndex]-dxdu[farIndex])*dist+dxdu[baseIndex]
+            return returnValue
+        
+        
+        def get_dydu(u):
+            uOriginal = np.linspace(0,3,globalLen)
+            uInt = np.linspace(0,len(u)-1,len(u))
+            uInt = uInt.astype(int)
+            returnValue = np.empty(len(u))
+            for i in uInt:
+                base = math.floor(u[i]*globalRes)/globalRes
+                dist = u[i]-base
+                baseIndex = int(base*globalRes)
+                if baseIndex < len(uOriginal)-1:
+                    farIndex = baseIndex+1
+                else:
+                    farIndex = baseIndex
+                returnValue[i]=(dydu[baseIndex]-dydu[farIndex])*dist+dydu[baseIndex]
+            return returnValue
+        
+        def get_d2xdu2(u):
+            uOriginal = np.linspace(0,3,globalLen)
+            uInt = np.linspace(0,len(u)-1,len(u))
+            uInt = uInt.astype(int)
+            returnValue = np.empty(len(u))
+            for i in uInt:
+                base = math.floor(u[i]*globalRes)/globalRes
+                dist = u[i]-base
+                baseIndex = int(base*globalRes)
+                if baseIndex < len(uOriginal)-1:
+                    farIndex = baseIndex+1
+                else:
+                    farIndex = baseIndex
+                returnValue[i]=(d2xdu2[baseIndex]-d2xdu2[farIndex])*dist+d2xdu2[baseIndex]
+            return returnValue
+        
+        def get_d2ydu2(u):
+            uOriginal = np.linspace(0,3,globalLen)
+            uInt = np.linspace(0,len(u)-1,len(u))
+            uInt = uInt.astype(int)
+            returnValue = np.empty(len(u))
+            for i in uInt:
+                base = math.floor(u[i]*globalRes)/globalRes
+                dist = u[i]-base
+                baseIndex = int(base*globalRes)
+                if baseIndex < len(uOriginal)-1:
+                    farIndex = baseIndex+1
+                else:
+                    farIndex = baseIndex
+                returnValue[i]=(d2ydu2[baseIndex]-d2ydu2[farIndex])*dist+d2ydu2[baseIndex]
+            return returnValue
+        
+        def get_largeCouple(u):
+            uOriginal = np.linspace(0,3,globalLen)
+            uInt = np.linspace(0,len(u)-1,len(u))
+            uInt = uInt.astype(int)
+            returnValue = np.empty(len(u))
+            for i in uInt:
+                base = math.floor(u[i]*globalRes)/globalRes
+                dist = u[i]-base
+                baseIndex = int(base*globalRes)
+                if baseIndex < len(uOriginal)-1:
+                    farIndex = baseIndex+1
+                else:
+                    farIndex = baseIndex
+                returnValue[i]=(largeCouple[baseIndex]-largeCouple[farIndex])*dist+largeCouple[baseIndex]
+            return returnValue
+        
+        def get_dlCdu(u):
+            uOriginal = np.linspace(0,3,globalLen)
+            uInt = np.linspace(0,len(u)-1,len(u))
+            uInt = uInt.astype(int)
+            returnValue = np.empty(len(u))
+            for i in uInt:
+                base = math.floor(u[i]*globalRes)/globalRes
+                dist = u[i]-base
+                baseIndex = int(base*globalRes)
+                if baseIndex < len(uOriginal)-1:
+                    farIndex = baseIndex+1
+                else:
+                    farIndex = baseIndex
+                returnValue[i]=(dlCdu[baseIndex]-dlCdu[farIndex])*dist+dlCdu[baseIndex]
+            return returnValue
+
+        def defomration_function(u, forceIn, p):
+            Fx = forceIn*np.sin(self.p9angle)
+            Fy = forceIn*np.cos(self.p9angle)
+            BetaMax = p[0]
+            # u2 = u
+            # u2 = u2.astype(int)
+            return np.vstack((gamma[1], \
+                             (Fx*np.sin(get_tan(u)+gamma[0])-Fy*np.cos(get_tan(u)+gamma[0]))*np.sqrt(get_dxdu(u)**2+get_dydu(u)**2)/get_largeCouple(u) \
+                              +gamma[1]*((get_dxdu(u)*get_d2xdu2(u)+get_dydu(u)*get_d2ydu2(u))-get_dlCdu(u)/np.sqrt(get_dxdu(u)**2+get_dydu(u)**2)), \
+                             np.cos(get_tan(u)+gamma[0]), \
+                             np.sin(get_tan(u)+gamma[0])))
+
+        def BC_function(left, right, p):
+             
+            BetaMax = p[0]
+            return np.array([left[0], right[0]-BetaMax, left[2], left[3], right[2]-Rn*np.cos(beta0+BetaMax), right[3]-Rn*np.sin(beta0+BetaMax)])
+
+        def rk4_deform (u0, gamma0, du):
+
+            #
+            #  Get four sample values of the derivative.
+            #
+            f1 = defomration_function ( u0,            gamma0 )
+            f2 = defomration_function ( u0 + du / 2.0, gamma0 + du * f1 / 2.0 )
+            f3 = defomration_function ( u0 + du / 2.0, gamma0 + du * f2 / 2.0 )
+            f4 = defomration_function ( u0 + du,       gamma0 + du * f3 )
+            #
+            #  Combine them to estimate the solution U1 at time T1 = T0 + DT.
+            #
+            u1 = gamma0 + du * ( f1 + 2.0 * f2 + 2.0 * f3 + f4 ) / 6.0
+
+            return u1
+        
+        # self.Fx = 1
+        # self.Fy = 1
+        BetaMaxInitial = deg2rad*5
+        beta0 = self.p9angle
+        rn = self.rn
+        Phi = BetaMaxInitial
+        tol = 0.0001
+        u = np.linspace(0,3,globalLen)
+        u0 = u
+        u2 = np.linspace(0,globalMaxIndex,globalLen)
+        
+        gamma = np.ones((4, u.shape[0]))
+        print("solving BVP")
+        # Finitial = np.sqrt((1530/self.outerRadius*25.4)**2/2)
+        Pinitial = [BetaMaxInitial]
+        self.deformation = integrate.solve_bvp(defomration_function, BC_function, u, gamma, p=Pinitial, \
+                                               verbose=2, max_nodes=600, tol=globalRelresLimit, bc_tol=globalBCresLimit)
+        # flag = 1
+        # iterator = 0
+        # while flag==1:
+        #     if iterator ==0:
+        #         self.deformation = integrate.solve_bvp(defomration_function, BC_function, u, gamma, p=Pinitial, \
+        #                                             verbose=2, max_nodes=600, tol=globalRelresLimit, bc_tol=globalBCresLimit)
+        #     else:
+        #         self.deformation = integrate.solve_bvp(defomration_function, BC_function, u, gamma, p=Pinitial, \
+        #                                             verbose=2, max_nodes=100000, tol=globalRelresLimit, bc_tol=globalBCresLimit)
+        #     flag = self.deformation.status
+        #     gamma = self.deformation.sol(u0)
+        #     Pinitial = self.deformation.p
+        #     iterator+=1
+        # print(flag)
 
     def get_max_stress(self):
         pass
@@ -280,11 +529,9 @@ class spring(object):
         self.pts = np.array([p0,p1,result[0],p3,result[1],result[2],p6,result[3],p8,p9])
         return self.pts
     
-    def generate_centroidal_profile(self, leng, **kwargs):
+    def generate_centroidal_profile(self):
             # print("profile")
-            u = kwargs.get('mesh', [None, None])
-            if np.any(u) == None:
-                u = np.linspace(0,3,leng)
+            u = np.linspace(0,3,globalLen)
             offset = 0
             # print(u)
             u2 = u - np.floor(u)
@@ -337,11 +584,8 @@ class spring(object):
             return self.xyc, self.norm, self.rc
         #print(cart)
     
-    def generate_thickness_profile(self, leng, **kwargs):
-        
-        u = kwargs.get('mesh', [None, None])
-        if np.any(u) == None:
-            u = np.linspace(0,3,leng)
+    def generate_thickness_profile(self):
+        u = np.linspace(0,3,globalLen)
         self.ttop = np.empty([len(u), 2])
         self.tbottom = np.empty([len(u), 2])
         
@@ -362,7 +606,7 @@ class spring(object):
                          [self.minThickness],[self.ctrlThickness], \
                          [self.rotorThickness],[0],[0]])
         coeffs = lin.solve(REG,Targ)
-        u = np.linspace(0,3,leng)
+        u = np.linspace(0,3,globalLen)
         self.thks = coeffs[0]*u**6 + coeffs[1]*u**5 + coeffs[2]*u**4 + coeffs[3]*u**3 + coeffs[4]*u**2 + coeffs[5]*u + coeffs[6]
         # self.thks = u/u*self.ctrlThickness
         # coeffs = lin.inv(REG.T.dot(REG)).dot(REG.T).dot(Targ)
@@ -379,60 +623,35 @@ class spring(object):
         #     print("nanerror")
         return self.thks
         
-    def generate_neutral_profile(self, leng, **kwargs):
+    def generate_neutral_profile(self):
         # print("neutral")
         self.curveError = False
-        # write mesh
-        u = kwargs.get('mesh', [None, None])
-        if np.any(u) == None:
-            u = np.linspace(0,3,leng)
-        # allocate arrays for outputs: x,y coords for neutral axis, neutral radius afo time,
-        # chord length afo time, derivative of x,y of neutral axis afo time, tangent angle of neutral axis afo time
+        u = np.linspace(0,3,globalLen)
         self.xyn = np.empty([len(u), 2])
         self.rn  = np.empty(len(u))
         self.s   = np.empty(len(u))
         self.dxyndu   = np.empty([len(u), 2])
-        self.tann     = np.empty(len(u))
-        # across mesh:
         for i in range(len(u)):
-            # if the centroidal axis is flat
             if np.isinf(self.rc[i]):
-                # then the neutral axis is also flat
                 self.rn[i] = self.rc[i]
-            # otherwise
             else:
-                # calculate neutral radius
                 self.rn[i] = np.sign(self.rc[i])*self.thks[i]/abs(np.log(abs(self.rc[i])+.5*self.thks[i])-np.log(abs(self.rc[i])-.5*self.thks[i]))
-                # funny stuff to make sure sign of stuff is right
                 if not np.sign(self.rc[i])==np.sign(self.rn[i]):
                     self.rn[i] = -1*self.rn[i]
-            # calculate the difference between neutral and centroidal axis
             diff = self.rc[i] - self.rn[i]
-            # get the nan error out
             if np.isnan(diff):
                 diff = 1
-            # record that a nan error occurred
             if np.isnan(self.rn[i]):
                 self.curveError = True
-            # calculate x/y coordinate of neutral axis
             self.xyn[i] = self.xyc[i]+self.norm[i]*diff
-
-            # calculate deriatives of neutral axis with time
-
             if i == 0:
                 self.dxyndu[i] = 1
-                # this is a temporary value that will be overwritten with an accurate one
             elif i == 1:
-                # calculate derivative at 0
                 self.dxyndu[i-1] = [(self.xyn[i,0]-self.xyn[i-1,0])/.001,(self.xyn[i,1]-self.xyn[i-1,1])/.001]
-
-                
-            elif i == len(u)-1:
+            elif i == globalMaxIndex:
                 self.dxyndu[i] = [(self.xyn[i,0]-self.xyn[i-1,0])/.001,(self.xyn[i,1]-self.xyn[i-1,1])/.001]
-                
             else:
                 self.dxyndu[i-1] = [(self.xyn[i,0]-self.xyn[i-2,0])/.002,(self.xyn[i,1]-self.xyn[i-2,1])/.002]
-                
             if i == 0:
                 self.s[i] = 0
             else:
@@ -440,7 +659,6 @@ class spring(object):
                 # print(integrand)
                 self.s[i] = np.sum(integrand)
             self.norm[i] = self.norm[i]*diff
-            self.tann[i] = np.arctan2(self.dxyndu[i,1],self.dxyndu[i,0])
         # if self.curveError == True:
         #     print(self.tangentPropEnd)
         #     print(self.tangentPropStart)
@@ -520,15 +738,15 @@ def main():
         
         startingParameters.generate_ctrl_points()
 
-        [xyc, rc, norm] = startingParameters.generate_centroidal_profile(globalLen)
+        [xyc, rc, norm] = startingParameters.generate_centroidal_profile()
         # sfor i in range(len(np.linspace(0,3,3001))):
             # if np.sqrt(xyc[i,0]**2+xyc[i,1]**2) > startingParameters.outerRadius:
             #     print("too-big-error-tripped")
             #     dragVector = prevDragVector
             #     [xyc, rc, norm] = startingParameters.generate_centroidal_profile()
             #     break
-        thks = startingParameters.generate_thickness_profile(globalLen)
-        [norm, rn, curveError] = startingParameters.generate_neutral_profile(globalLen)
+        thks = startingParameters.generate_thickness_profile()
+        [norm, rn, curveError] = startingParameters.generate_neutral_profile()
         prevDragVector = dragVector
         # print(norm)
         # numberMins = np.array([i for i, x in enumerate(abs(startingParameters.rn)) if x == np.min(abs(startingParameters.rn))])
@@ -559,26 +777,12 @@ def main():
         #             'tangentPropEnd':      1 }
 
     material = MaraginSteelC300()
-
-    initialRotorThickness   = .85
-    initialCtrlThickness    = .3
-    initialMinThickness     = .3
-    initialP3radius         = 2
-    initialP6radius         = 1.466089122536943
-    initialP3angle          = 0.6109352064805111
-    initialP6angle          = 1.745535503850574
-    initialP9angle          = 2.705260340591211
-    initialTangentPropStart = 1.1491492041951368
-    initialTangentPropEnd   = 1.2718246231042096
-
-    startingParameters = spring(material, rotorThickness=initialRotorThickness, ctrlThickness=initialCtrlThickness, minThickness=initialMinThickness, \
-                                p3radius=initialP3radius, p6radius=initialP6radius, p3angle=initialP3angle, p6angle=initialP6angle, \
-                                p9angle=initialP9angle, tangentPropStart=initialTangentPropStart, tangentPropEnd=initialTangentPropEnd)
+    startingParameters = spring(material, rotorThickness=.85, p9angle=(180-25)*deg2rad, tangentPropStart=1.5, tangentPropEnd=1.5, p6radius=1.8, ctrlThickness=.3, minThickness=.3)
 
     startingParameters.generate_ctrl_points()
-    startingParameters.generate_centroidal_profile(globalLen)
-    startingParameters.generate_thickness_profile(globalLen)
-    [norm, rn, curveError] = startingParameters.generate_neutral_profile(globalLen)
+    startingParameters.generate_centroidal_profile()
+    startingParameters.generate_thickness_profile()
+    [norm, rn, curveError] = startingParameters.generate_neutral_profile()
 
     pts = startingParameters.pts
     print(startingParameters.pts)
@@ -595,23 +799,21 @@ def main():
     dragVector = np.array([startingParameters.tangentPropStart,startingParameters.tangentPropEnd, \
                            startingParameters.p3radius,startingParameters.p6radius, \
                            startingParameters.p3angle,startingParameters.p6angle])
-    # print("minimizing")
-    # res = op.minimize(drag_end_points, dragVector, method='Nelder-Mead', bounds=Bnds, options={'maxiter': 2000, 'adaptive': True, 'fatol': 0.01})
-    # print("done minimizing")
-    # print(res)
+    print("minimizing")
+    res = op.minimize(drag_end_points, dragVector, method='Nelder-Mead', bounds=Bnds, options={'maxiter': 2000, 'adaptive': True, 'fatol': 0.01})
+    print("done minimizing")
+    print(res)
     
     startingParameters.generate_ctrl_points()
-    [xyc, rc, norm] = startingParameters.generate_centroidal_profile(globalLen)
-    thks = startingParameters.generate_thickness_profile(globalLen)
-    [norm, rn, curveError] = startingParameters.generate_neutral_profile(globalLen)
+    [xyc, rc, norm] = startingParameters.generate_centroidal_profile()
+    thks = startingParameters.generate_thickness_profile()
+    [norm, rn, curveError] = startingParameters.generate_neutral_profile()
     print(startingParameters.pts)
-    plt.close()
+    # plt.close()
     # startingParameters.plotResults(oldPts)
     # plt.show()
 
-    startingParameters.print_parameters()
-
-    startingParameters.deform_force(10000)
+    startingParameters.deform_force(3500)
 
 
 if __name__ == '__main__':
