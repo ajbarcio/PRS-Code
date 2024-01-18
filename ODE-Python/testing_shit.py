@@ -82,10 +82,14 @@ funny2 = np.array([0, 3, 2, 1])
 
 if 0 in funny1:
     print("in")
-    funny3 = np.where(funny1 < 2, funny1 ,funny1*5)
+    funny3 = np.where(funny1 != 2, funny1 ,funny1*5)
     print(funny3)
 # print(1/np.sqrt(np.square(funny1)+np.square(funny2)))
     
     a = np.arange(10)
     print(a)
     print(np.where(a < 5, a ,a+5))
+
+funny4 = np.array([15*10**500, 0, 0])
+funny5 = np.square(funny4)
+print(funny5)

@@ -18,11 +18,11 @@ deg2rad = np.pi/180
 EPS = np.finfo(float).eps
 funnyNumber = 1
 
-globalRes = 10
+globalRes = 100
 globalLen = 3*globalRes+1
 globalMaxIndex = 3*globalRes
-globalBCresLimit = 0.01
-globalRelresLimit = .1
+globalBCresLimit = 1
+globalRelresLimit = 10**7
 
 def get_derivative(vec1, vec2):
     dv1dv2 = np.empty(len(vec1))
@@ -108,86 +108,38 @@ class spring(object):
             Fx = self.Fx
             Fy = self.Fy
             BetaMax = p[0]
-
+            u2 = u*3/(self.fixedArcLen)
             leng = len(u)
 
             self.generate_ctrl_points()
-            self.generate_centroidal_profile(leng, mesh=u)
-            self.generate_thickness_profile(leng, mesh=u)
-            self.generate_neutral_profile(leng, mesh=u)
+            self.generate_centroidal_profile(leng, mesh=u2)
+            self.generate_thickness_profile(leng, mesh=u2)
+            self.generate_neutral_profile(leng, mesh=u2)
 
             largeCouple = np.transpose(self.outPlaneThickness*self.thks*self.material.E*(self.rc-self.rn)*self.rn)
-            dlCdu       = np.transpose(get_derivative(largeCouple, np.linspace(0,3,leng)))
-            dxdu        = np.transpose(self.dxyndu[:,0])
-            dydu        = np.transpose(self.dxyndu[:,1])
-            d2xdu2      = np.transpose(get_derivative(dxdu, np.linspace(0,3,leng)))
-            d2ydu2      = np.transpose(get_derivative(dydu, np.linspace(0,3,leng)))
-
-            # print(len(dlCdu), len(dxdu**2))
-
-            # if np.isnan(dxdu.any):
-            #     print("AAAAAA")
-            # if np.isnan(dxdu.any):
-            #     print("AAAAAA")    
-
-            # u2 = u
-            # u2 = u2.astype(int)
-            #  print(np.sqrt(np.square(dxdu)+np.square(dydu)))
-            # print(dxdu[-2], dydu[-2])
-
-            if 0 in (np.sqrt(np.square(dxdu)+np.square(dydu))):
-                sqrt_replace = np.sqrt(np.square(dxdu)+np.square(dydu))
-                sqrt_replace = np.where(sqrt_replace > 1, sqrt_replace, 1)
-                print("replace attempted -----------------------------------------------------------------------")
-            else:
-                sqrt_replace = np.sqrt(np.square(dxdu)+np.square(dydu))
-
-            # print("denom size",sqrt_replace.size)
-            # print("num size",dlCdu.size)
-            # print("div size",(dlCdu/sqrt_replace).size)
-            # print(u)
-            # print(sqrt_replace)
-            # print("STOP")
+            dlCds       = np.transpose(get_derivative(largeCouple, u))
 
             return np.vstack((gamma[1], \
-                             (Fx*np.sin(self.tann+gamma[0])-Fy*np.cos(self.tann+gamma[0]))*np.sqrt(np.square(dxdu)+np.square(dydu))/largeCouple \
-                              +gamma[1]*((dxdu*d2xdu2+dydu*d2ydu2)-dlCdu/sqrt_replace), \
+                             (Fx*np.sin(self.tann+gamma[0])-Fy*np.cos(self.tann+gamma[0])-dlCds*gamma[1])/largeCouple, \
                              np.cos(self.tann+gamma[0]), \
                              np.sin(self.tann+gamma[0])))
 
         def BC_function(left, right, p):
             BetaMax = p[0]
-            Rn = self.rn[-1]
-            return np.array([left[0], right[0]-BetaMax, left[3], right[2]-Rn*np.cos(beta0+BetaMax), right[3]-Rn*np.sin(beta0+BetaMax)])
-
-        def rk4_deform (u0, gamma0, du):
-
-            #
-            #  Get four sample values of the derivative.
-            #
-            f1 = defomration_function ( u0,            gamma0 )
-            f2 = defomration_function ( u0 + du / 2.0, gamma0 + du * f1 / 2.0 )
-            f3 = defomration_function ( u0 + du / 2.0, gamma0 + du * f2 / 2.0 )
-            f4 = defomration_function ( u0 + du,       gamma0 + du * f3 )
-            #
-            #  Combine them to estimate the solution U1 at time T1 = T0 + DT.
-            #
-            u1 = gamma0 + du * ( f1 + 2.0 * f2 + 2.0 * f3 + f4 ) / 6.0
-
-            return u1
-        
+            Rn = np.sqrt(self.xyn[-1,0]**2+self.xyn[-1,1]**2)
+            return np.array([left[0], right[0]-BetaMax, left[3], right[2]-Rn*np.cos(self.p9angle+BetaMax), right[3]-Rn*np.sin(self.p9angle+BetaMax)])
+      
         self.Fx = force*np.sin(self.p9angle)
         self.Fy = force*np.cos(self.p9angle)
-        BetaMax = 5*deg2rad
+        BetaMax = 3*deg2rad
         beta0 = self.p9angle
         rn = self.rn
         Phi = BetaMax
         tol = 0.0001
-        u = np.linspace(0,3,globalLen)
-        u0 = u
-        u2 = np.linspace(0,globalMaxIndex,globalLen)
+        self.fixedArcLen = self.s[-1]
+        u = np.linspace(0,3,globalLen)*self.fixedArcLen/3
         
-        gamma = np.ones((4, u.shape[0]))
+        gamma = np.zeros((4, u.shape[0]))
         print("solving BVP")
         # Finitial = np.sqrt((1530/self.outerRadius*25.4)**2/2)
         Pinitial = [BetaMax]
@@ -208,6 +160,7 @@ class spring(object):
         #     Pinitial = self.deformation.p
         #     iterator+=1
         print(flag)
+        return self.deformation
 
 
         # error = 1
@@ -411,39 +364,18 @@ class spring(object):
                 self.curveError = True
             # calculate x/y coordinate of neutral axis
             self.xyn[i] = self.xyc[i]+self.norm[i]*diff
-
             # calculate deriatives of neutral axis with time
-
             if i == 0:
                 self.dxyndu[i] = 1
                 # this is a temporary value that will be overwritten with an accurate one
             elif i == 1:
                 # calculate derivative at 0
                 self.dxyndu[i-1] = [(self.xyn[i,0]-self.xyn[i-1,0])/.001,(self.xyn[i,1]-self.xyn[i-1,1])/.001]
-                # error tracking: replace zeros with small numbers that aren't 0
-                if self.dxyndu[i-1,0] == 0:
-                    print("zero")
-                    self.dxyndu[i-1,0] = funnyNumber
-                if self.dxyndu[i-1,1] == 0:
-                    print("zero")
-                    self.dxyndu[i-1,1] = funnyNumber
-
             elif i == len(u)-1:
                 self.dxyndu[i] = [(self.xyn[i,0]-self.xyn[i-1,0])/.001,(self.xyn[i,1]-self.xyn[i-1,1])/.001]
-                if self.dxyndu[i,0] == 0:
-                    print("zero")
-                    self.dxyndu[i,0] = funnyNumber
-                if self.dxyndu[i,1] == 0:
-                    print("zero")
-                    self.dxyndu[i,1] = funnyNumber
             else:
                 self.dxyndu[i-1] = [(self.xyn[i,0]-self.xyn[i-2,0])/.002,(self.xyn[i,1]-self.xyn[i-2,1])/.002]
-                if self.dxyndu[i-1,0] == 0:
-                    print("zero")
-                    self.dxyndu[i-1,0] = funnyNumber
-                if self.dxyndu[i-1,1] == 0:
-                    print("zero")
-                    self.dxyndu[i-1,1] = funnyNumber
+                
             if i == 0:
                 self.s[i] = 0
             else:
@@ -510,6 +442,8 @@ class spring(object):
         #  plt.plot([-1,2])
         plt.ylim([-1.5,1.5])
         plt.plot(np.linspace(0,3,globalLen), self.s)
+        plt.plot(np.linspace(0,3,globalLen), np.linspace(0,3,globalLen)*self.s[-1]/3)
+        plt.plot(np.linspace(0,3,globalLen), np.linspace(0,3,globalLen))
         plt.figure(3)
         plt.clf()
         # self.rc[i] = ((1+(dydx)**2)**(1.5)/((d2ydx2)))
@@ -616,14 +550,26 @@ def main():
     thks = startingParameters.generate_thickness_profile(globalLen)
     [norm, rn, curveError] = startingParameters.generate_neutral_profile(globalLen)
     print(startingParameters.pts)
-    plt.close()
+    # plt.close()
     # startingParameters.plotResults(oldPts)
     # plt.show()
 
     startingParameters.print_parameters()
 
-    startingParameters.deform_force(10000)
+    permanentMesh = startingParameters.s
 
+    deformOutput = startingParameters.deform_force(8850)
+    finalMesh = deformOutput.x
+    plt.figure(1)
+    plt.clf()
+    print("angle:",startingParameters.deformation.p*1/deg2rad)
+    plt.plot(finalMesh, deformOutput.y[0,:]/deg2rad)
+    plt.plot(finalMesh, deformOutput.y[1,:]/deg2rad)
+    # plt.figure(2)
+    # plt.clf()
+    plt.plot(finalMesh, deformOutput.sol(finalMesh)[0,:])
+    plt.plot(finalMesh, deformOutput.sol(finalMesh)[1,:])
+    plt.show()
 
 if __name__ == '__main__':
     main()

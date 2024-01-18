@@ -606,8 +606,8 @@ def main():
     [norm, rn, curveError] = startingParameters.generate_neutral_profile(globalLen)
     print(startingParameters.pts)
     plt.close()
-    # startingParameters.plotResults(oldPts)
-    # plt.show()
+    startingParameters.plotResults(oldPts)
+    plt.show()
 
     startingParameters.print_parameters()
 
