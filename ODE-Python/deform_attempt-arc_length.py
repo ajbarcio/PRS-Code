@@ -18,11 +18,11 @@ deg2rad = np.pi/180
 EPS = np.finfo(float).eps
 funnyNumber = 1
 
-globalRes = 10
+globalRes = 100
 globalLen = 3*globalRes+1
 globalMaxIndex = 3*globalRes
-globalBCresLimit = 0.01
-globalRelresLimit = .1
+globalBCresLimit = 0.1
+globalRelresLimit = 10
 
 def get_derivative(vec1, vec2):
     dv1dv2 = np.empty(len(vec1))
@@ -123,47 +123,19 @@ class spring(object):
             d2xdu2      = np.transpose(get_derivative(dxdu, np.linspace(0,3,leng)))
             d2ydu2      = np.transpose(get_derivative(dydu, np.linspace(0,3,leng)))
 
-            # print(len(dlCdu), len(dxdu**2))
-
-            # if np.isnan(dxdu.any):
-            #     print("AAAAAA")
-            # if np.isnan(dxdu.any):
-            #     print("AAAAAA")    
-
-            # u2 = u
-            # u2 = u2.astype(int)
-            #  print(np.sqrt(np.square(dxdu)+np.square(dydu)))
-            # print(dxdu[-2], dydu[-2])
-
-            sqrt_replace = np.sqrt(np.square(dxdu)+np.square(dydu))
-
-            if 0 in sqrt_replace:
-                # print("replaced")
-                sqrt_replace = np.where(sqrt_replace != 0, sqrt_replace, .001)
-                # print(sqrt_replace)
-            if float('inf') in sqrt_replace:
-                # print(sqrt_replace)
-                sqrt_replace = np.where(sqrt_replace != float('inf'), sqrt_replace, 1.7976931348623158*10**308)
-
-
-            
-            # print("denom size",sqrt_replace.size)
-            # print("num size",dlCdu.size)
-            # print("div size",(dlCdu/sqrt_replace).size)
-            # print(u)
-           # print(sqrt_replace)
-            # print("STOP")
+            dlCds       = np.transpose(get_derivative(largeCouple, self.s))
 
             return np.vstack((gamma[1], \
-                             (Fx*np.sin(self.tann+gamma[0])-Fy*np.cos(self.tann+gamma[0]))*np.sqrt(np.square(dxdu)+np.square(dydu))/largeCouple \
-                              +gamma[1]*((dxdu*d2xdu2+dydu*d2ydu2)-dlCdu/sqrt_replace), \
-                             np.cos(self.tann+gamma[0]), \
-                             np.sin(self.tann+gamma[0])))
+                            ((Fx*np.sin(self.tann+gamma[0])-Fy*np.cos(self.tann+gamma[0]))-dlCds*gamma[1])/largeCouple, \
+                              self.tann+gamma[0]))
 
         def BC_function(left, right, p):
             BetaMax = p[0]
             Rn = self.rn[-1]
-            return np.array([left[0], right[0]-BetaMax, left[2], right[2]-Rn*np.cos(beta0+BetaMax), right[3]-Rn*np.sin(beta0+BetaMax)])
+
+            # self.s[-1]*np.cos(self.p9angle+BetaMax)
+
+            return np.array([left[0], right[0]-BetaMax, left[2], right[2]-(self.p9angle+BetaMax)])
 
         def rk4_deform (u0, gamma0, du):
 
@@ -183,7 +155,7 @@ class spring(object):
         
         self.Fx = force*np.sin(self.p9angle)
         self.Fy = force*np.cos(self.p9angle)
-        BetaMax = 5*deg2rad
+        BetaMax = 0*deg2rad
         beta0 = self.p9angle
         rn = self.rn
         Phi = BetaMax
@@ -192,14 +164,14 @@ class spring(object):
         u0 = u
         u2 = np.linspace(0,globalMaxIndex,globalLen)
         
-        gamma = np.ones((4, u.shape[0]))
+        gamma = np.ones((3, u.shape[0]))
         print("solving BVP")
         # Finitial = np.sqrt((1530/self.outerRadius*25.4)**2/2)
         Pinitial = [BetaMax]
         flag = 1
         iterator = 0
         self.deformation = integrate.solve_bvp(defomration_function, BC_function, u, gamma, p=Pinitial, \
-                                               verbose=2, max_nodes=50000, tol=globalRelresLimit, bc_tol=globalBCresLimit)
+                                               verbose=2, max_nodes=25000, tol=globalRelresLimit, bc_tol=globalBCresLimit)
 
         # while flag==1:
         #     if iterator ==0:
@@ -611,7 +583,7 @@ def main():
 
     startingParameters.print_parameters()
 
-    startingParameters.deform_force(10000)
+    startingParameters.deform_force(4500)
 
 
 if __name__ == '__main__':
