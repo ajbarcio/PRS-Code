@@ -98,63 +98,19 @@ class spring(object):
         print(self.tangentPropStart)
         print(self.tangentPropEnd  )
 
-    def deform_force(self, force):
-        
-        # ODE System
-        # Parametrized version (no arc length)
-        # g'  = g'
-        # g'' = f(u)g' + h(u, g)
+    def deform_force(self, force, test_init):
 
-        def defomration_function(u, gamma, p):
-            Fx = self.Fx
-            Fy = self.Fy
-            BetaMax = p[0]
-
-            leng = len(u)
-
-            self.generate_ctrl_points()
-            self.generate_centroidal_profile(leng, mesh=u)
-            self.generate_thickness_profile(leng, mesh=u)
-            self.generate_neutral_profile(leng, mesh=u)
-
-            largeCouple = np.empty(len(u))
-
-            for i in range(len(u)):
-                if np.isinf(self.rn[i]) and self.ecc[i]==0:
-                    largeCouple[i] = 0.0001
-                else:
-                    largeCouple[i] = self.outPlaneThickness*self.thks[i]*self.material.E*(self.ecc[i])*self.rn[i]
-
-            largeCouple = np.transpose(largeCouple)
-            
-            dlCdu       = np.transpose(get_derivative(largeCouple, np.linspace(0,3,leng)))
-            dxdu        = np.transpose(self.dxyndu[:,0])
-            dydu        = np.transpose(self.dxyndu[:,1])
-            d2xdu2      = np.transpose(get_derivative(dxdu, np.linspace(0,3,leng)))
-            d2ydu2      = np.transpose(get_derivative(dydu, np.linspace(0,3,leng)))
-
-            sqrt_replace = np.sqrt(np.square(dxdu)+np.square(dydu))
-
-            return np.vstack((gamma[1], \
-                             (Fx*np.sin(self.tann+gamma[0])-Fy*np.cos(self.tann+gamma[0]))*sqrt_replace/largeCouple \
-                              +gamma[1]*((dxdu*d2xdu2+dydu*d2ydu2)-dlCdu/sqrt_replace), \
-                             np.cos(self.tann+gamma[0]), \
-                             np.sin(self.tann+gamma[0])))
-
-        def BC_function(left, right, p):
-            BetaMax = p[0]
-            Rn = self.rn[-1]
-            return np.array([left[0], right[0]-BetaMax, left[2], right[2]-Rn*np.cos(beta0+BetaMax), right[3]-Rn*np.sin(beta0+BetaMax)])
+        u = np.linspace(0,3,globalLen)
 
         def rk4_deform (u0, gamma0, du):
 
             #
             #  Get four sample values of the derivative.
             #
-            f1 = defomration_function ( u0,            gamma0 )
-            f2 = defomration_function ( u0 + du / 2.0, gamma0 + du * f1 / 2.0 )
-            f3 = defomration_function ( u0 + du / 2.0, gamma0 + du * f2 / 2.0 )
-            f4 = defomration_function ( u0 + du,       gamma0 + du * f3 )
+            f1 = deformation_function ( u0,            gamma0 )
+            f2 = deformation_function ( u0 + du / 2.0, gamma0 + du * f1 / 2.0 )
+            f3 = deformation_function ( u0 + du / 2.0, gamma0 + du * f2 / 2.0 )
+            f4 = deformation_function ( u0 + du,       gamma0 + du * f3 )
             #
             #  Combine them to estimate the solution U1 at time T1 = T0 + DT.
             #
@@ -162,26 +118,48 @@ class spring(object):
 
             return u1
         
-        self.Fx = force*np.sin(self.p9angle)
-        self.Fy = force*np.cos(self.p9angle)
-        BetaMax = 5*deg2rad
-        beta0 = self.p9angle
-        rn = self.rn
-        Phi = BetaMax
-        tol = 0.0001
-        u = np.linspace(0,3,globalLen)
-        u0 = u
-        u2 = np.linspace(0,globalMaxIndex,globalLen)
-        
-        gamma = np.ones((4, u.shape[0]))
-        print("solving BVP")
-        # Finitial = np.sqrt((1530/self.outerRadius*25.4)**2/2)
-        Pinitial = [BetaMax]
-        iterator = 0
-        self.deformation = integrate.solve_bvp(defomration_function, BC_function, u, gamma, p=Pinitial, \
-                                               verbose=2, max_nodes=50000, tol=globalRelresLimit, bc_tol=globalBCresLimit)
+        largeCouple = np.empty(len(u))
 
-        return self.deformation
+        for i in range(len(u)):
+            if np.isinf(self.rn[i]) and self.ecc[i]==0:
+                largeCouple[i] = 0.0001
+            else:
+                largeCouple[i] = self.outPlaneThickness*self.thks[i]*self.material.E*(self.ecc[i])*self.rn[i]
+
+        # largeCouple = np.transpose(largeCouple)
+        
+        dlCdu       = np.transpose(get_derivative(largeCouple, np.linspace(0,3,globalLen)))
+        dxdu        = np.transpose(self.dxyndu[:,0])
+        dydu        = np.transpose(self.dxyndu[:,1])
+        d2xdu2      = np.transpose(get_derivative(dxdu, np.linspace(0,3,globalLen)))
+        d2ydu2      = np.transpose(get_derivative(dydu, np.linspace(0,3,globalLen)))
+
+        sqrt_replace = np.sqrt(np.square(dxdu)+np.square(dydu))
+        Fx = force*np.sin(self.p9angle)
+        Fy = force*np.cos(self.p9angle)
+
+        def deformation_function(u, gamma0):
+
+            return np.array([gamma0[1], (Fx*np.sin(self.tann[i]+gamma0[0])-Fy*np.cos(self.tann[i]+gamma0[0]))*sqrt_replace[i]/largeCouple[i] \
+                              +gamma0[1]*((dxdu[i]*d2xdu2[i]+dydu[i]*d2ydu2[i])-dlCdu[i]/sqrt_replace[i])])
+
+        u = np.linspace(0,3,globalLen)
+        u0 = 0
+        gamma0 = np.array([0, test_init])
+        self.gammaSol = np.empty((u.shape[0], 2))
+        du = 2/globalRes
+        for i in range(len(u)-1):
+            if i == 0:
+                self.gammaSol[i] = gamma0
+                self.gammaSol[i+1] = rk4_deform(u[i], gamma0, du)
+                gamma0 = self.gammaSol[i+1]
+            else:
+                self.gammaSol[i+1] = rk4_deform(u[i], gamma0, du)
+                gamma0 = self.gammaSol[i+1]
+            print(i,"success")
+
+        
+        return self.gammaSol[-1,1]
 
     def deform_torque(self, torqueIn):
         pass
@@ -529,18 +507,28 @@ def main():
     if np.array_equal(compareParameters.xyn,startingParameters.xyn):
         print("arc length equal")
 
-    # deformOutput2 = startingParameters.deform_force(5)
-    # finalMesh = deformOutput2.x
-    # plt.figure(1)
-    # plt.clf()
-    # print("angle:",startingParameters.deformation.p*1/deg2rad)
-    # plt.plot(finalMesh, deformOutput2.y[0,:]/deg2rad)
-    # # plt.plot(finalMesh, deformOutput2.y[1,:]/deg2rad)
-    # # plt.figure(2)
-    # # plt.clf()
-    # plt.plot(finalMesh, deformOutput2.sol(finalMesh)[0,:])
-    # # plt.plot(finalMesh, deformOutput2.sol(finalMesh)[1,:])
-    # plt.show()
+    BC1Fun = np.empty((100))
+    ang = 5*deg2rad
+
+    BC1Fun[0] = startingParameters.deform_force(100, 0)-ang
+    print(startingParameters.gammaSol)
+    print(startingParameters.dxyndu[25])
+    print(startingParameters.dxyndu[26])
+    print(startingParameters.dxyndu[27])
+    # step = 0.5*deg2rad
+    # err = 1
+    # i = 0
+    # val = step
+    # while err > 0.001 and i < BC1Fun.shape[0]:
+    #     prevVal = val
+    #     deriv = ((BC1Fun[i+1]-BC1Fun[i])/step)
+    #     val = val - BC1Fun[i]/deriv
+    #     print(prevVal+val)
+    #     BC1Fun[i+1] = startingParameters.deform_force(100, prevVal+val)-ang
+    #     err = prevVal-val
+    #     i += 1
+
+    # print(val)
 
 
 if __name__ == '__main__':

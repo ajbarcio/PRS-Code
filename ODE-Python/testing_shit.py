@@ -10,7 +10,8 @@ from matplotlib.ticker import MaxNLocator
 from materials import *
 from openpyxl import *
 
-a = float('inf')
-print(a-a)
-b = a*0
-print(b)
+u = np.linspace(0,3,3001)
+gammaSol = np.zeros((u.shape[0], 2))
+fuck = np.array([1, 1])
+gammaSol[-1] = fuck
+print(gammaSol)
