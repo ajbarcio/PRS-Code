@@ -117,7 +117,7 @@ class spring(object):
             self.generate_neutral_profile(leng, mesh=u2)
 
             largeCouple = np.transpose(self.outPlaneThickness*self.thks*self.material.E*(self.rc-self.rn)*self.rn)
-            dlCds       = np.transpose(get_derivative(largeCouple, u))
+            dlCds       = np.transpose(get_derivative(largeCouple, self.s))
 
             return np.vstack((gamma[1], \
                              (Fx*np.sin(self.tann+gamma[0])-Fy*np.cos(self.tann+gamma[0])-dlCds*gamma[1])/largeCouple))

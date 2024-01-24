@@ -49,9 +49,9 @@ class spring(object):
                         'minThickness':        0.5,             \
                         'p3radius':            .5+2.5/3,             \
                         'p6radius':            .5+5/3,                \
-                        'p3angle':             5*deg2rad,       \
-                        'p6angle':             10*deg2rad,      \
-                        'p9angle':             15*deg2rad,    \
+                        'p3angle':             0,       \
+                        'p6angle':             0,      \
+                        'p9angle':             0,    \
                         'tangentPropStart':    1,           \
                         'tangentPropEnd':      1 }
 
@@ -121,7 +121,7 @@ class spring(object):
 
             for i in range(len(u)):
                 if np.isinf(self.rn[i]) and self.ecc[i]==0:
-                    largeCouple[i] = 0.0001
+                    largeCouple[i] = self.outPlaneThickness*self.thks[i]*self.material.E
                 else:
                     largeCouple[i] = self.outPlaneThickness*self.thks[i]*self.material.E*(self.ecc[i])*self.rn[i]
 
@@ -137,14 +137,12 @@ class spring(object):
 
             return np.vstack((gamma[1], \
                              (Fx*np.sin(self.tann+gamma[0])-Fy*np.cos(self.tann+gamma[0]))*sqrt_replace/largeCouple \
-                              +gamma[1]*((dxdu*d2xdu2+dydu*d2ydu2)-dlCdu/sqrt_replace), \
-                             np.cos(self.tann+gamma[0]), \
-                             np.sin(self.tann+gamma[0])))
+                              +gamma[1]*((dxdu*d2xdu2+dydu*d2ydu2)-dlCdu/sqrt_replace)))
 
         def BC_function(left, right, p):
             BetaMax = p[0]
             Rn = self.rn[-1]
-            return np.array([left[0], right[0]-BetaMax, left[2], right[2]-Rn*np.cos(beta0+BetaMax), right[3]-Rn*np.sin(beta0+BetaMax)])
+            return np.array([left[0], left[1], right[0]-BetaMax])
 
         def rk4_deform (u0, gamma0, du):
 
@@ -173,7 +171,7 @@ class spring(object):
         u0 = u
         u2 = np.linspace(0,globalMaxIndex,globalLen)
         
-        gamma = np.ones((4, u.shape[0]))
+        gamma = np.ones((2, u.shape[0]))
         print("solving BVP")
         # Finitial = np.sqrt((1530/self.outerRadius*25.4)**2/2)
         Pinitial = [BetaMax]
@@ -460,53 +458,6 @@ class spring(object):
         print(self.s[-1])
 
 def main():
-    def drag_end_points(dragVector):
-        startingParameters.tangentPropStart = dragVector[0]
-        startingParameters.tangentPropEnd = dragVector[1]   
-        startingParameters.p3radius = dragVector[2]
-        startingParameters.p6radius = dragVector[3]
-        startingParameters.p3angle = dragVector[4]
-        startingParameters.p6angle = dragVector[5]     
-        
-        startingParameters.generate_ctrl_points()
-
-        [xyc, rc, norm] = startingParameters.generate_centroidal_profile(globalLen)
-        # sfor i in range(len(np.linspace(0,3,3001))):
-            # if np.sqrt(xyc[i,0]**2+xyc[i,1]**2) > startingParameters.outerRadius:
-            #     print("too-big-error-tripped")
-            #     dragVector = prevDragVector
-            #     [xyc, rc, norm] = startingParameters.generate_centroidal_profile()
-            #     break
-        thks = startingParameters.generate_thickness_profile(globalLen)
-        [norm, rn, curveError] = startingParameters.generate_neutral_profile(globalLen)
-        prevDragVector = dragVector
-        # print(norm)
-        # numberMins = np.array([i for i, x in enumerate(abs(startingParameters.rn)) if x == np.min(abs(startingParameters.rn))])
-        # print(numberMins)
-        # numberMins = 0
-        # for i in range(len(np.linspace(0,3,3001))):
-        #     if (abs(startingParameters.rn[i]) < min(abs(startingParameters.rn))+.00001):
-        #         numberMins+=1
-        # localMinDiff = startingParameters.rn[1000] - np.min(abs(startingParameters.rn))
-        gainArray = np.array([1.5,1.5,1,2])
-        gainArray = gainArray/lin.norm(gainArray,2)
-        costArray = np.array([gainArray[0]*1/lin.norm(abs(rn[0:globalRes-1]), ord=-np.inf),gainArray[1]*1/lin.norm(abs(rn[globalRes:2*globalRes]), ord=-np.inf),gainArray[2]*1/lin.norm(abs(rn[globalRes+1:3*globalRes]), ord=-np.inf),gainArray[3]*1/startingParameters.s[-1]])
-        
-        #
-        # print(numberMins)
-        print(lin.norm(costArray, ord=2))
-        return lin.norm(costArray, ord=2)
-
-        #            {'rotorThickness': 0.88,             \
-        #             'ctrlThickness':  0.27,             \
-        #             'minThickness':   0.23,             \
-        #             'p3radius':       2.13,             \
-        #             'p6radius':       2,                \
-        #             'p3angle':        deg2rad*45,       \
-        #             'p6angle':        deg2rad*110,      \
-        #             'p9angle':        (180)*deg2rad,    \
-        #             'tangentPropStart':    1,           \
-        #             'tangentPropEnd':      1 }
 
     material = MaraginSteelC300()
 
@@ -522,6 +473,9 @@ def main():
     compareParameters.generate_thickness_profile(globalLen)
     [norm, rn, curveError] = compareParameters.generate_neutral_profile(globalLen)
     
+    print(startingParameters.pts)
+    # startingParameters.plotResults(startingParameters.pts)
+
     if np.array_equal(compareParameters.xyn,startingParameters.xyn):
         print("neutral surface equal")
     if np.array_equal(compareParameters.xyn,startingParameters.xyn):
@@ -531,7 +485,7 @@ def main():
 
     deformOutput2 = startingParameters.deform_force(5)
     finalMesh = deformOutput2.x
-    plt.figure(1)
+    plt.figure(9)
     plt.clf()
     print("angle:",startingParameters.deformation.p*1/deg2rad)
     plt.plot(finalMesh, deformOutput2.y[0,:]/deg2rad)
