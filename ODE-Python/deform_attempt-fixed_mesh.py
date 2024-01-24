@@ -21,8 +21,8 @@ funnyNumber = 1
 globalRes = 100
 globalLen = 3*globalRes+1
 globalMaxIndex = 3*globalRes
-globalBCresLimit = 1
-globalRelresLimit = 10**7
+globalBCresLimit = .01
+globalRelresLimit = 10**4
 
 def get_derivative(vec1, vec2):
     dv1dv2 = np.empty(len(vec1))
@@ -120,14 +120,12 @@ class spring(object):
             dlCds       = np.transpose(get_derivative(largeCouple, u))
 
             return np.vstack((gamma[1], \
-                             (Fx*np.sin(self.tann+gamma[0])-Fy*np.cos(self.tann+gamma[0])-dlCds*gamma[1])/largeCouple, \
-                             np.cos(self.tann+gamma[0]), \
-                             np.sin(self.tann+gamma[0])))
+                             (Fx*np.sin(self.tann+gamma[0])-Fy*np.cos(self.tann+gamma[0])-dlCds*gamma[1])/largeCouple))
 
         def BC_function(left, right, p):
             BetaMax = p[0]
             Rn = np.sqrt(self.xyn[-1,0]**2+self.xyn[-1,1]**2)
-            return np.array([left[0], right[0]-BetaMax, left[3], right[2]-Rn*np.cos(self.p9angle+BetaMax), right[3]-Rn*np.sin(self.p9angle+BetaMax)])
+            return np.array([left[0], right[0]-BetaMax, left[1]])
       
         self.Fx = force*np.sin(self.p9angle)
         self.Fy = force*np.cos(self.p9angle)
@@ -139,7 +137,7 @@ class spring(object):
         self.fixedArcLen = self.s[-1]
         u = np.linspace(0,3,globalLen)*self.fixedArcLen/3
         
-        gamma = np.zeros((4, u.shape[0]))
+        gamma = np.zeros((2, u.shape[0]))
         print("solving BVP")
         # Finitial = np.sqrt((1530/self.outerRadius*25.4)**2/2)
         Pinitial = [BetaMax]
@@ -550,17 +548,17 @@ def main():
     thks = startingParameters.generate_thickness_profile(globalLen)
     [norm, rn, curveError] = startingParameters.generate_neutral_profile(globalLen)
     print(startingParameters.pts)
-    # plt.close()
-    # startingParameters.plotResults(oldPts)
-    # plt.show()
+    plt.close()
+    startingParameters.plotResults(oldPts)
+    plt.show()
 
     startingParameters.print_parameters()
 
     permanentMesh = startingParameters.s
 
-    deformOutput = startingParameters.deform_force(8850)
+    deformOutput = startingParameters.deform_force(-8850)
     finalMesh = deformOutput.x
-    plt.figure(1)
+    plt.figure(9)
     plt.clf()
     print("angle:",startingParameters.deformation.p*1/deg2rad)
     plt.plot(finalMesh, deformOutput.y[0,:]/deg2rad)

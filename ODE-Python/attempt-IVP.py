@@ -18,7 +18,7 @@ deg2rad = np.pi/180
 EPS = np.finfo(float).eps
 funnyNumber = 1
 
-globalRes = 200
+globalRes = 500
 globalLen = 3*globalRes+1
 globalMaxIndex = 3*globalRes
 globalBCresLimit = 2
@@ -26,7 +26,7 @@ globalRelresLimit = 10**6
 
 def get_derivative(vec1, vec2):
     dv1dv2 = np.empty(len(vec1))
-    for i in range(len(dv1dv2)-1):
+    for i in range(len(dv1dv2)):
         if i == 0:
             dv1dv2[i] = 1
         elif i == 1:
@@ -114,15 +114,15 @@ class spring(object):
             #
             #  Combine them to estimate the solution U1 at time T1 = T0 + DT.
             #
-            u1 = gamma0 + du * ( f1 + 2.0 * f2 + 2.0 * f3 + f4 ) / 6.0
+            gamma1 = gamma0 + du * ( f1 + 2.0 * f2 + 2.0 * f3 + f4 ) / 6.0
 
-            return u1
+            return gamma1
         
         largeCouple = np.empty(len(u))
 
         for i in range(len(u)):
             if np.isinf(self.rn[i]) and self.ecc[i]==0:
-                largeCouple[i] = 0.0001
+                largeCouple[i] = 0
             else:
                 largeCouple[i] = self.outPlaneThickness*self.thks[i]*self.material.E*(self.ecc[i])*self.rn[i]
 
@@ -139,15 +139,16 @@ class spring(object):
         Fy = force*np.cos(self.p9angle)
 
         def deformation_function(u, gamma0):
-
+            du = 1/globalRes
+            i = int(u/du)
             return np.array([gamma0[1], (Fx*np.sin(self.tann[i]+gamma0[0])-Fy*np.cos(self.tann[i]+gamma0[0]))*sqrt_replace[i]/largeCouple[i] \
                               +gamma0[1]*((dxdu[i]*d2xdu2[i]+dydu[i]*d2ydu2[i])-dlCdu[i]/sqrt_replace[i])])
 
-        u = np.linspace(0,3,globalLen)
+        u = np.linspace(0,3,int((globalLen-1)/2+1))
         u0 = 0
         gamma0 = np.array([0, test_init])
         self.gammaSol = np.empty((u.shape[0], 2))
-        du = 2/globalRes
+        du = 1/globalRes*2
         for i in range(len(u)-1):
             if i == 0:
                 self.gammaSol[i] = gamma0
@@ -156,10 +157,10 @@ class spring(object):
             else:
                 self.gammaSol[i+1] = rk4_deform(u[i], gamma0, du)
                 gamma0 = self.gammaSol[i+1]
-            print(i,"success")
+            print(i,"success", gamma0)
 
         
-        return self.gammaSol[-1,1]
+        return self.gammaSol[-1,1], d2xdu2, d2ydu2
 
     def deform_torque(self, torqueIn):
         pass
@@ -510,11 +511,19 @@ def main():
     BC1Fun = np.empty((100))
     ang = 5*deg2rad
 
-    BC1Fun[0] = startingParameters.deform_force(100, 0)-ang
+    [BC1Fun[0], d2xdu2, d2ydu2] = startingParameters.deform_force(100, 0)# -ang
     print(startingParameters.gammaSol)
     print(startingParameters.dxyndu[25])
     print(startingParameters.dxyndu[26])
     print(startingParameters.dxyndu[27])
+    
+    print(d2xdu2[25])
+    print(d2xdu2[26])
+    print(d2xdu2[27])
+
+    print(d2ydu2[25])
+    print(d2ydu2[26])
+    print(d2ydu2[27])
     # step = 0.5*deg2rad
     # err = 1
     # i = 0

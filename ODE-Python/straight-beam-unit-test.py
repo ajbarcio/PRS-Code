@@ -529,18 +529,18 @@ def main():
     if np.array_equal(compareParameters.xyn,startingParameters.xyn):
         print("arc length equal")
 
-    # deformOutput2 = startingParameters.deform_force(5)
-    # finalMesh = deformOutput2.x
-    # plt.figure(1)
+    deformOutput2 = startingParameters.deform_force(5)
+    finalMesh = deformOutput2.x
+    plt.figure(1)
+    plt.clf()
+    print("angle:",startingParameters.deformation.p*1/deg2rad)
+    plt.plot(finalMesh, deformOutput2.y[0,:]/deg2rad)
+    # plt.plot(finalMesh, deformOutput2.y[1,:]/deg2rad)
+    # plt.figure(2)
     # plt.clf()
-    # print("angle:",startingParameters.deformation.p*1/deg2rad)
-    # plt.plot(finalMesh, deformOutput2.y[0,:]/deg2rad)
-    # # plt.plot(finalMesh, deformOutput2.y[1,:]/deg2rad)
-    # # plt.figure(2)
-    # # plt.clf()
-    # plt.plot(finalMesh, deformOutput2.sol(finalMesh)[0,:])
-    # # plt.plot(finalMesh, deformOutput2.sol(finalMesh)[1,:])
-    # plt.show()
+    plt.plot(finalMesh, deformOutput2.sol(finalMesh)[0,:])
+    # plt.plot(finalMesh, deformOutput2.sol(finalMesh)[1,:])
+    plt.show()
 
 
 if __name__ == '__main__':
