@@ -155,7 +155,8 @@ class spring(object):
             # print("STOP")
 
             return np.vstack((gamma[1], \
-                             (Fx*np.sin(self.tann+gamma[0])-Fy*np.cos(self.tann+gamma[0]))*np.sqrt(np.square(dxdu)+np.square(dydu))/largeCouple \
+                             (Fx*np.sin(self.tann+gamma[0])-Fy*np.cos(self.tann+gamma[0])) \
+                              *np.sqrt(np.square(dxdu)+np.square(dydu))/largeCouple \
                               +gamma[1]*((dxdu*d2xdu2+dydu*d2ydu2)-dlCdu/sqrt_replace), \
                              np.cos(self.tann+gamma[0]), \
                              np.sin(self.tann+gamma[0])))

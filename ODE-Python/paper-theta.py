@@ -113,14 +113,18 @@ def xyc_deformed(s):
     xyc[0] =  integral_s(stupid_cos, s)
     xyc[1] =  integral_s(stupid_sin, s)
 
-def deform_ODE(s, gamma):
+def deform_ODE(theta, gamma):
     Fx = F*np.sin(alpha(thmax))
     Fy = F*np.cos(alpha(thmax))
-    theta = theta_of_s_approx(s, *coeffs)
-    dgSds = deriv_estimate(gen_stiffness, theta)/deriv_estimate(s_exact, theta)
+    dgSdtheta = deriv_estimate(gen_stiffness, theta)
+    dxydtheta  = deriv_estimate(xyn, theta)
+    dxdtheta = dxydtheta[:,0]
+    dydtheta = dxydtheta[:,1]
     LHS = np.empty(2)
     LHS[0] = gamma[1]
-    LHS[1] = (Fx*np.sin(alpha(theta)+gamma[0])-Fy*np.cos(alpha(theta)+gamma[0])-dgSds*gamma[1])/gen_stiffness(theta)
+    LHS[1] = (Fx*np.sin(alpha(theta)+gamma[0])-Fy*np.cos(alpha(theta)+gamma[0])) \
+              *np.sqrt(np.square(dxdtheta)+np.square(dydtheta))/gen_stiffness(theta) \
+              +gamma[1]*((dxdtheta*d2xdtheta2+dydtheta*d2ydtheta2)-dgSdtheta/np.sqrt(np.square(dxdtheta)+np.square(dydtheta)))
     return LHS
 
 #print(c)
@@ -158,12 +162,12 @@ for i in range (-Frange,Frange+1):
     key=str("dfrm_F_"+str(i))
 
     F = -i*MaxF/Frange
-    th_span = [thmin, thmax]
-    smax = s_exact(thmax)
-    s_span  = [0, smax]
+    thSpan = [thmin, thmax]
+    # smax = s_exact(thmax)
+    # s_span  = [0, smax]
     gamma = np.zeros(2)
     print("thinking about what happens when F =",F)
-    tempDeform = ODE45(deform_ODE, s_span, gamma, dense_output=True, method='LSODA')
+    tempDeform = ODE45(deform_ODE, thSpan, gamma, dense_output=True, method='LSODA')
     Fdeforms[key] = tempDeform.y[0,:]
     Fmeshes[key]  = tempDeform.t
     Fangles[key] = tempDeform.y[0,-1]
