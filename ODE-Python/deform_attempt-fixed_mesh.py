@@ -550,7 +550,13 @@ def main():
     print(startingParameters.pts)
     plt.close()
     startingParameters.plotResults(oldPts)
+
+    plt.figure(8)
+    plt.plot(startingParameters.thks*startingParameters.outPlaneThickness*(startingParameters.rc-startingParameters.rn)*startingParameters.rn)
+    plt.plot((startingParameters.rc-startingParameters.rn)*startingParameters.rn)
     plt.show()
+
+
 
     startingParameters.print_parameters()
 

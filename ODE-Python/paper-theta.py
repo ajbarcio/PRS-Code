@@ -113,13 +113,26 @@ def xyc_deformed(s):
     xyc[0] =  integral_s(stupid_cos, s)
     xyc[1] =  integral_s(stupid_sin, s)
 
+def dxy_dtheta(theta):
+    return deriv_estimate(xyn, theta)
+
+def xyn_theta_derivatives(theta):
+    dxydtheta  = dxy_dtheta(theta)
+    dxdtheta = dxydtheta[0]
+    dydtheta = dxydtheta[1]
+    d2xydtheta2 = deriv_estimate(dxy_dtheta, theta)
+    d2xdtheta2 = d2xydtheta2[0]
+    d2ydtheta2 = d2xydtheta2[1]
+
+    return dxdtheta, dydtheta, d2xdtheta2, d2ydtheta2
+
 def deform_ODE(theta, gamma):
     Fx = F*np.sin(alpha(thmax))
     Fy = F*np.cos(alpha(thmax))
     dgSdtheta = deriv_estimate(gen_stiffness, theta)
-    dxydtheta  = deriv_estimate(xyn, theta)
-    dxdtheta = dxydtheta[:,0]
-    dydtheta = dxydtheta[:,1]
+
+    dxdtheta, dydtheta, d2xdtheta2, d2ydtheta2 = xyn_theta_derivatives(theta)
+    
     LHS = np.empty(2)
     LHS[0] = gamma[1]
     LHS[1] = (Fx*np.sin(alpha(theta)+gamma[0])-Fy*np.cos(alpha(theta)+gamma[0])) \
@@ -127,14 +140,9 @@ def deform_ODE(theta, gamma):
               +gamma[1]*((dxdtheta*d2xdtheta2+dydtheta*d2ydtheta2)-dgSdtheta/np.sqrt(np.square(dxdtheta)+np.square(dydtheta)))
     return LHS
 
-#print(c)
-# #print(np.linspace(thmin, thmax, 81))
-S = np.empty(81)
-for i in range(len(np.linspace(thmin, thmax, 81))):
-    S[i] = s_exact(np.linspace(thmin, thmax, 81)[i])
-
-#print(S[-1])
-# print(np.column_stack([np.linspace(thmin, thmax, 81),S]))
+# S = np.empty(81)
+# for i in range(len(np.linspace(thmin, thmax, 81))):
+#     S[i] = s_exact(np.linspace(thmin, thmax, 81)[i])
 
 def s_of_theta_approx(x, a, qn):
     return (x-a)**qn-(thmin-a)**qn
@@ -142,13 +150,14 @@ def s_of_theta_approx(x, a, qn):
 def theta_of_s_approx(x, a, qn):
     return a + (x+(thmin-a)**qn)**(1./qn)
 
-coeffs, shit = curve_fit(s_of_theta_approx,np.linspace(thmin, thmax, 81),S,p0=[.52,1.695])
-# print(coeffs)
-
-# plt.plot((np.linspace(thmin, thmax, 81)), S)
-# plt.plot((np.linspace(thmin, thmax, 81)), s_of_theta_approx(np.linspace(thmin, thmax, 81),*coeffs))
-# plt.show()
-
+# coeffs, shit = curve_fit(s_of_theta_approx,np.linspace(thmin, thmax, 81),S,p0=[.52,1.695])
+thSpan = [thmin, thmax]
+gamma = np.zeros(2)
+F = 50
+dfrmation = ODE45(deform_ODE, thSpan, gamma, dense_output=True, method='LSODA')
+plt.plot(dfrmation.t, dfrmation.y[0,:])
+plt.show()
+'''
 Fdeforms={}
 Fmeshes={}
 Fangles={}
@@ -194,19 +203,9 @@ plt.plot(np.linspace(-Frange,Frange,len(range(-Frange,Frange+1))),finalAngles)
 plt.figure(3)
 plt.plot(np.linspace(-Frange,Frange,len(range(-Frange,Frange+1))),(maxStresses))
 
-
-# for key in Fmeshes:
-#     print(key)
-# for key in Fdeforms:
-#     print(key)
+'''
 
 def gamma_fun(s):
     return dfmation.sol(s)[0]
-
-# deformed_shape = np.empty([2,len(dfmation.t)])
-# for i in range(len(dfmation.t)):
-#     deformed_shape[:,i] = xyc_deformed(dfmation.t[i])
-
-# print(deformed_shape)
 
 plt.show()
