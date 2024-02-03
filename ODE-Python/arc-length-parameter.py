@@ -23,19 +23,10 @@ globalStep = 1/globalRes
 globalMaxIndex = globalLen-1
 smod           = 2
 
-startingAngle = 0*deg2rad
-intersectOffset = 30
-endingAngle = (180-intersectOffset)*deg2rad
-
-stiffFactor = 0.01
-
-p1Angle = (startingAngle+(endingAngle-startingAngle)/3)
-p2Angle = (startingAngle+2*(endingAngle-startingAngle)/3)
-
-p0 = np.array([startingAngle, stiffFactor])
-p1 = np.array([p1Angle, 0])
-p2 = np.array([p2Angle, 0])
-p3 = np.array([endingAngle, stiffFactor])
+p0 = np.array([0, .001])
+p1 = np.array([90*deg2rad, .001])
+p2 = np.array([-45*deg2rad, .001])
+p3 = np.array([-90*deg2rad, .001])
 
 outPlaneThickness = 0.375
 
@@ -43,6 +34,7 @@ def get_coeffs():
     D = np.array([[-1,3,-3,1],[3,-6,3,0],[-3,3,0,0],[1,0,0,0]])
     P = np.array([p0,p1,p2,p3])
     coeffs = D.dot(P)
+    print(coeffs)
     return coeffs
 
 def get_metaphor_coords(s, coeffs):
@@ -51,9 +43,11 @@ def get_metaphor_coords(s, coeffs):
     return metaphorCoords
 
 def alpha_s(s, coeffs):
+    # print(get_metaphor_coords(s, coeffs)[0])
     return get_metaphor_coords(s, coeffs)[0]
 
 def genStiffness_s(s, coeffs):
+    # print(get_metaphor_coords(s, coeffs)[1])
     return get_metaphor_coords(s, coeffs)[1]
 
 def d_alpha_d_s(s, coeffs):
@@ -68,45 +62,73 @@ def r_n(s, coeffs):
     rn = 1/d_alpha_d_s(s, coeffs)
     return rn
 
-def h_rc_rootfinding(s, coeffs, printBool):
+def b_a_rootfinding(s, coeffs, printBool):
     rn =  r_n(s, coeffs)
-    genStiff = get_metaphor_coords(s, coeffs)[1]
+    genStiff = genStiffness_s(s, coeffs)
+
+    c = np.log(1.2)/0.2
+
     def func(x, rn, genStiff):
-        f1 = x[1]/((np.log((x[0]+0.5*x[1])/(x[0]-0.5*x[1]))))-rn
+        # x0 = rc, x1 = h
+        f1 = (x[1]-x[0])/(np.log(x[1]/x[0]))-rn
         # f1 = f1**2
-        f2 = outPlaneThickness*x[1]*(x[0]-rn)*rn-genStiff
+        f2 = outPlaneThickness*(x[1]-x[0])*((x[1]+x[0])/2-rn)*rn-genStiff
         # f2 = f2**2
         # return lin.norm(np.array([f1, f2]))
         return np.array([f1, f2])
     def jac(x, rn, genStiff):
-        num = np.log((x[0]+0.5*x[1])/(x[0]-0.5*x[1]))*x[1]**2+4*x[1]*x[0]-4*x[0]**2*np.log((x[0]+0.5*x[1])/(x[0]-0.5*x[1]))
-        den = np.log((x[0]+0.5*x[1])/(x[0]-0.5*x[1]))**2*(x[1]-2*x[0])*(x[1]+2*x[0])
-        return np.array([[4*x[1]**2/((4*x[0]**2-x[1]**2)*np.log((x[0]+0.5*x[1])/(x[0]-0.5*x[1]))**2), \
-                          num/den], \
-                         [outPlaneThickness*x[1]*rn, outPlaneThickness*(x[0]-rn)*rn]])
+        return np.array([[(x[1]-x[0])/(x[0]*np.log(x[1]/x[0])**2)-1/(np.log(x[1]/x[0])), \
+                          (x[1]*np.log(x[1]/x[0])-x[1]+x[0])/(x[1]*np.log(x[1]/x[0])**2)], \
+                         [-rn*outPlaneThickness*(x[0]-rn), rn*outPlaneThickness*(x[1]-rn)]])
     err = 1
-    x0 = np.array([1,1])
-    x=x0
-    while err > 10**-6:
-        xprev = x
-        x = x - np.transpose(lin.inv(jac(x, rn, genStiff)).dot(func(x, rn, genStiff)))
-        err = lin.norm(x-xprev)
-        # print(err)
-    # res = op.fsolve(func, guess, args = (rn,genStiff))
+
+    c = np.log(1.2)/0.2
+    a0 = c*rn
+    b0 =rn+np.sqrt(rn**2-4*0.5*(c-c**2/2))
+
+    x0 = np.array([a0,b0])
+    x = x0
+    if np.isinf(rn):
+        x = np.array([float('inf'), genStiff/outPlaneThickness])
+    else:
+        while err > 10**-6:
+            xprev = x
+            x = x - np.transpose(lin.inv(jac(x, rn, genStiff)).dot(func(x, rn, genStiff)))
+            err = lin.norm(x-xprev)
+            # print(err)
     if(printBool):
         print(x0)
         print(x)
     return x
 
 coeffs = get_coeffs()
+smesh = np.linspace(0,1,globalLen)
+
+plot0 = np.empty(globalLen)
+plot1 = np.empty(globalLen)
+plot3 = np.empty(globalLen)
+for i in range(len(smesh)):
+    plot0[i] = alpha_s(i*globalStep,coeffs)
+    plot1[i] = genStiffness_s(i*globalStep,coeffs)
+    plot3[i] = r_n(i*globalStep, coeffs)
+print("alpha:",plot0)
+print("genStiffness:",plot1)
+print("rn:",plot3)
+plt.figure(0)
+plt.plot(plot0, plot1)
+plt.figure(1)
+plt.plot(smesh, plot3)
+
 plot = np.empty([globalLen, 2])
 plotrn = np.empty(globalLen)
 
 for i in range(globalLen):
-    plot[i,:] = h_rc_rootfinding(i*globalStep,coeffs,False)
+    plot[i,:] = b_a_rootfinding(i*globalStep,coeffs,False)
     plotrn[i] = r_n(i*globalStep,coeffs)
-plt.plot(np.linspace(0,1,globalLen), plot[:,0])
-plt.plot(np.linspace(0,1,globalLen), plot[:,1])
+
+plt.figure(2)
+plt.plot(np.linspace(0,1,globalLen), plot[:,0]) # a
+plt.plot(np.linspace(0,1,globalLen), plot[:,1]) # b
 plt.plot(np.linspace(0,1,globalLen), plotrn)
 plt.show()
 
@@ -125,9 +147,9 @@ def deform_ODE(s, gamma, F):
     LHS[1] = (Fx*np.sin(alpha_s(s, coeffs)+gamma[0])-Fy*np.cos(alpha_s(s, coeffs)+gamma[0])-E*dgSds*gamma[1])/(genStiffness_s(s, coeffs)*E)
     return LHS
 
-sSpan = [0,1]
-sMax = sSpan[-1]
-gamma = np.zeros(2)
-F = 1000
-dfrmation = ODE45(deform_ODE, sSpan, gamma, args=(F,), dense_output=True, method='LSODA')
+# sSpan = [0,1]
+# sMax = sSpan[-1]
+# gamma = np.zeros(2)
+# F = 1000
+# dfrmation = ODE45(deform_ODE, sSpan, gamma, args=(F,), dense_output=True, method='LSODA')
 
