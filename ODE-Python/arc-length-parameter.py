@@ -69,7 +69,7 @@ def b_a_rootfinding(s, coeffs, printBool):
     c = np.log(1.2)/0.2
 
     def func(x, rn, genStiff):
-        # x0 = rc, x1 = h
+        # x0 = a, x1 = b
         f1 = (x[1]-x[0])/(np.log(x[1]/x[0]))-rn
         # f1 = f1**2
         f2 = outPlaneThickness*(x[1]-x[0])*((x[1]+x[0])/2-rn)*rn-genStiff
