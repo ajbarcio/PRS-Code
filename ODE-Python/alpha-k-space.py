@@ -54,8 +54,13 @@ def k_poly():
 
 def k_s(s, kCoeffs):
     U = np.array([s**4, s**3, s**2, s, 1])
-    h = U.dot(kCoeffs)
-    return h[0]
+    k = U.dot(kCoeffs)
+    return k[0]
+
+def d_k_d_s(s, kCoeffs):
+    U = np.array([4*s**3, 3*s**2, 2*s, 1, 0])
+    dKdS = U.dot(kCoeffs)
+    return dKdS[0]
 
 def alpha_poly():
     Mat = np.array([[0,0,0,0,0,1], \
@@ -165,7 +170,7 @@ def create_geometry(abProfile, alphaProfile, dAlphaProfile, rnProfile, alphaCoef
     for i in range(globalLen):
         if np.isnan(eProfile[i]):
             eProfile[i] = 0
-    
+    print(eProfile)
     rnDx = np.empty(globalLen)
     rnDy = np.empty(globalLen)
     rnX  = np.empty(globalLen)
@@ -178,23 +183,23 @@ def create_geometry(abProfile, alphaProfile, dAlphaProfile, rnProfile, alphaCoef
             rnDy[i]=0
             rnX[i] = xy0[0]
             rnY[i] = xy0[1]
-
-            rcX[i] = xy0[0]+eProfile[i]*-np.sin(alpha(i*globalStep,alphaCoeffs))
-            rcY[i] = xy0[1]+eProfile[i]*np.cos(alpha(i*globalStep,alphaCoeffs))
+            rcX[i] = xy0[0]+eProfile[i]*np.sin(alpha(i*globalStep,alphaCoeffs))*d_alpha_d_s(i*globalStep,alphaCoeffs)
+            rcY[i] = xy0[1]+eProfile[i]*-np.cos(alpha(i*globalStep,alphaCoeffs))*d_alpha_d_s(i*globalStep,alphaCoeffs)
         else:
             rnDx[i]=globalStep*np.cos(alpha(i*globalStep,alphaCoeffs))
             rnDy[i]=globalStep*np.sin(alpha(i*globalStep,alphaCoeffs))
             rnX[i] = rnX[i-1]+rnDx[i]
             rnY[i] = rnY[i-1]+rnDy[i]
-            rcX[i] = rnX[i]+eProfile[i]*-np.sin(alpha(i*globalStep,alphaCoeffs))
-            rcY[i] = rnY[i]+eProfile[i]*np.cos(alpha(i*globalStep,alphaCoeffs))
+            rcX[i] = rnX[i]+eProfile[i]*np.sin(alpha(i*globalStep,alphaCoeffs))*d_alpha_d_s(i*globalStep,alphaCoeffs)
+            rcY[i] = rnY[i]+eProfile[i]*-np.cos(alpha(i*globalStep,alphaCoeffs))*d_alpha_d_s(i*globalStep,alphaCoeffs)
     plt.figure(1)
     plt.plot(rnX,rnY)
     plt.plot(rcX,rcY)
     plt.show()
+    return rnX, rnY
 
 
-def create_initial_spring():
+def create_initial_spring(geoBool):
     
     alphaCoeffs = alpha_poly()
     kCoeffs     = k_poly()
@@ -202,18 +207,89 @@ def create_initial_spring():
     print(smesh)
     print(alpha(0, alphaCoeffs))
 
-    [alphaProfile, dAlphaProfile, kProfile, rnProfile, abProfile] = create_profiles(alphaCoeffs, kCoeffs, smesh)
-    create_geometry(abProfile, alphaProfile, dAlphaProfile, rnProfile, alphaCoeffs, smesh)
+    if geoBool:
+           
+        [alphaProfile, dAlphaProfile, kProfile, rnProfile, abProfile] = create_profiles(alphaCoeffs, kCoeffs, smesh)
+        [rnX, rnY] = create_geometry(abProfile, alphaProfile, dAlphaProfile, rnProfile, alphaCoeffs, smesh)
     
+    return rnX, rnY
 
-def deform_ODE(s, gamma, F):
-    Fx = F*np.sin(alpha_s(sMax, coeffs))
-    Fy = F*np.cos(alpha_s(sMax, coeffs))
-    dgSds = d_genStiffness_d_s(s, coeffs)
+def deform_ODE(s, gamma, F, ang):
+    
+    Fx = F*np.sin(ang)
+    Fy = F*-np.cos(ang)
+    dgSds = d_k_d_s(s, kCoeffs)
     LHS = np.empty(2)
     LHS[0] = gamma[1]
-    LHS[1] = (Fx*np.sin(alpha_s(s, coeffs)+gamma[0])-Fy*np.cos(alpha_s(s, coeffs)+gamma[0])-E*dgSds*gamma[1])/(genStiffness_s(s, coeffs)*E)
+    LHS[1] = (Fx*np.sin(alpha(s, alphaCoeffs)+gamma[0])-Fy*np.cos(alpha(s, alphaCoeffs)+gamma[0])-E*dgSds*gamma[1])/(k_s(s, kCoeffs)*E)
     return LHS
 
 
-create_initial_spring()
+
+
+def integral_s(fun, array, mesh):
+    #centered Riemman sum
+    i = 1
+    sum = 0
+    while i < len(array):
+        step = mesh[i]-mesh[i-1]
+        sum += 0.5*(fun(mesh[i], array[i])+fun(mesh[i-1], array[i-1]))*step
+        i += 1
+    return sum
+
+def integrand_x(s, gamma):
+    return np.cos(alpha(s, alphaCoeffs)+gamma)
+def integrand_y(s, gamma):
+    return np.sin(alpha(s, alphaCoeffs)+gamma)
+
+
+[rnX, rnY] = create_initial_spring(True)
+
+sMax = fullArcLength
+alphaCoeffs = alpha_poly()
+kCoeffs = k_poly()
+F = 600
+dGdS0 = 0
+
+err = 1
+
+g0 = np.array([0, dGdS0])
+ang = alpha(sMax, alphaCoeffs)
+res = ODE45(deform_ODE, [0, sMax], g0, args=(F,ang), method='LSODA')
+gamma = res.y[0,:]
+xdis = integral_s(integrand_x, gamma, res.t)
+ydis = integral_s(integrand_y, gamma, res.t)
+diff0 = np.sqrt(xdis**2+ydis**2)-np.sqrt(rnX**2+rnY**2)[-1]
+ang = np.arctan2((rnY[-1]-ydis),(rnX[-1]-xdis))
+print(diff0, ang)
+
+dGdS0 = 0.01
+dGdS0prev = 0
+gain = 1
+iii = 0
+while abs(err)>1.1e-3:
+    g0 = np.array([0, dGdS0])
+    res = ODE45(deform_ODE, [0, sMax], g0, args=(F,ang), method='LSODA')
+    gamma = res.y[0,:]
+    xdis = integral_s(integrand_x, gamma, res.t)
+    ydis = integral_s(integrand_y, gamma, res.t)
+    diff1 = np.sqrt(xdis**2+ydis**2)-np.sqrt(rnX**2+rnY**2)[-1]
+    ang = np.arctan2((rnY[-1]-ydis),(rnX[-1]-xdis))
+    grad = (diff1-diff0)/(dGdS0-dGdS0prev)
+    err  = abs(diff1)
+    dGdS0prev = dGdS0
+    dGdS0 = dGdS0-gain*diff1/grad
+    diff0 = diff1
+    iii +=1
+    
+    print(diff0, dGdS0, ang, iii)
+
+Fx = F*np.sin(alpha(sMax, alphaCoeffs))
+Fy = F*-np.cos(alpha(sMax, alphaCoeffs))
+dBeta = np.arccos(integral_s(integrand_x, gamma, res.t)/np.sqrt(rnX**2+rnY**2)[-1])-(alphas[-1]-alphas[0])
+Torque = 2*(xdis*Fy-ydis*Fx+E*k_s(sMax, kCoeffs)*res.y[1,-1])
+springK = Torque/dBeta
+
+print("dBeta:",dBeta,"Torque:",Torque,"spring k:",springK)
+
+
