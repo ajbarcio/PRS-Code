@@ -7,30 +7,7 @@ from openpyxl import *
 from scipy.integrate import solve_ivp as ODE45
 import os
 
-deg2rad = np.pi/180
-E = 10000
-
-fullArcLength = 6
-globalRes = 100
-globalLen = globalRes+1
-globalStep = fullArcLength/globalRes
-globalMaxIndex = globalLen-1
-
-# alphas = [0,100*deg2rad,190*deg2rad,135*deg2rad]
-# cIs     = [.05,.01,.05]
-alphas = [0,45*deg2rad,135*deg2rad,180*deg2rad]
-cIs     = [.05,.05,.05]
-
-xy0    = [1,0]
-
-si = fullArcLength/3.0
-sj = 2.0*fullArcLength/3.0
-sk = fullArcLength/2.0
-sf = fullArcLength
-
-outPlaneThickness = 0.375
-
-def cI_poly():
+def cI_poly(cIs, sk, sf):
     Mat = np.array([[0,0,0,0,1], \
                     [sk**4,sk**3,sk**2,sk,1], \
                     [sf**4,sf**3,sf**2,sf,1], \
@@ -43,21 +20,21 @@ def cI_poly():
                      [0], \
                      [0], \
                      ])
-    hCoeffs = lin.solve(Mat, Targ)
+    cICoeffs = lin.solve(Mat, Targ)
     # print(hCoeffs)
-    return hCoeffs
+    return cICoeffs
 
-def cI_s(s, kCoeffs):
+def cI_s(s, cICoeffs):
     U = np.array([s**4, s**3, s**2, s, 1])
-    k = U.dot(kCoeffs)
+    k = U.dot(cICoeffs)
     return k[0]
 
-def d_cI_d_s(s, kCoeffs):
+def d_cI_d_s(s, cICoeffs):
     U = np.array([4*s**3, 3*s**2, 2*s, 1, 0])
-    dKdS = U.dot(kCoeffs)
+    dKdS = U.dot(cICoeffs)
     return dKdS[0]
 
-def alpha_poly():
+def alpha_poly(alphas, si, sj, sf):
     Mat = np.array([[0,0,0,0,0,1], \
                     [si**5,si**4,si**3,si**2,si,1], \
                     [sj**5,sj**4,sj**3,sj**2,sj,1], \
@@ -87,9 +64,9 @@ def r_n(s, alphaCoeffs):
     return rn
 ## Only for geometry finding AFTER desired stiffness acquired
 
-def a_b_rootfinding(s, alphaCoeffs, kCoeffs, printBool):
+def a_b_rootfinding(s, alphaCoeffs, cICoeffs, printBool):
     rn =  r_n(s, alphaCoeffs)
-    k = cI_s(s, kCoeffs)
+    k = cI_s(s, cICoeffs)
     def func(x, rn, k):
         # x0 = a, x1 = b
         f1 = (x[1]-x[0])/(np.log(x[1]/x[0]))-rn
@@ -124,38 +101,40 @@ def a_b_rootfinding(s, alphaCoeffs, kCoeffs, printBool):
         print(err)
     return x
 
-def create_profiles(alphaCoeffs, kCoeffs, smesh, geoBool):
-    plot0 = np.empty(globalLen)
-    plot1 = np.empty(globalLen)
-    plot2 = np.empty(globalLen)
-    plot3 = np.empty(globalLen)
-    plot4 = np.empty((globalLen,2))
+def create_profiles(alphaCoeffs, cICoeffs, smesh, geoBool):
+    plotAlpha = np.empty(globalLen)
+    plotCurvature = np.empty(globalLen)
+    plotCI = np.empty(globalLen)
+    plotRn = np.empty(globalLen)
+    plotAB = np.empty((globalLen,2))
+    plotH = np.empty(globalLen)
     for i in range(len(smesh)):
-        plot0[i] = alpha(i*globalStep,alphaCoeffs)
-        plot1[i] = d_alpha_d_s(i*globalStep,alphaCoeffs)
-        plot2[i] = cI_s(i*globalStep,kCoeffs)
-        plot3[i] = r_n(i*globalStep,alphaCoeffs)
+        plotAlpha[i] = alpha(i*globalStep,alphaCoeffs)
+        plotCurvature[i] = d_alpha_d_s(i*globalStep,alphaCoeffs)
+        plotCI[i] = cI_s(i*globalStep,cICoeffs)
+        plotRn[i] = r_n(i*globalStep,alphaCoeffs)
         if geoBool:
         # print("starting to rootfind", i)
-            plot4[i] = a_b_rootfinding(i*globalStep,alphaCoeffs,kCoeffs,False)
+            plotAB[i] = a_b_rootfinding(i*globalStep,alphaCoeffs,cICoeffs,False)
         # print("finished rootfinding")
     # print("alpha:",plot0)
     # print("dalpha/ds:",plot1)
     # print("rn:",plot3)
-    if geoBool:
-        print("ab:",plot4)    
+    for i in range(len(smesh)):
+        plotH[i] = plotAB[i][1]-plotAB[i][0] 
     if geoBool:
         plt.figure(0)
-        plt.plot(smesh, plot0)
-        plt.plot(smesh, plot1)
-        plt.plot(smesh, plot2)
-        plt.plot(smesh, plot3)
-        plt.plot(smesh, plot4)
+        plt.plot(smesh, plotAlpha)
+        plt.plot(smesh, plotCurvature)
+        plt.plot(smesh, plotCI)
+        plt.plot(smesh, plotRn)
+        plt.plot(smesh, plotAB)
+        plt.plot(smesh, plotH)
         plt.show()
     if geoBool:
-        return plot0, plot1, plot2, plot3, plot4
+        return plotAlpha, plotCurvature, plotCI, plotRn, plotAB, plotH
     else:
-        return plot0, plot1, plot2, plot3
+        return plotAlpha, plotCurvature, plotCI, plotRn
 
 def mesh_original_geometry(alphaCoeffs, smesh):
     rnDx = np.empty(len(smesh))
@@ -197,23 +176,21 @@ def mesh_deformed_geometry(alphaCoeffs, gamma, smesh):
     return rnX, rnY
     
 
-def create_initial_spring():
+def create_initial_spring(alphas, cIs, si, sj, sk, sf):
     
-    alphaCoeffs = alpha_poly()
-    kCoeffs     = cI_poly()
+    alphaCoeffs = alpha_poly(alphas, si, sj, sf)
+    cICoeffs     = cI_poly(cIs, sk, sf)
     smesh = np.linspace(0,fullArcLength,globalLen)
     
-    return alphaCoeffs, kCoeffs, smesh
+    return alphaCoeffs, cICoeffs, smesh
 
 def deform_ODE(s, gamma, F, ang):
     
-    Fx = F*np.sin(ang)
-    Fy = F*-np.cos(ang)
-    # print(Fx, Fy)
-    dkds = d_cI_d_s(s, kCoeffs)
+    Fx = F*-np.sin(ang)
+    Fy = F*np.cos(ang)
     LHS = np.empty(2)
     LHS[0] = gamma[1]
-    LHS[1] = (Fx*np.sin(alpha(s, alphaCoeffs)+gamma[0])-Fy*np.cos(alpha(s, alphaCoeffs)+gamma[0])-E*dkds*gamma[1])/(cI_s(s, kCoeffs)*E)
+    LHS[1] = (Fx*np.sin(alpha(s, alphaCoeffs)+gamma[0])-Fy*np.cos(alpha(s, alphaCoeffs)+gamma[0])-E*d_cI_d_s(s, cICoeffs)*gamma[1])/(cI_s(s, cICoeffs)*E)
     return LHS
 
 def rk4_step(fun, u0, gamma0, du, F, ang):
@@ -231,7 +208,7 @@ def rk4_step(fun, u0, gamma0, du, F, ang):
 
     return gamma1
 
-def fixed_rk4(deform_ODE, gamma0, F, ang, smesh):
+def fixed_rk4(fun, gamma0, F, ang, smesh):
     res = np.empty((len(gamma0), len(smesh)))
     step = smesh[1]-smesh[0]
     for i in range(len(smesh)):
@@ -239,9 +216,10 @@ def fixed_rk4(deform_ODE, gamma0, F, ang, smesh):
             res[0,i] = gamma0[0]
             res[1,i] = gamma0[1]
         else:
-            res[0,i] = rk4_step(deform_ODE, smesh[i-1], gamma0, step, F, ang)[0]
-            res[1,i] = rk4_step(deform_ODE, smesh[i-1], gamma0, step, F, ang)[1]
-            gamma0 = res        
+            stepRes = rk4_step(fun, smesh[i-1], gamma0, step, F, ang)
+            res[0,i] = stepRes[0]
+            res[1,i] = stepRes[1]
+            gamma0 = stepRes        
     return res
 
 def integral_s(fun, array, mesh):
@@ -259,37 +237,37 @@ def integrand_x(s, gamma):
 def integrand_y(s, gamma):
     return np.sin(alpha(s, alphaCoeffs)+gamma)
 
-def deform_spring(alphaCoeffs, kCoeffs, F):
+def deform_spring(alphaCoeffs, cICoeffs, F, plotBool):
 
     sMax = fullArcLength
     dcIds0 = 0
 
     # err = 1
 
-    dcIds_plot=[]
-    ang_plot=[]
-    z_plot=[]
+    # dcIds_plot=[]
+    # ang_plot=[]
+    # z_plot=[]
 
-    gamma0 = np.array([0, 0])
+    gamma0 = [0, 0]
     ang = alpha(sMax, alphaCoeffs)
     smesh = np.linspace(0, fullArcLength, globalLen)
 
     res = fixed_rk4(deform_ODE, gamma0, F, ang, smesh)
 
-
     gamma = res[0,:]
         # res = ODE45(deform_ODE, [0, sMax], gamma0, args=(F,ang), method='RK45', max_step=globalStep, atol=1, rtol=1)
 
-    Fx = F*np.sin(ang)
-    Fy = F*-np.cos(ang)
+    Fx = F*-np.sin(ang)
+    Fy = F*np.cos(ang)
 
-    [rnXd, rnYd] = mesh_deformed_geometry(alphaCoeffs, gamma, res.t)
-    [rnX, rnY]   = mesh_original_geometry(alphaCoeffs, res.t)
+    [rnXd, rnYd] = mesh_deformed_geometry(alphaCoeffs, gamma, smesh)
+    [rnX, rnY]   = mesh_original_geometry(alphaCoeffs, smesh)
     
-    # plt.figure(F)
-    # cmap = plt.get_cmap('viridis')
-    # color = cmap(float(0))
-    # plt.plot(rnX,rnY, c=color)
+    if plotBool:
+        plt.figure(F)
+        cmap = plt.get_cmap('viridis')
+        color = cmap(float(0))
+        plt.plot(rnXd,rnYd, c=color)
     
     xdis = rnXd[-1]
     ydis = rnYd[-1]
@@ -299,41 +277,39 @@ def deform_spring(alphaCoeffs, kCoeffs, F):
 
     rdis   = np.sqrt(xdis**2+ydis**2)
     rorg = np.sqrt(xorg**2+yorg**2)
+    # print("orig difference:",rdis,rorg)
     diff0 = rdis-rorg
     err = abs(diff0)
 
-    print("F:",F)
-    print("original guess divergence:", rdis, rorg)
-    stepPrev = res.t[10]-res.t[9]
-    print("original step size:",res.t[10]-res.t[9])
-
-    dcIds_plot.append(dcIds0)
-    ang_plot.append(ang)
-    z_plot.append(abs(diff0))
+    # dcIds_plot.append(dcIds0)
+    # ang_plot.append(ang)
+    # z_plot.append(abs(diff0))
 
     dcIdsPrev = dcIds0
-    dcIds0 = 0.01 # is there a better way to estimate this initial step??
+    dcIds0 = 0.001 # is there a better way to estimate this initial step??
 
     angPrev = ang
-    ang = ang+1*deg2rad
+    ang = ang+0.5*deg2rad
 
     errPrev = abs(diff0)
     gain = 0.005 # also fuck this
 
     iii = 1
     rprev = rorg
-    while abs(err)>1.1e-6:
+    while abs(err)>1.1e-12:
         # use the current shooting variables (dGdS and ang) to solve
         gamma0 = np.array([0, dcIds0])
-        res = ODE45(deform_ODE, [0, sMax], gamma0, args=(F,ang), method='RK45', max_step=globalStep, atol=1, rtol=1)
-        gamma = res.y[0,:]
+    
+        res = fixed_rk4(deform_ODE, gamma0, F, ang, smesh)
 
-        [rnXd, rnYd] = mesh_deformed_geometry(alphaCoeffs, gamma, res.t)
-        [rnX, rnY]   = mesh_original_geometry(alphaCoeffs, res.t)
+        gamma = res[0,:]
+        [rnXd, rnYd] = mesh_deformed_geometry(alphaCoeffs, gamma, smesh)
+        [rnX, rnY]   = mesh_original_geometry(alphaCoeffs, smesh)
         # print(res.t[-1])
         
-        # color = cmap(float(iii)/float(17))
-        # plt.plot(rnX,rnY, c=color, label=iii)
+        # if plotBool:
+        #     color = cmap(float(iii)/float(27))
+        #     plt.plot(rnXd,rnYd, c=color, label=iii)
 
         xdis = rnXd[-1]
         ydis = rnYd[-1]
@@ -343,30 +319,27 @@ def deform_spring(alphaCoeffs, kCoeffs, F):
 
         rdis   = np.sqrt(xdis**2+ydis**2)
         rorg = np.sqrt(xorg**2+yorg**2)
-        step = res.t[1]-res.t[0]
-        # print("in-loop divergence:",rorg,rdis)
-        if iii == 1:
-            print(rorg)
-        if not stepPrev == step:
-            print("in-loop step:", step)
-        if not rorg == rprev:
-            print(rorg)
         
-        stepPrev = step
+        # if rorg == rprev:
+        #     print("difference:",rdis,rorg)
+
+        # stepPrev = step
         rprev = rorg
 
         diff1 = rdis-rorg
         err  = abs(diff1)
-        dcIds_plot.append(dcIds0)
-        ang_plot.append(ang)
-        z_plot.append(err)
+        # dcIds_plot.append(dcIds0)
+        # ang_plot.append(ang)
+        # z_plot.append(err)
+
         # estimate jacobian from prev. 2 guesses
         jac = np.array([(err-errPrev)/(dcIds0-dcIdsPrev), (err-errPrev)/(ang-angPrev)])
+        # these two lines probably no longer necessary
         if lin.norm(jac) == 0:
             break
 
-        Fx = F*np.sin(ang)
-        Fy = F*-np.cos(ang)
+        Fx = F*-np.sin(ang)
+        Fy = F*np.cos(ang)
 
         # save guess for next time
         dcIdsPrev = dcIds0
@@ -386,29 +359,100 @@ def deform_spring(alphaCoeffs, kCoeffs, F):
     #     color = cmap(float(i/len(dGdS0_plot)))
     #     ax.plot3D(dGdS0_plot[i:i+5+1],ang_plot[i:i+5+1],z_plot[i:i+5+1], c=color)
     # plt.show()
-    print("final guess divergence:", rorg, rdis)
 
-    rorg_vec = np.sqrt(rnX**2+rnY**2)
-    rdis_vec = np.sqrt(rnXd**2+rnYd**2)
     # # plt.figure(F)
     # plt.plot(res.t, rorg_vec)
     # print(res.t)
     # print(rorg_vec)
-    dBeta = np.arctan2(ydis,xdis)-np.arctan2(yorg,xorg)
-    Torque = 2*(xdis*Fy-ydis*Fx+E*cI_s(sMax, kCoeffs)*res.y[1,-1])
+        
+
+    if plotBool:
+        cmap = plt.get_cmap('viridis')
+        color = cmap(float(1))
+        plt.plot(rnXd,rnYd, c=color)
+
+    dBeta = -(np.arctan2(ydis,xdis)-np.arctan2(yorg,xorg))
+    Torque = 2*(xdis*Fy-ydis*Fx+E*cI_s(sMax, cICoeffs)*res[1,-1])
     if not dBeta == 0:
-        springK = Torque/dBeta
+        springK = Torque/dBeta*deg2rad
     else: 
         springK = 'unknown'
+    if plotBool:
+        theta = np.linspace(0, 2*np.pi, 100)
+        outerCircleX = rorg*np.cos(theta)
+        outerCircleY = rorg*np.sin(theta)
+        plt.plot(outerCircleX,outerCircleY)
+    
     return dBeta, Torque, springK, gamma, iii
 
-[alphaCoeffs, kCoeffs, smesh] = create_initial_spring()
+def eval_stiffness(alphaCoeffs, cICoeffs, Fmax, Fres, plotBool):
 
-for F in [0, 1, 2, 3, 4, 5]:
-    [dBeta, Torque, springK, gamma, iii]  = deform_spring(alphaCoeffs, kCoeffs, F)
-    print("iterations:", iii, "dBeta:",dBeta*1/deg2rad,"degrees","Torque:",Torque,"spring k:",springK)
-# plot_deformed_geometry(gamma)
-plt.show()
+    Fres = 5
+    Fmax = 5000
+    Fvec = np.linspace(-Fmax, Fmax, 2*Fres+1)
+
+    dBetaPlot = np.empty(len(Fvec))
+    TPlot =     np.empty(len(Fvec))
+    kPlot =     np.empty(len(Fvec))
+
+    ploti = 0
+    recalli = len(Fvec)+2
+    for F in Fvec:
+        [dBeta, Torque, springK, gamma, iii]  = deform_spring(alphaCoeffs, cICoeffs, F, plotBool)
+        print("iterations:", iii, "dBeta:",dBeta*1/deg2rad,"degrees","Torque:",Torque,"spring k:",springK)
+        dBetaPlot[ploti] = dBeta*1/deg2rad
+        TPlot[ploti] =Torque
+        if springK == 'unknown':
+            kPlot[ploti] = kPlot[ploti-1]
+            recalli = ploti
+        else:
+            kPlot[ploti] = springK
+        if ploti == recalli+1:
+            kPlot[recalli] = (kPlot[ploti-2]+kPlot[ploti])/2
+        ploti+=1
+    approxK = (TPlot[-1]-TPlot[0])/(dBetaPlot[-1]-dBetaPlot[0])
+
+    if plotBool:
+        plt.figure('defl vs T')
+        plt.plot(TPlot,dBetaPlot)
+        plt.xlabel('Torque (lb-in)')
+        plt.ylabel('displacement (deg)')
+        plt.figure('k vs defl')
+        plt.plot(dBetaPlot,kPlot)
+        plt.show()
+
+    return approxK
+
+def optimize_stiffness(goalK, s_events_initial, ):
+
+
+deg2rad = np.pi/180
+E = 27.5*10**6
+
+fullArcLength = 6.2
+globalRes = 150
+globalLen = globalRes+1
+globalStep = fullArcLength/globalRes
+globalMaxIndex = globalLen-1
+
+alphas = [0,100*deg2rad,190*deg2rad,135*deg2rad]
+cIs     = [.1,.05,.1]
+# alphas = [0,45*deg2rad,135*deg2rad,180*deg2rad]
+# cIs     = [.05,.05,.05]
+
+xy0    = [1,0]
+
+si = fullArcLength/3.0
+sj = 2.0*fullArcLength/3.0
+sk = fullArcLength/2.0
+sf = fullArcLength
+
+outPlaneThickness = 0.375
+
+# [alph, curvature, cI, rn, ab, h] = create_profiles(alphaCoeffs, cICoeffs, smesh, True)
+[alphaCoeffs, cICoeffs, smesh] = create_initial_spring(alphas, cIs, si, sj, sk, sf)
+approxK = eval_stiffness(alphaCoeffs, cICoeffs, 5000, 10, True)
+print(approxK)
 
 
 

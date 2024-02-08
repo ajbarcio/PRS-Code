@@ -10,12 +10,6 @@ from matplotlib.ticker import MaxNLocator
 from materials import *
 from openpyxl import *
 
-jac = np.array([[1,1]])
-jacI = lin.pinv(jac)
-print(jacI)
-print(jacI.dot(jac))
-print(jac.dot(jacI))
-
-cmap = plt.get_cmap('hot')
-print(cmap)
+gamma0 = np.array([0, 0])
+print(gamma0[1])
 
