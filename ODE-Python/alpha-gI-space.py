@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from materials import *
 from openpyxl import *
 from scipy.integrate import solve_ivp as ODE45
+from scipy import optimize as op
 import os
 
 def cI_poly(cIs, sk, sf):
@@ -184,7 +185,7 @@ def create_initial_spring(alphas, cIs, si, sj, sk, sf):
     
     return alphaCoeffs, cICoeffs, smesh
 
-def deform_ODE(s, gamma, F, ang):
+def deform_ODE(s, alphaCoeffs, cICoeffs, gamma, F, ang):
     
     Fx = F*-np.sin(ang)
     Fy = F*np.cos(ang)
@@ -193,14 +194,14 @@ def deform_ODE(s, gamma, F, ang):
     LHS[1] = (Fx*np.sin(alpha(s, alphaCoeffs)+gamma[0])-Fy*np.cos(alpha(s, alphaCoeffs)+gamma[0])-E*d_cI_d_s(s, cICoeffs)*gamma[1])/(cI_s(s, cICoeffs)*E)
     return LHS
 
-def rk4_step(fun, u0, gamma0, du, F, ang):
+def rk4_step(fun, alphaCoeffs, cICoeffs, u0, gamma0, du, F, ang):
     #
     #  Get four sample values of the derivative.
     #
-    f1 = fun ( u0,            gamma0, F, ang )
-    f2 = fun ( u0 + du / 2.0, gamma0 + du * f1 / 2.0, F, ang )
-    f3 = fun ( u0 + du / 2.0, gamma0 + du * f2 / 2.0, F, ang )
-    f4 = fun ( u0 + du,       gamma0 + du * f3, F, ang )
+    f1 = fun ( u0,            alphaCoeffs, cICoeffs, gamma0, F, ang )
+    f2 = fun ( u0 + du / 2.0, alphaCoeffs, cICoeffs, gamma0 + du * f1 / 2.0, F, ang )
+    f3 = fun ( u0 + du / 2.0, alphaCoeffs, cICoeffs, gamma0 + du * f2 / 2.0, F, ang )
+    f4 = fun ( u0 + du,       alphaCoeffs, cICoeffs, gamma0 + du * f3, F, ang )
     #
     #  Combine them to estimate the solution gamma at time T1 = T0 + DT.
     #
@@ -208,7 +209,7 @@ def rk4_step(fun, u0, gamma0, du, F, ang):
 
     return gamma1
 
-def fixed_rk4(fun, gamma0, F, ang, smesh):
+def fixed_rk4(fun, alphaCoeffs, cICoeffs, gamma0, F, ang, smesh):
     res = np.empty((len(gamma0), len(smesh)))
     step = smesh[1]-smesh[0]
     for i in range(len(smesh)):
@@ -216,7 +217,7 @@ def fixed_rk4(fun, gamma0, F, ang, smesh):
             res[0,i] = gamma0[0]
             res[1,i] = gamma0[1]
         else:
-            stepRes = rk4_step(fun, smesh[i-1], gamma0, step, F, ang)
+            stepRes = rk4_step(fun, alphaCoeffs, cICoeffs, smesh[i-1], gamma0, step, F, ang)
             res[0,i] = stepRes[0]
             res[1,i] = stepRes[1]
             gamma0 = stepRes        
@@ -237,7 +238,7 @@ def integrand_x(s, gamma):
 def integrand_y(s, gamma):
     return np.sin(alpha(s, alphaCoeffs)+gamma)
 
-def deform_spring(alphaCoeffs, cICoeffs, F, plotBool):
+def deform_spring(alphaCoeffs, cICoeffs, F, Fmax, plotBool):
 
     sMax = fullArcLength
     dcIds0 = 0
@@ -252,7 +253,7 @@ def deform_spring(alphaCoeffs, cICoeffs, F, plotBool):
     ang = alpha(sMax, alphaCoeffs)
     smesh = np.linspace(0, fullArcLength, globalLen)
 
-    res = fixed_rk4(deform_ODE, gamma0, F, ang, smesh)
+    res = fixed_rk4(deform_ODE, alphaCoeffs, cICoeffs, gamma0, F, ang, smesh)
 
     gamma = res[0,:]
         # res = ODE45(deform_ODE, [0, sMax], gamma0, args=(F,ang), method='RK45', max_step=globalStep, atol=1, rtol=1)
@@ -264,10 +265,10 @@ def deform_spring(alphaCoeffs, cICoeffs, F, plotBool):
     [rnX, rnY]   = mesh_original_geometry(alphaCoeffs, smesh)
     
     if plotBool:
-        plt.figure(F)
+        # plt.figure(F)
         cmap = plt.get_cmap('viridis')
         color = cmap(float(0))
-        plt.plot(rnXd,rnYd, c=color)
+        plt.plot(rnX,rnY, c=color, linewidth=2.0)
     
     xdis = rnXd[-1]
     ydis = rnYd[-1]
@@ -300,7 +301,7 @@ def deform_spring(alphaCoeffs, cICoeffs, F, plotBool):
         # use the current shooting variables (dGdS and ang) to solve
         gamma0 = np.array([0, dcIds0])
     
-        res = fixed_rk4(deform_ODE, gamma0, F, ang, smesh)
+        res = fixed_rk4(deform_ODE, alphaCoeffs, cICoeffs, gamma0, F, ang, smesh)
 
         gamma = res[0,:]
         [rnXd, rnYd] = mesh_deformed_geometry(alphaCoeffs, gamma, smesh)
@@ -320,7 +321,7 @@ def deform_spring(alphaCoeffs, cICoeffs, F, plotBool):
         rdis   = np.sqrt(xdis**2+ydis**2)
         rorg = np.sqrt(xorg**2+yorg**2)
         
-        # if rorg == rprev:
+        # if not rorg == rprev:
         #     print("difference:",rdis,rorg)
 
         # stepPrev = step
@@ -368,8 +369,24 @@ def deform_spring(alphaCoeffs, cICoeffs, F, plotBool):
 
     if plotBool:
         cmap = plt.get_cmap('viridis')
-        color = cmap(float(1))
-        plt.plot(rnXd,rnYd, c=color)
+        color = cmap(abs(float(F))/float(Fmax))
+        plt.plot(rnXd,rnYd, c=color, linewidth=7.0)
+
+    [rnXd, rnYd] = mesh_deformed_geometry(alphaCoeffs, gamma, smesh)
+    [rnX, rnY]   = mesh_original_geometry(alphaCoeffs, smesh)
+
+    xdis = rnXd[-1]
+    ydis = rnYd[-1]
+
+    xorg = rnX[-1]
+    yorg = rnY[-1]
+
+    # print("xyorg for reference:",xorg,yorg)
+
+    rdis   = np.sqrt(xdis**2+ydis**2)
+    rorg = np.sqrt(xorg**2+yorg**2)
+    # print("final difference:", rdis, rorg)
+
 
     dBeta = -(np.arctan2(ydis,xdis)-np.arctan2(yorg,xorg))
     Torque = 2*(xdis*Fy-ydis*Fx+E*cI_s(sMax, cICoeffs)*res[1,-1])
@@ -388,7 +405,7 @@ def deform_spring(alphaCoeffs, cICoeffs, F, plotBool):
 def eval_stiffness(alphaCoeffs, cICoeffs, Fmax, Fres, plotBool):
 
     Fres = 5
-    Fmax = 5000
+    Fmax = 50000
     Fvec = np.linspace(-Fmax, Fmax, 2*Fres+1)
 
     dBetaPlot = np.empty(len(Fvec))
@@ -398,8 +415,8 @@ def eval_stiffness(alphaCoeffs, cICoeffs, Fmax, Fres, plotBool):
     ploti = 0
     recalli = len(Fvec)+2
     for F in Fvec:
-        [dBeta, Torque, springK, gamma, iii]  = deform_spring(alphaCoeffs, cICoeffs, F, plotBool)
-        print("iterations:", iii, "dBeta:",dBeta*1/deg2rad,"degrees","Torque:",Torque,"spring k:",springK)
+        [dBeta, Torque, springK, gamma, iii]  = deform_spring(alphaCoeffs, cICoeffs, F, Fmax, plotBool)
+        # print("iterations:", iii, "dBeta:",dBeta*1/deg2rad,"degrees","Torque:",Torque)
         dBetaPlot[ploti] = dBeta*1/deg2rad
         TPlot[ploti] =Torque
         if springK == 'unknown':
@@ -410,7 +427,8 @@ def eval_stiffness(alphaCoeffs, cICoeffs, Fmax, Fres, plotBool):
         if ploti == recalli+1:
             kPlot[recalli] = (kPlot[ploti-2]+kPlot[ploti])/2
         ploti+=1
-    approxK = (TPlot[-1]-TPlot[0])/(dBetaPlot[-1]-dBetaPlot[0])
+    approxK = abs((TPlot[-1]-TPlot[0])/(dBetaPlot[-1]-dBetaPlot[0]))
+    print("overall K:", approxK)
 
     if plotBool:
         plt.figure('defl vs T')
@@ -423,8 +441,97 @@ def eval_stiffness(alphaCoeffs, cICoeffs, Fmax, Fres, plotBool):
 
     return approxK
 
-def optimize_stiffness(goalK, s_events_initial, ):
+def tune_stiffness(goalK, Feval, **kwargs):
 
+    def stiffnessObjectiveFun(dragVector, goalK, Feval):
+        [alphas, cIs, si, sj, sk ,sf] = generate_params(dragVector)
+        [alphaCoeffs, cICoeffs, smesh] = create_initial_spring(alphas, cIs, si, sj, sk, sf)
+
+        currentK = eval_stiffness(alphaCoeffs, cICoeffs, Feval, 5, False)
+        dist = currentK-goalK
+        print("dist:",dist)
+        print("params:",dragVector)
+        return currentK-goalK
+
+
+    def generate_params(dragVector):
+
+        alphas = [dragVector[0],dragVector[1],dragVector[2],dragVector[3]]
+        cIs    = [dragVector[6],dragVector[7],dragVector[8]]
+        si     = dragVector[10]*dragVector[4]
+        sj     = dragVector[10]*dragVector[5]
+        sk     = dragVector[10]*dragVector[9]
+        sf     = dragVector[10]
+
+        return alphas, cIs, si, sj, sk, sf
+    
+   
+    dragVectorParams = {'alpha0':       0,            \
+                        'alpha1':       100*deg2rad,  \
+                        'alpha2':       190*deg2rad,  \
+                        'alpha3':       135*deg2rad,  \
+                        'alpha1factor': 1/3.0,        \
+                        'alpha2factor': 2/3.0,        \
+                        'cI0':          .1,           \
+                        'cI1':          .05,          \
+                        'cI2':          .1,           \
+                        'cIfactor':     0.5,          \
+                        'fullLength':   6             }
+    
+    for key, value in kwargs.items():
+        dragVectorParams[key] = value
+
+    dragVector = np.array(list(dragVectorParams.values()))
+
+    angleRange = 30*deg2rad
+    propRange = 1/5.0
+    lenRange  = 0.375
+
+    bnds = ((0,0), (dragVector[1]-angleRange,dragVector[1]+angleRange), \
+                   (dragVector[2]-angleRange,dragVector[2]+angleRange),  \
+                   (dragVector[3]-angleRange,dragVector[3]+angleRange),  \
+                   (dragVector[4]-propRange,dragVector[4]+propRange),  \
+                   (dragVector[5]-propRange,dragVector[5]+propRange),  \
+                   (0,None),  \
+                   (0,None),  \
+                   (0,None),  \
+                   (dragVector[9]-propRange,dragVector[9]+propRange),  \
+                   (dragVector[10]-lenRange,dragVector[10]+lenRange))
+
+    res = op.minimize(stiffnessObjectiveFun, dragVector, args=(goalK,Feval), bounds=bnds, method='Nelder-Mead')
+    # err = stiffnessObjectiveFun(dragVector, goalK, Feval)
+    # err0 = err
+    # dragVector0 = dragVector
+    # dragVector = dragVector*1.01
+    # dragVector[1] = dragVector0[1]
+    # dragVector[2] = dragVector0[2]
+    # dragVector[3] = dragVector0[3]
+    # jac = np.empty(len(dragVector0))
+    # gain = 1.5
+    # while err>1:
+    #     err = stiffnessObjectiveFun(dragVector, goalK, Feval)
+    #     for i in range(len(dragVector0)):
+    #         if i == 0 or i == 1 or i == 2 or i == 3:
+    #             jac[i] = 1
+    #         else:
+    #             jac[i] = (err-err0)/(dragVector[i]-dragVector0[i])
+    #             dragVector0[i] = dragVector[i]
+    #         dragVector[i] = dragVector[i] - gain*err * jac[i]/(lin.norm(jac)**2)
+        
+    #     err0 = err
+
+    # finalParameters = dragVector
+
+    if res.success:
+        print("good shit")
+    finalParameters = res.x
+    
+    [alphas, cIs, si, sj, sk ,sf] = generate_params(finalParameters)
+    [alphaCoeffs, cICoeffs, smesh] = create_initial_spring(alphas, cIs, si, sj, sk, sf)
+    finalK = eval_stiffness(alphaCoeffs, cICoeffs, Feval, 5, True)
+    print("final stiffness:",finalK)
+
+    return finalParameters
 
 deg2rad = np.pi/180
 E = 27.5*10**6
@@ -435,7 +542,7 @@ globalLen = globalRes+1
 globalStep = fullArcLength/globalRes
 globalMaxIndex = globalLen-1
 
-alphas = [0,100*deg2rad,190*deg2rad,135*deg2rad]
+alphas  = [0,100*deg2rad,190*deg2rad,135*deg2rad]
 cIs     = [.1,.05,.1]
 # alphas = [0,45*deg2rad,135*deg2rad,180*deg2rad]
 # cIs     = [.05,.05,.05]
@@ -449,10 +556,13 @@ sf = fullArcLength
 
 outPlaneThickness = 0.375
 
-# [alph, curvature, cI, rn, ab, h] = create_profiles(alphaCoeffs, cICoeffs, smesh, True)
 [alphaCoeffs, cICoeffs, smesh] = create_initial_spring(alphas, cIs, si, sj, sk, sf)
+[alph, curvature, cI, rn, ab, h] = create_profiles(alphaCoeffs, cICoeffs, smesh, True)
 approxK = eval_stiffness(alphaCoeffs, cICoeffs, 5000, 10, True)
 print(approxK)
+create_profiles(alphaCoeffs, cICoeffs, smesh, True)
+
+finalParameters = tune_stiffness(5000,3000)
 
 
 
