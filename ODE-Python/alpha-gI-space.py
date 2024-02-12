@@ -238,10 +238,38 @@ def integrand_x(s, gamma):
 def integrand_y(s, gamma):
     return np.sin(alpha(s, alphaCoeffs)+gamma)
 
-def deform_spring(alphaCoeffs, cICoeffs, F, Fmax, plotBool):
+
+def deform_spring_byAngle(alphaCoeffs, cICoeffs, dBetaTarg, Fguess):
+
+    [dBeta, torque, springK, gamma, iii, finalGuess] = deform_spring_byForce(alphaCoeffs, cICoeffs, Fguess, Fguess, True)
+    plt.show()
+    err = (dBeta-dBetaTarg)*1/deg2rad
+    errPrev = err
+
+    errFactor = 0.5
+    factor = 1+err*errFactor
+
+    Fprev = Fguess
+    Fnew  = Fprev + Fprev*factor
+    print("ANGLE DEFORM RESULT",Fnew, err)
+    iiii = 0
+    while abs(err)>10e-6:
+        [dBeta, torque, springK, gamma, iii, finalGuess] = deform_spring_byForce(alphaCoeffs, cICoeffs, Fnew, Fnew, True)
+        plt.show()
+        err = (dBeta-dBetaTarg)*1/deg2rad
+        jac = (err-errPrev)/(Fnew-Fprev)
+        Fprev = Fnew
+        errPrev = err
+        Fnew = Fprev - errPrev/jac
+        print("ANGLE DEFORM RESULT",Fnew, err)
+        iiii+=1
+
+    return torque, Fnew, springK
+       
+def deform_spring_byForce(alphaCoeffs, cICoeffs, F, Fmax, plotBool):
 
     sMax = fullArcLength
-    dcIds0 = 0
+    dgds0 = 0
 
     # err = 1
 
@@ -251,6 +279,7 @@ def deform_spring(alphaCoeffs, cICoeffs, F, Fmax, plotBool):
 
     gamma0 = [0, 0]
     ang = alpha(sMax, alphaCoeffs)
+    # print("initial angle:", ang)
     smesh = np.linspace(0, fullArcLength, globalLen)
 
     res = fixed_rk4(deform_ODE, alphaCoeffs, cICoeffs, gamma0, F, ang, smesh)
@@ -286,8 +315,8 @@ def deform_spring(alphaCoeffs, cICoeffs, F, Fmax, plotBool):
     # ang_plot.append(ang)
     # z_plot.append(abs(diff0))
 
-    dcIdsPrev = dcIds0
-    dcIds0 = 0.001 # is there a better way to estimate this initial step??
+    dcIdsPrev = dgds0
+    dgds0 = 0.001 # is there a better way to estimate this initial step??
 
     angPrev = ang
     ang = ang+0.5*deg2rad
@@ -299,7 +328,7 @@ def deform_spring(alphaCoeffs, cICoeffs, F, Fmax, plotBool):
     rprev = rorg
     while abs(err)>1.1e-12:
         # use the current shooting variables (dGdS and ang) to solve
-        gamma0 = np.array([0, dcIds0])
+        gamma0 = np.array([0, dgds0])
     
         res = fixed_rk4(deform_ODE, alphaCoeffs, cICoeffs, gamma0, F, ang, smesh)
 
@@ -334,7 +363,7 @@ def deform_spring(alphaCoeffs, cICoeffs, F, Fmax, plotBool):
         # z_plot.append(err)
 
         # estimate jacobian from prev. 2 guesses
-        jac = np.array([(err-errPrev)/(dcIds0-dcIdsPrev), (err-errPrev)/(ang-angPrev)])
+        jac = np.array([(err-errPrev)/(dgds0-dcIdsPrev), (err-errPrev)/(ang-angPrev)])
         # these two lines probably no longer necessary
         if lin.norm(jac) == 0:
             break
@@ -343,14 +372,14 @@ def deform_spring(alphaCoeffs, cICoeffs, F, Fmax, plotBool):
         Fy = F*np.cos(ang)
 
         # save guess for next time
-        dcIdsPrev = dcIds0
+        dcIdsPrev = dgds0
         diff0 = diff1
         errPrev = abs(diff1)
         angPrev = ang
 
         #shitty newtons method to determine next guess
 
-        dcIds0 = dcIds0-err*jac[0]*1/(lin.norm(jac)**2)
+        dgds0 = dgds0-err*jac[0]*1/(lin.norm(jac)**2)
         ang   = ang  -err*jac[1]*1/(lin.norm(jac)**2)
         iii +=1
     # fig = plt.figure()
@@ -365,7 +394,6 @@ def deform_spring(alphaCoeffs, cICoeffs, F, Fmax, plotBool):
     # plt.plot(res.t, rorg_vec)
     # print(res.t)
     # print(rorg_vec)
-        
 
     if plotBool:
         cmap = plt.get_cmap('viridis')
@@ -385,11 +413,11 @@ def deform_spring(alphaCoeffs, cICoeffs, F, Fmax, plotBool):
 
     rdis   = np.sqrt(xdis**2+ydis**2)
     rorg = np.sqrt(xorg**2+yorg**2)
-    # print("final difference:", rdis, rorg)
 
 
     dBeta = -(np.arctan2(ydis,xdis)-np.arctan2(yorg,xorg))
     Torque = 2*(xdis*Fy-ydis*Fx+E*cI_s(sMax, cICoeffs)*res[1,-1])
+    print("FORCE DEFORM RESULT:", dBeta*1/deg2rad)
     if not dBeta == 0:
         springK = Torque/dBeta*deg2rad
     else: 
@@ -399,8 +427,10 @@ def deform_spring(alphaCoeffs, cICoeffs, F, Fmax, plotBool):
         outerCircleX = rorg*np.cos(theta)
         outerCircleY = rorg*np.sin(theta)
         plt.plot(outerCircleX,outerCircleY)
+
+    finalGuess = {"angle": ang, "dgds0": dgds0}
     
-    return dBeta, Torque, springK, gamma, iii
+    return dBeta, Torque, springK, gamma, iii, finalGuess
 
 def eval_stiffness(alphaCoeffs, cICoeffs, Fmax, Fres, plotBool):
 
@@ -415,7 +445,7 @@ def eval_stiffness(alphaCoeffs, cICoeffs, Fmax, Fres, plotBool):
     ploti = 0
     recalli = len(Fvec)+2
     for F in Fvec:
-        [dBeta, Torque, springK, gamma, iii]  = deform_spring(alphaCoeffs, cICoeffs, F, Fmax, plotBool)
+        [dBeta, Torque, springK, gamma, iii, finalGuess]  = deform_spring_byForce(alphaCoeffs, cICoeffs, F, Fmax, plotBool)
         # print("iterations:", iii, "dBeta:",dBeta*1/deg2rad,"degrees","Torque:",Torque)
         dBetaPlot[ploti] = dBeta*1/deg2rad
         TPlot[ploti] =Torque
@@ -427,8 +457,10 @@ def eval_stiffness(alphaCoeffs, cICoeffs, Fmax, Fres, plotBool):
         if ploti == recalli+1:
             kPlot[recalli] = (kPlot[ploti-2]+kPlot[ploti])/2
         ploti+=1
+        # print("final angle:", finalGuess["angle"], "final dgds0", finalGuess["dgds0"])
     approxK = abs((TPlot[-1]-TPlot[0])/(dBetaPlot[-1]-dBetaPlot[0]))
     print("overall K:", approxK)
+    
 
     if plotBool:
         plt.figure('defl vs T')
@@ -534,7 +566,8 @@ def tune_stiffness(goalK, Feval, **kwargs):
     return finalParameters
 
 deg2rad = np.pi/180
-E = 27.5*10**6
+# E = 27.5*10**6
+E = 1000000
 
 fullArcLength = 6.2
 globalRes = 150
@@ -557,12 +590,16 @@ sf = fullArcLength
 outPlaneThickness = 0.375
 
 [alphaCoeffs, cICoeffs, smesh] = create_initial_spring(alphas, cIs, si, sj, sk, sf)
-[alph, curvature, cI, rn, ab, h] = create_profiles(alphaCoeffs, cICoeffs, smesh, True)
-approxK = eval_stiffness(alphaCoeffs, cICoeffs, 5000, 10, True)
-print(approxK)
+#  [alph, curvature, cI, rn, ab, h] = create_profiles(alphaCoeffs, cICoeffs, smesh, True)
+dBetaTarg = 5*deg2rad
+Fguess    = 500
+[torque, Fnew, springK] = deform_spring_byAngle(alphaCoeffs, cICoeffs, dBetaTarg, Fguess)
+print("torque",torque,"force:",Fnew,"K:",springK)
+# approxK = eval_stiffness(alphaCoeffs, cICoeffs, 5000, 10, True)
+# print(approxK)
 create_profiles(alphaCoeffs, cICoeffs, smesh, True)
 
-finalParameters = tune_stiffness(5000,3000)
+#  finalParameters = tune_stiffness(5000,3000)
 
 
 
