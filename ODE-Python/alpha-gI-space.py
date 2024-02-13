@@ -240,54 +240,69 @@ def integrand_y(s, gamma):
 
 
 def deform_spring_byAngle(alphaCoeffs, cICoeffs, dBetaTarg, Fguess):
-
+    print("first guess")
     [dBeta, torque, springK, gamma, iii, finalGuess] = deform_spring_byForce(alphaCoeffs, cICoeffs, Fguess, Fguess, True)
     plt.show()
     err = (abs(dBeta)-dBetaTarg)*1/deg2rad
     errPrev = err
 
-    errFactor = 0.5
-    factor = 1+err*errFactor
+    factor = 1.01
 
     Fprev = Fguess
     Fnew  = Fprev*factor
-    print("ANGLE DEFORM RESULT",Fnew, err)
+    print("ANGLE DEFORM RESULT: angle error:",err,"next force guess", Fnew)
     iiii = 0
+    print("second guess; arbitrary step")
     while abs(err)>10e-6:
         print("gonna try a force")
         [dBeta, torque, springK, gamma, iii, finalGuess] = deform_spring_byForce(alphaCoeffs, cICoeffs, Fnew, Fnew, True)
         print("tried a force")
         plt.show()
-        err = (dBeta-dBetaTarg)*1/deg2rad
+        err = (abs(dBeta)-dBetaTarg)*1/deg2rad
         jac = (err-errPrev)/(Fnew-Fprev)
         Fprev = Fnew
         errPrev = err
         Fnew = Fprev - errPrev/jac
-        print("ANGLE DEFORM RESULT",Fnew, err)
+        print("ANGLE DEFORM RESULT: angle error:",err,"next force guess", Fnew)
         iiii+=1
 
     return torque, Fnew, springK
-       
+def deform_spring_byForce_bisect(alphaCoeffs, cICoeffs, F, Fmax, plotBool):
+    sMax = fullArcLength
+    dgdsLeft = 0
+    dgdsRight = 0.01
+
+    angLeft = alpha(sMax, alphaCoeffs)
+    angRight = ang+0.5*deg2rad
+
+    exitFlag = 0
+    while exitFlag == 0:
+        gamma0 = [0, dgdsLeft]
+        ang = angLeft
+        leftRes = fixed_rk4(deform_ODE, alphaCoeffs, cICoeffs, gamma0, F, ang, smesh)
+        gamma0 = [0, dgdsRight]
+        ang = angRight
+        
+
+    gamma0 = [0, dgds0]
+    ang = alpha(sMax, alphaCoeffs)
+    smesh = np.linspace(0, fullArcLength, globalLen)
+
+
+    pass
 def deform_spring_byForce(alphaCoeffs, cICoeffs, F, Fmax, plotBool):
-    print("trying a force")
+    print("trying a force:", F)
     sMax = fullArcLength
     dgds0 = 0
 
-    # err = 1
-
-    # dcIds_plot=[]
-    # ang_plot=[]
-    # z_plot=[]
-
-    gamma0 = [0, 0]
+    gamma0 = [0, dgds0]
     ang = alpha(sMax, alphaCoeffs)
-    # print("initial angle:", ang)
+    angOrig = ang
     smesh = np.linspace(0, fullArcLength, globalLen)
     print("integrating forward - first iteration")
     res = fixed_rk4(deform_ODE, alphaCoeffs, cICoeffs, gamma0, F, ang, smesh)
     print("done")
     gamma = res[0,:]
-        # res = ODE45(deform_ODE, [0, sMax], gamma0, args=(F,ang), method='RK45', max_step=globalStep, atol=1, rtol=1)
 
     Fx = F*-np.sin(ang)
     Fy = F*np.cos(ang)
@@ -313,10 +328,6 @@ def deform_spring_byForce(alphaCoeffs, cICoeffs, F, Fmax, plotBool):
     diff0 = rdis-rorg
     err = abs(diff0)
 
-    # dcIds_plot.append(dcIds0)
-    # ang_plot.append(ang)
-    # z_plot.append(abs(diff0))
-
     dgds0Prev = dgds0
     dgds0 = 0.001 # is there a better way to estimate this initial step??
 
@@ -328,20 +339,13 @@ def deform_spring_byForce(alphaCoeffs, cICoeffs, F, Fmax, plotBool):
 
     iii = 1
     rprev = rorg
+    restartFlag = 0
     while abs(err)>1.1e-12:
-        # use the current shooting variables (dGdS and ang) to solve
         gamma0 = np.array([0, dgds0])
-        # print("integrating forward - ",iii,"iteration")
         res = fixed_rk4(deform_ODE, alphaCoeffs, cICoeffs, gamma0, F, ang, smesh)
-        # print("done")
         gamma = res[0,:]
         [rnXd, rnYd] = mesh_deformed_geometry(alphaCoeffs, gamma, smesh)
         [rnX, rnY]   = mesh_original_geometry(alphaCoeffs, smesh)
-        # print(res.t[-1])
-        
-        # if plotBool:
-        #     color = cmap(float(iii)/float(27))
-        #     plt.plot(rnXd,rnYd, c=color, label=iii)
 
         xdis = rnXd[-1]
         ydis = rnYd[-1]
@@ -351,55 +355,89 @@ def deform_spring_byForce(alphaCoeffs, cICoeffs, F, Fmax, plotBool):
 
         rdis   = np.sqrt(xdis**2+ydis**2)
         rorg = np.sqrt(xorg**2+yorg**2)
-        
-        # if not rorg == rprev:
-        #     print("difference:",rdis,rorg)
-
-        # stepPrev = step
         rprev = rorg
 
         diff1 = rdis-rorg
         err  = abs(diff1)
-        # dcIds_plot.append(dcIds0)
-        # ang_plot.append(ang)
-        # z_plot.append(err)
-        # estimate jacobian from prev. 2 guesses
-        jac = np.array([(err-errPrev)/(dgds0-dgds0Prev), (err-errPrev)/(ang-angPrev)])
-        # print(jac)
-        # these two lines probably no longer necessary
-        if lin.norm(jac) == 0:
+        jacInv = np.array([(err-errPrev)/(dgds0-dgds0Prev), (err-errPrev)/(ang-angPrev)])
+        jacInv = jacInv/lin.norm(jacInv)**2
+        if lin.norm(jacInv) == 0:
             break
 
         Fx = F*-np.sin(ang)
         Fy = F*np.cos(ang)
-
-        # save guess for next time
         dgds0Prev = dgds0
         diff0 = diff1
         errPrev = abs(diff1)
         angPrev = ang
-
-        #shitty newtons method to determine next guess
-        print(err*jac[0]*1/(lin.norm(jac)**2),err*jac[1]*1/(lin.norm(jac)**2))
-        dgds0 = dgds0-err*jac[0]*1/(lin.norm(jac)**2)
-        ang   = ang  -err*jac[1]*1/(lin.norm(jac)**2)
+        # print(err*jac[0]*1/(lin.norm(jac)**2),err*jac[1]*1/(lin.norm(jac)**2))
+        dgds0 = dgds0-err*jacInv[0] # *1/(lin.norm(jacInv)**2)
+        ang   = ang  -err*jacInv[1] # *1/(lin.norm(jacInv)**2)
         if dgds0-dgds0Prev == 0:
             print("no change in dgds")
         if ang-angPrev == 0:
             print("no change in ang")
         iii +=1
-    # fig = plt.figure()
-    # ax = plt.axes(projection='3d')
-    # for i in range(len(dGdS0_plot)):
-    #     cmap = plt.get_cmap('viridis')
-    #     color = cmap(float(i/len(dGdS0_plot)))
-    #     ax.plot3D(dGdS0_plot[i:i+5+1],ang_plot[i:i+5+1],z_plot[i:i+5+1], c=color)
-    # plt.show()
 
-    # # plt.figure(F)
-    # plt.plot(res.t, rorg_vec)
-    # print(res.t)
-    # print(rorg_vec)
+        if iii>500:
+            print("restarting!!!")
+            restartFlag += 1
+            gamma0 = [0, 0]
+            ang = alpha(sMax, alphaCoeffs)
+            smesh = np.linspace(0, fullArcLength, globalLen)
+            print("integrating forward - first iteration")
+            res = fixed_rk4(deform_ODE, alphaCoeffs, cICoeffs, gamma0, F, ang, smesh)
+            print("done")
+            gamma = res[0,:]
+
+            Fx = F*-np.sin(ang)
+            Fy = F*np.cos(ang)
+
+            [rnXd, rnYd] = mesh_deformed_geometry(alphaCoeffs, gamma, smesh)
+            [rnX, rnY]   = mesh_original_geometry(alphaCoeffs, smesh)
+            
+            if plotBool:
+                # plt.figure(F)
+                cmap = plt.get_cmap('viridis')
+                color = cmap(float(0))
+                plt.plot(rnX,rnY, c=color, linewidth=2.0)
+            
+            xdis = rnXd[-1]
+            ydis = rnYd[-1]
+
+            xorg = rnX[-1]
+            yorg = rnY[-1]
+
+            rdis   = np.sqrt(xdis**2+ydis**2)
+            rorg = np.sqrt(xorg**2+yorg**2)
+            # print("orig difference:",rdis,rorg)
+            diff0 = rdis-rorg
+            err = abs(diff0)
+
+            dgds0Prev = dgds0
+            dgds0 = 0.1*restartFlag # is there a better way to estimate this initial step??
+
+            angPrev = ang
+            ang = ang+1*deg2rad*restartFlag
+
+            errPrev = abs(diff0)
+            gain = 0.005 # also fuck this
+
+            iii = 1
+            rprev = rorg
+
+    """ fig = plt.figure()
+    ax = plt.axes(projection='3d')
+    for i in range(len(dGdS0_plot)):
+        cmap = plt.get_cmap('viridis')
+        color = cmap(float(i/len(dGdS0_plot)))
+        ax.plot3D(dGdS0_plot[i:i+5+1],ang_plot[i:i+5+1],z_plot[i:i+5+1], c=color)
+    plt.show()
+
+    # plt.figure(F)
+    plt.plot(res.t, rorg_vec)
+    print(res.t)
+    print(rorg_vec) """
     print(iii)
     if plotBool:
         cmap = plt.get_cmap('viridis')
@@ -415,15 +453,12 @@ def deform_spring_byForce(alphaCoeffs, cICoeffs, F, Fmax, plotBool):
     xorg = rnX[-1]
     yorg = rnY[-1]
 
-    # print("xyorg for reference:",xorg,yorg)
-
     rdis   = np.sqrt(xdis**2+ydis**2)
     rorg = np.sqrt(xorg**2+yorg**2)
 
-
     dBeta = -(np.arctan2(ydis,xdis)-np.arctan2(yorg,xorg))
     Torque = 2*(xdis*Fy-ydis*Fx+E*cI_s(sMax, cICoeffs)*res[1,-1])
-    print("FORCE DEFORM RESULT:", dBeta*1/deg2rad)
+    print("FORCE DEFORM RESULT:", dBeta*1/deg2rad, "derivative IC", dgds0, "angle range",ang-angOrig)
     if not dBeta == 0:
         springK = Torque/dBeta*deg2rad
     else: 
