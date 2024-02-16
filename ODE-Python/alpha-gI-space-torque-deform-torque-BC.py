@@ -241,6 +241,8 @@ def integrand_y(s, gamma):
 def forward_integration_result(fun, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, plotBool, itr):
     res = fixed_rk4(fun, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh)
     gamma = res[0,:]
+    dgamma = res[1,:]
+
     [rnXd, rnYd] = mesh_deformed_geometry(alphaCoeffs, gamma, smesh)
     [rnX, rnY]   = mesh_original_geometry(alphaCoeffs, smesh)
 
@@ -259,6 +261,7 @@ def forward_integration_result(fun, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh
 
     rErr = rdis-rorg
     gammaErr = gamma[-1]-dBeta
+    dgammaErr = dgamma[-1]-dgammaTarg
 
     if plotBool:
         
@@ -290,7 +293,8 @@ def deform_spring_byTorque(alphaCoeffs, cICoeffs, torqueTarg):
 
     # get force angle for first guess from some fuck shit math:
     # step 1: find 'delta' angle from pure torque deform:
-    dgds0 = torqueTarg/(n*E*cI_s(0, cICoeffs))
+    dgds0     = torqueTarg/(n*E*cI_s(0, cICoeffs))
+    dgdsLtarg = 
     gamma0 = np.array([0, dgds0])
     [rnX, rnY]   = mesh_original_geometry(alphaCoeffs, smesh)
     xorg = rnX[-1]
