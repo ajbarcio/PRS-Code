@@ -26,14 +26,24 @@ def cI_poly(cIs, sk, sf):
     return cICoeffs
 
 def cI_s(s, cICoeffs):
-    U = np.array([s**4, s**3, s**2, s, 1])
-    k = U.dot(cICoeffs)
-    return k[0]
+
+    if hasattr(s, "__len__"):
+        cI = np.empty(len(s))
+        i = 0
+        for value in s:
+            U = np.array([value**4, value**3, value**2, value, 1])
+            cI[i] = U.dot(cICoeffs)[0]
+            i+=1
+        return cI
+    else:
+        U = np.array([s**4, s**3, s**2, s, 1])
+        cI = U.dot(cICoeffs)
+        return cI[0]
 
 def d_cI_d_s(s, cICoeffs):
     U = np.array([4*s**3, 3*s**2, 2*s, 1, 0])
-    dKdS = U.dot(cICoeffs)
-    return dKdS[0]
+    dcIdS = U.dot(cICoeffs)
+    return dcIdS[0]
 
 def alpha_poly(alphas, si, sj, sf):
     Mat = np.array([[0,0,0,0,0,1], \
@@ -48,9 +58,19 @@ def alpha_poly(alphas, si, sj, sf):
     return alphaCoeffs
 
 def alpha(s, alphaCoeffs):
-    U = np.array([s**5, s**4, s**3, s**2, s, 1])
-    alpha = U.dot(alphaCoeffs)
-    return alpha[0]
+
+    if hasattr(s, "__len__"):
+        alpha = np.empty(len(s))
+        i = 0
+        for value in s:
+            U = np.array([value**5, value**4, value**3, value**2, value, 1])
+            alpha[i] = U.dot(alphaCoeffs)[0]
+            i+=1
+        return alpha
+    else:
+        U = np.array([s**5, s**4, s**3, s**2, s, 1])
+        alpha = U.dot(alphaCoeffs)
+        return alpha[0]
 
 def d_alpha_d_s(s, alphaCoeffs):
     U = np.array([5*s**4, 4*s**3, 3*s**2, 2*s, 1, 0])
@@ -263,13 +283,18 @@ def forward_integration_result(fun, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh
     if plotBool:
         
         cmap = plt.get_cmap('cool')
-        color = cmap(itr/30.0)
+        color = cmap(itr/50.0)
         plt.figure(0)
         plt.plot(rnXd,rnYd, c=color, linewidth=3.0)
         plt.figure(1)
+        cmap = plt.get_cmap('winter')
+        color = cmap(itr/50.0)
         plt.plot(smesh, gamma/deg2rad, c = color)
+        cmap = plt.get_cmap('autumn')
+        color = cmap(itr/50.0)
         plt.plot(smesh, res[1,:]/deg2rad, c = color)
         if itr == 0:
+            cmap = plt.get_cmap('cool')
             plt.figure(0)
             color = cmap(1.0)
             plt.plot(rnX,rnY, c=color, linewidth=3.0)
@@ -278,7 +303,7 @@ def forward_integration_result(fun, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh
             outerCircleY = rorg*np.sin(theta)
             plt.plot(outerCircleX,outerCircleY)
 
-    return rErr, gammaErr, dBeta, xdis, ydis, dgdsL
+    return rErr, gammaErr, dBeta, xdis, ydis, dgdsL, res
 
 def deform_spring_byDeflection(alphaCoeffs, cICoeffs, torqueTarg):
     n=2
@@ -299,7 +324,7 @@ def deform_spring_byTorque(alphaCoeffs, cICoeffs, torqueTarg):
     betaorg = np.arctan2(yorg,xorg)
     Fx = 0
     Fy = 0
-    rErrG, gammaErrG, dBeta, xdis, ysdis, dgdsL = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, True, itr)
+    rErrG, gammaErrG, dBeta, xdis, ydis, dgdsL, resG = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, True, itr)
     deltaTorque = np.pi/2+betaorg+dBeta
     deltaExp    = np.pi/2+betaorg+2*deg2rad
 
@@ -327,7 +352,7 @@ def deform_spring_byTorque(alphaCoeffs, cICoeffs, torqueTarg):
     # Fy = np.sin(90*deg2rad)*F
 
     gamma0 = np.array([0, dgds0])
-    rErr, gammaErr, dBeta, xdis, ydis, dgdsL = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, True, itr)
+    rErr, gammaErr, dBeta, xdis, ydis, dgdsL, res = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, False, itr)
     print("original guess:", Fx, Fy, lin.norm(F),"result", dBeta/deg2rad, rErr)
 
     errVec = np.array([rErr, gammaErr])
@@ -342,7 +367,7 @@ def deform_spring_byTorque(alphaCoeffs, cICoeffs, torqueTarg):
     while err>1.1e-6:
         F = np.array([Fx, Fy])
         # print("Fx, Fy:",Fx, Fy)
-        rErr, gammaErr, dBeta, xdis, ydis, dgdsL = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, True, itr)
+        rErr, gammaErr, dBeta, xdis, ydis, dgdsL, res = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, False, itr)
         errVec = np.array([rErr, gammaErr])
         err = lin.norm(errVec)
         # print(err)
@@ -353,14 +378,27 @@ def deform_spring_byTorque(alphaCoeffs, cICoeffs, torqueTarg):
         if err<1.1e-6 or itr>1000:
             print("final guess:",Fx, Fy, lin.norm(F))
             print(itr)
-            rErr, gammaErr, dBeta, xdis, ydis, dgdsL = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, True, itr)
+            rErr, gammaErr, dBeta, xdis, ydis, dgdsL, res = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, True, itr)
+            [rnXd, rnYd] = mesh_deformed_geometry(alphaCoeffs, res[0,:], smesh)
 
             print("original torque:", torqueTarg)
-            finalTorque = n*(Fx*ydis-Fy*xdis+E*cI_s(fullArcLength, cICoeffs)*dgdsL)
+            finalTorque = n*(Fy*xdis-Fx*ydis+E*cI_s(fullArcLength, cICoeffs)*dgdsL)
             print("final Torque:", finalTorque)
             plt.figure(1)
             plt.axhline(dBeta/deg2rad)
-            plt.show()
+            plt.figure("Moment, Shear")
+            plt.plot(smesh, (res[1,:]*E*(cI_s(smesh, cICoeffs))), label="bending M") # internal bending moment along the beam
+            Fs = -Fx*np.sin(alpha(smesh, alphaCoeffs)+res[0,:])+Fy*np.cos(alpha(smesh, alphaCoeffs)+res[0,:])
+            plt.plot(smesh, Fs, label = "shear force N") # shear FORCE along the beam
+            Fsx = -Fs*np.sin(alpha(smesh, alphaCoeffs)+res[0,:])
+            Fsy =  Fs*np.cos(alpha(smesh, alphaCoeffs)+res[0,:])
+            plt.plot(smesh, rnXd*Fy-rnYd*Fx, label="M due to force?") # shear MOMENT along the beam
+            Tt = (res[1,:]*E*(cI_s(smesh, cICoeffs)))+rnXd*Fy-rnYd*Fx #vs Fsy and Fsx
+            plt.plot(smesh, Tt, label="total torque reaction") # total torque load
+            print("total torque at end:",Tt[-1]*n)
+            plt.axhline(xdis*Fy-ydis*Fx,0,fullArcLength)
+            plt.axhline(torqueTarg/2)
+            plt.legend(loc='best')
 
             return dBeta, rErr, gammaErr
 
@@ -485,12 +523,10 @@ deg2rad = np.pi/180
 E = 1000000
 
 fullArcLength = 6.2
-globalRes = 150
+globalRes = 1000
 globalLen = globalRes+1
 globalStep = fullArcLength/globalRes
 globalMaxIndex = globalLen-1
-
-
 
 alphas  = [0,100*deg2rad,190*deg2rad,135*deg2rad]
 # alphas = [0,0,0,0]
@@ -500,7 +536,7 @@ cIs     = [.1,.05,.1]
 # alphas = [0,45*deg2rad,135*deg2rad,180*deg2rad]
 # cIs     = [.05,.05,.05]
 
-xy0    = [1,0]
+xy0    = [0,0]
 
 si = fullArcLength/3.0
 sj = 2.0*fullArcLength/3.0
@@ -513,6 +549,7 @@ outPlaneThickness = 0.375
 [dBeta, rErr, gammaErr] = deform_spring_byTorque(alphaCoeffs, cICoeffs, 13541.641)
 print(dBeta*1/deg2rad)
 print(rErr, gammaErr)
+plt.show()
 
 #  [alph, curvature, cI, rn, ab, h] = create_profiles(alphaCoeffs, cICoeffs, smesh, True)
 # dBetaTarg = 10*deg2rad
