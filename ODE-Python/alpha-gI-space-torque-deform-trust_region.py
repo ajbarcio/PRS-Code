@@ -26,24 +26,14 @@ def cI_poly(cIs, sk, sf):
     return cICoeffs
 
 def cI_s(s, cICoeffs):
-
-    if hasattr(s, "__len__"):
-        cI = np.empty(len(s))
-        i = 0
-        for value in s:
-            U = np.array([value**4, value**3, value**2, value, 1])
-            cI[i] = U.dot(cICoeffs)[0]
-            i+=1
-        return cI
-    else:
-        U = np.array([s**4, s**3, s**2, s, 1])
-        cI = U.dot(cICoeffs)
-        return cI[0]
+    U = np.array([s**4, s**3, s**2, s, 1])
+    k = U.dot(cICoeffs)
+    return k[0]
 
 def d_cI_d_s(s, cICoeffs):
     U = np.array([4*s**3, 3*s**2, 2*s, 1, 0])
-    dcIdS = U.dot(cICoeffs)
-    return dcIdS[0]
+    dKdS = U.dot(cICoeffs)
+    return dKdS[0]
 
 def alpha_poly(alphas, si, sj, sf):
     Mat = np.array([[0,0,0,0,0,1], \
@@ -58,19 +48,9 @@ def alpha_poly(alphas, si, sj, sf):
     return alphaCoeffs
 
 def alpha(s, alphaCoeffs):
-
-    if hasattr(s, "__len__"):
-        alpha = np.empty(len(s))
-        i = 0
-        for value in s:
-            U = np.array([value**5, value**4, value**3, value**2, value, 1])
-            alpha[i] = U.dot(alphaCoeffs)[0]
-            i+=1
-        return alpha
-    else:
-        U = np.array([s**5, s**4, s**3, s**2, s, 1])
-        alpha = U.dot(alphaCoeffs)
-        return alpha[0]
+    U = np.array([s**5, s**4, s**3, s**2, s, 1])
+    alpha = U.dot(alphaCoeffs)
+    return alpha[0]
 
 def d_alpha_d_s(s, alphaCoeffs):
     U = np.array([5*s**4, 4*s**3, 3*s**2, 2*s, 1, 0])
@@ -258,7 +238,7 @@ def integrand_y(s, gamma):
 # attempting 0 force
 
 
-def forward_integration_result(fun, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, plotBool, itr, resolution):
+def forward_integration_result(fun, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, plotBool, itr):
     res = fixed_rk4(fun, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh)
     gamma = res[0,:]
     [rnXd, rnYd] = mesh_deformed_geometry(alphaCoeffs, gamma, smesh)
@@ -283,20 +263,13 @@ def forward_integration_result(fun, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh
     if plotBool:
         
         cmap = plt.get_cmap('cool')
-        color = cmap(itr/float(resolution))
+        color = cmap(itr/30.0)
         plt.figure(0)
         plt.plot(rnXd,rnYd, c=color, linewidth=3.0)
         plt.figure(1)
-        cmap = plt.get_cmap('winter')
-        color = cmap(itr/float(resolution))
-        if itr/float(resolution) == 1:
-            color = 'orange'
         plt.plot(smesh, gamma/deg2rad, c = color)
-        cmap = plt.get_cmap('autumn')
-        color = cmap(itr/float(resolution))
         plt.plot(smesh, res[1,:]/deg2rad, c = color)
         if itr == 0:
-            cmap = plt.get_cmap('cool')
             plt.figure(0)
             color = cmap(1.0)
             plt.plot(rnX,rnY, c=color, linewidth=3.0)
@@ -305,135 +278,220 @@ def forward_integration_result(fun, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh
             outerCircleY = rorg*np.sin(theta)
             plt.plot(outerCircleX,outerCircleY)
 
-    return rErr, gammaErr, dBeta, xdis, ydis, dgdsL, res
+    return rErr, gammaErr, dBeta, xdis, ydis, dgdsL
 
 def deform_spring_byDeflection(alphaCoeffs, cICoeffs, torqueTarg):
     n=2
 
-def deform_spring_byTorque(alphaCoeffs, cICoeffs, torqueTarg, torqueStepRes, plotBool):  
+def deform_spring_byTorque(alphaCoeffs, cICoeffs, torqueTarg):
     n = 2
     itr = 0
     smesh = np.linspace(0, fullArcLength, globalLen)
-    hJ = 1 # Lbs
-    hT = torqueTarg/torqueStepRes # lbs-in
 
-    F = [0, 0, hT]
+    # get force angle for first guess from some fuck shit math:
+    # step 1: find 'delta' angle from pure torque deform:
 
-    Fx = F[0]
-    Fy = F[1]
-    torque = F[2]
-    fevalCounter = 0
+    dgds0 = torqueTarg/(n*E*cI_s(0, cICoeffs))
+    gamma0 = np.array([0, dgds0])
+    [rnX, rnY]   = mesh_original_geometry(alphaCoeffs, smesh)
+    xorg = rnX[-1]
+    yorg = rnY[-1]
+    rorg = np.sqrt(xorg**2+yorg**2)
+    betaorg = np.arctan2(yorg,xorg)
+    Fx = 0
+    Fy = 0
+    rErrG, gammaErrG, dBeta, xdis, ysdis, dgdsL = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, True, itr)
+    deltaTorque = np.pi/2+betaorg+dBeta
+    deltaExp    = np.pi/2+betaorg+2*deg2rad
 
-    # test error for small amount of pure bending:
-    for i in range(torqueStepRes):
+    dT   = np.array([rorg*(np.cos(betaorg)+np.cos(betaorg+dBeta)), rorg*(np.sin(betaorg)+np.sin(betaorg+dBeta))])
+    dExp = np.array([rorg*(np.cos(betaorg)+np.cos(betaorg+2*deg2rad)), rorg*(np.sin(betaorg)+np.sin(betaorg+2*deg2rad))])
 
-        [rnX, rnY]   = mesh_original_geometry(alphaCoeffs, smesh)
-        dgds0 = (torque/(n) + rnY[0]*Fx - rnX[0]*Fy)/(E*cI_s(0, cICoeffs))
-        torqueCheck = 
-        gamma0 = np.array([0, dgds0])
-        xorg = rnX[-1]
-        yorg = rnY[-1]
-        rorg = np.sqrt(xorg**2+yorg**2)
-        betaorg = np.arctan2(yorg,xorg)
+    print(deltaTorque/deg2rad,deltaExp/deg2rad)
 
-        # above lines should be moved into forward_integration_result
+    # construct first guess from some fuck shit math: fangle = expected delta - deltaTorque
+    Fvec = (dExp-dT)/lin.norm(dExp - dT)
+    F = torqueTarg/(2*rorg)
+    Fx = Fvec[0]*F
+    Fy = Fvec[1]*F
+    # Fx = 0
+    # Fy = 0
+    # Fx = -np.sin(betaorg)*F
+    # Fy = np.cos(betaorg)*F
 
-        cErr, gammaErr, dBeta, xdis, ydis, dgdsL, resG = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, plotBool, i, torqueStepRes)
-        fevalCounter+=1
+# # ## THIS ONE WORKS WITH [FORCE] FOR SOME REASON
+    Fx = np.cos(alpha(fullArcLength, alphaCoeffs))*F
+    Fy = np.sin(alpha(fullArcLength, alphaCoeffs))*F
+    
+    
+    # Fx = np.cos(90*deg2rad)*F
+    # Fy = np.sin(90*deg2rad)*F
 
-        e = np.array([cErr, gammaErr]) # RESULT
-        # print(e)
+    gamma0 = np.array([0, dgds0])
+    rErr, gammaErr, dBeta, xdis, ydis, dgdsL = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, True, itr)
+    print("original guess:", Fx, Fy, lin.norm(F),"result", dBeta/deg2rad, rErr)
 
-        # finite difference in Fx
-        Fx = Fx+hJ
-        Fy = F[1]
-        J11, J21, dBeta, xdisG, ydisG, dgdsLG, resG = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, False, itr, torqueStepRes)
-        fevalCounter+=1
-        # finite difference in Fy
-        Fx = F[0]
-        Fy = Fy+hJ
-        J12, J22, dBeta, xdisG, ydisG, dgdsLG, resG = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, False, itr, torqueStepRes)
-        fevalCounter+=1
-        # approximate jacobian with small finite difference:
-        J = np.array([[J11-e[0],J12-e[0]],[J21-e[1],J22-e[1]]])*1/(hJ)
-        # print(J)
-        dF = np.array(lin.pinv(J).dot(-e))
-        dF = np.append(dF, 0)
-        # print(dF)
+    errVec = np.array([rErr, gammaErr])
+    err = lin.norm(errVec)
 
-        errorDecreaseCount = 0
+    FPrev = np.array([Fx, Fy])
+    errVecPrev = errVec
+    Fx +=Fx*0.01
+    Fy +=Fy*0.01
+    itr = 1
+    printFlag = 1
+    while err>1.1e-6:
+        F = np.array([Fx, Fy])
+        # print("Fx, Fy:",Fx, Fy)
+        rErr, gammaErr, dBeta, xdis, ydis, dgdsL = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, True, itr)
+        errVec = np.array([rErr, gammaErr])
+        err = lin.norm(errVec)
+        # print(err)
+        if err>lin.norm(errVecPrev)and printFlag:
+            print("diverging")
+            printFlag = 0
 
-        while lin.norm(e)>10**-6:
-            F = F+dF
-            # see how good your jacobian approximation was
-            Fx = F[0]
-            Fy = F[1]
-            torque = F[2]
-            print(torque)
+        if err<1.1e-6 or itr>1000:
+            print("final guess:",Fx, Fy, lin.norm(F))
+            print(itr)
+            rErr, gammaErr, dBeta, xdis, ydis, dgdsL = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, True, itr)
+
+            print("original torque:", torqueTarg)
+            finalTorque = n*(Fy*xdis-Fx*ydis+E*cI_s(fullArcLength, cICoeffs)*dgdsL)
+            print("final Torque:", finalTorque)
+            plt.figure(1)
+            plt.axhline(dBeta/deg2rad)
+            plt.show()
+
+            return dBeta, rErr, gammaErr
+
+        dErr = errVec-errVecPrev
+        dX   = F-FPrev
+        if itr == 1:
+            J = np.array([[dErr[0]/dX[0],dErr[0]/dX[1]],[dErr[1]/dX[0],dErr[1]/dX[1]]])
             
-            cErr, gammaErr, dBeta, xdis, ydis, dgdsL, res = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, plotBool, i, torqueStepRes)
-            fevalCounter+=1
+            Jinv = lin.pinv(J)
+        else:
+            # Jinv = JinvPrev + ((dErr-JinvPrev.dot(dX))/(dX.dot(JinvPrev).dot(dErr))).dot(dX.dot(JinvPrev)) # "good" algorithm
+            Jinv   = JinvPrev + ((dX-JinvPrev.dot(dErr))/(lin.norm(dErr)**2)).dot(dErr) # "bad" algorithm
 
-            e = np.array([cErr, gammaErr])
 
-            # finite difference in Fx
-            Fx = Fx+hJ
-            Fy = F[1]
-            J11, J21, dBetaG, xdisG, ydisG, dgdsLG, resG = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, False, itr, torqueStepRes)
-            fevalCounter+=1
-            # finite difference in Fy
-            Fx = F[0]
-            Fy = Fy+hJ
-            J12, J22, dBetaG, xdisG, ydisG, dgdsLG, resG = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, False, itr, torqueStepRes)
-            fevalCounter+=1
-            # approximate jacobian with small finite difference:
-            J = np.array([[J11-e[0],J12-e[0]],[J21-e[1],J22-e[1]]])*1/(hJ)
-            # print(J)
-            dF = np.array(lin.pinv(J).dot(-e))
-            dF = np.append(dF, 0)
-            # print(dF)
+        JinvPrev = Jinv
+        # print("Jinv:",Jinv)
+        FPrev = F
+        # print("Fbefore:",F)
+        F = F - Jinv.dot(errVec)
+        # print("F:",F)
+        Fx = F[0]
+        Fy = F[1]
 
-            errorDecreaseCount += 1
+        itr+=1
 
-        F[2] = F[2]+hT
-        torque = F[2]
+    return dBeta, rErr, gammaErr
 
-    # print solid mechanics properties of result
-    if plotBool:
-        rnXd, rnYd = mesh_deformed_geometry(alphaCoeffs, res[0,:], smesh)
-        plt.figure("Moment, Shear")
-        plt.plot(smesh, (res[1,:]*E*(cI_s(smesh, cICoeffs))), label="bending M") # internal bending moment along the beam
-        Fs = -Fx*np.sin(alpha(smesh, alphaCoeffs)+res[0,:])+Fy*np.cos(alpha(smesh, alphaCoeffs)+res[0,:])
-        plt.plot(smesh, Fs, label = "shear force N") # shear FORCE along the beam
-        Fsx = -Fs*np.sin(alpha(smesh, alphaCoeffs)+res[0,:])
-        Fsy =  Fs*np.cos(alpha(smesh, alphaCoeffs)+res[0,:])
-        plt.plot(smesh, rnXd*Fy-rnYd*Fx, label="M due to force?") # shear MOMENT along the beam
-        Tt = (res[1,:]*E*(cI_s(smesh, cICoeffs)))+rnXd*Fy-rnYd*Fx #vs Fsy and Fsx
-        plt.plot(smesh, Tt, label="total torque reaction") # total torque load
-        plt.axhline(torqueTarg/2) #torque reaction target
-        plt.legend(loc='best')
+def tune_stiffness(goalK, Feval, **kwargs):
 
-    print("globalRes:", globalRes)
-    print('feval per torque iteration:', fevalCounter/torqueStepRes)
-    print('total feval', fevalCounter)
-    # print("original torque:", torqueTarg)
-    initialTorque = n*(Fy*rnX[0]-Fx*rnY[0]+E*cI_s(0, cICoeffs)*dgds0)
-    finalTorque = n*(Fy*xdis-Fx*ydis+E*cI_s(fullArcLength, cICoeffs)*dgdsL)
-    print("Torque Integration Error:", finalTorque-torqueTarg)
-    print("initial Torque Error:", initialTorque-torqueTarg)
+    def stiffnessObjectiveFun(dragVector, goalK, Feval):
+        [alphas, cIs, si, sj, sk ,sf] = generate_params(dragVector)
+        [alphaCoeffs, cICoeffs, smesh] = create_initial_spring(alphas, cIs, si, sj, sk, sf)
 
-    return dBeta, cErr, gammaErr
+        currentK = eval_stiffness(alphaCoeffs, cICoeffs, Feval, 5, False)
+        dist = currentK-goalK
+        print("dist:",dist)
+        print("params:",dragVector)
+        return currentK-goalK
 
+
+    def generate_params(dragVector):
+
+        alphas = [dragVector[0],dragVector[1],dragVector[2],dragVector[3]]
+        cIs    = [dragVector[6],dragVector[7],dragVector[8]]
+        si     = dragVector[10]*dragVector[4]
+        sj     = dragVector[10]*dragVector[5]
+        sk     = dragVector[10]*dragVector[9]
+        sf     = dragVector[10]
+
+        return alphas, cIs, si, sj, sk, sf
+    
+   
+    dragVectorParams = {'alpha0':       0,            \
+                        'alpha1':       100*deg2rad,  \
+                        'alpha2':       190*deg2rad,  \
+                        'alpha3':       135*deg2rad,  \
+                        'alpha1factor': 1/3.0,        \
+                        'alpha2factor': 2/3.0,        \
+                        'cI0':          .1,           \
+                        'cI1':          .05,          \
+                        'cI2':          .1,           \
+                        'cIfactor':     0.5,          \
+                        'fullLength':   6             }
+    
+    for key, value in kwargs.items():
+        dragVectorParams[key] = value
+
+    dragVector = np.array(list(dragVectorParams.values()))
+
+    angleRange = 30*deg2rad
+    propRange = 1/5.0
+    lenRange  = 0.375
+
+    bnds = ((0,0), (dragVector[1]-angleRange,dragVector[1]+angleRange), \
+                   (dragVector[2]-angleRange,dragVector[2]+angleRange),  \
+                   (dragVector[3]-angleRange,dragVector[3]+angleRange),  \
+                   (dragVector[4]-propRange,dragVector[4]+propRange),  \
+                   (dragVector[5]-propRange,dragVector[5]+propRange),  \
+                   (0,None),  \
+                   (0,None),  \
+                   (0,None),  \
+                   (dragVector[9]-propRange,dragVector[9]+propRange),  \
+                   (dragVector[10]-lenRange,dragVector[10]+lenRange))
+
+    res = op.minimize(stiffnessObjectiveFun, dragVector, args=(goalK,Feval), bounds=bnds, method='Nelder-Mead')
+    # err = stiffnessObjectiveFun(dragVector, goalK, Feval)
+    # err0 = err
+    # dragVector0 = dragVector
+    # dragVector = dragVector*1.01
+    # dragVector[1] = dragVector0[1]
+    # dragVector[2] = dragVector0[2]
+    # dragVector[3] = dragVector0[3]
+    # jac = np.empty(len(dragVector0))
+    # gain = 1.5
+    # while err>1:
+    #     err = stiffnessObjectiveFun(dragVector, goalK, Feval)
+    #     for i in range(len(dragVector0)):
+    #         if i == 0 or i == 1 or i == 2 or i == 3:
+    #             jac[i] = 1
+    #         else:
+    #             jac[i] = (err-err0)/(dragVector[i]-dragVector0[i])
+    #             dragVector0[i] = dragVector[i]
+    #         dragVector[i] = dragVector[i] - gain*err * jac[i]/(lin.norm(jac)**2)
+        
+    #     err0 = err
+
+    # finalParameters = dragVector
+
+    if res.success:
+        print("good shit")
+    finalParameters = res.x
+    
+    [alphas, cIs, si, sj, sk ,sf] = generate_params(finalParameters)
+    [alphaCoeffs, cICoeffs, smesh] = create_initial_spring(alphas, cIs, si, sj, sk, sf)
+    finalK = eval_stiffness(alphaCoeffs, cICoeffs, Feval, 5, True)
+    print("final stiffness:",finalK)
+
+    return finalParameters
 
 deg2rad = np.pi/180
 # E = 27.5*10**6
 E = 1000000
 
 fullArcLength = 6.2
-globalRes = 100
+globalRes = 150
 globalLen = globalRes+1
 globalStep = fullArcLength/globalRes
 globalMaxIndex = globalLen-1
+
+
 
 alphas  = [0,100*deg2rad,190*deg2rad,135*deg2rad]
 # alphas = [0,0,0,0]
@@ -453,20 +511,9 @@ sf = fullArcLength
 outPlaneThickness = 0.375
 
 [alphaCoeffs, cICoeffs, smesh] = create_initial_spring(alphas, cIs, si, sj, sk, sf)
-globalRes = 25
-globalLen = globalRes+1
-[dBeta, rErr, gammaErr] = deform_spring_byTorque(alphaCoeffs, cICoeffs, 13541.641, 50, False)
-for i in range(6):
-    globalRes = 2*globalRes
-    globalLen = globalRes+1
-    plotBool = False
-    if i == 5:
-        plotBool = True
-    [dBeta, rErr, gammaErr] = deform_spring_byTorque(alphaCoeffs, cICoeffs, 13541.641, 50, plotBool)
-
+[dBeta, rErr, gammaErr] = deform_spring_byTorque(alphaCoeffs, cICoeffs, 13541.641)
 print(dBeta*1/deg2rad)
 print(rErr, gammaErr)
-plt.show()
 
 #  [alph, curvature, cI, rn, ab, h] = create_profiles(alphaCoeffs, cICoeffs, smesh, True)
 # dBetaTarg = 10*deg2rad
