@@ -20,4 +20,8 @@ from openpyxl import *
 s = np.array([1,2,3,4])
 t = np.array([4, 3, 2, 1])
 # U = np.array([s**4, s**3, s**2, s, 1])
-print(s*t)
+
+print(s.dot(np.identity(4)))
+print(s)
+print(np.identity(4).dot(s))
+print(np.identity(4)*(s))

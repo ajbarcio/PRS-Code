@@ -311,24 +311,29 @@ def deform_spring_byDeflection(alphaCoeffs, cICoeffs, torqueTarg):
     n=2
 
 def deform_spring_byTorque(alphaCoeffs, cICoeffs, torqueTarg, torqueStepRes, plotBool):  
-    Tgain = .8
-    
     n = 2
     itr = 0
     smesh = np.linspace(0, fullArcLength, globalLen)
     hJ = 1 # Lbs
     hT = torqueTarg/torqueStepRes # lbs-in
 
-    F = [0, 0, hT]
+    F  = [0, 0, hT]
+    dF = [0, 0, 0]
+    gains = np.array([1, 1, 50])
 
     Fx = F[0]
     Fy = F[1]
     torque = F[2]
     fevalCounter = 0
+    e = np.array([1, 1, 1])
 
-    # test error for small amount of pure bending:
-    while abs(torque-torqueTarg)>10e-10:
+    # reduce error in all 3 directions simultaneously:
+    while lin.norm(e) > 10e-6:
 
+        F = F+dF
+        Fx = F[0]
+        Fy = F[1]
+        torque = F[2]
         [rnX, rnY]   = mesh_original_geometry(alphaCoeffs, smesh)
         dgds0 = (torque/(n) + rnY[0]*Fx - rnX[0]*Fy)/(E*cI_s(0, cICoeffs))
         torqueCheck = n*(Fy*rnX[0]-Fx*rnY[0]+E*cI_s(0, cICoeffs)*dgds0)
@@ -342,85 +347,40 @@ def deform_spring_byTorque(alphaCoeffs, cICoeffs, torqueTarg, torqueStepRes, plo
         # above lines should be moved into forward_integration_result
 
         cErr, gammaErr, dBeta, xdis, ydis, dgdsL, resG = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, plotBool, itr, torqueStepRes)
+        tErr = n*(rnX[0]*Fy-rnY[0]*Fx+E*cI_s(0, cICoeffs)*dgds0)-torqueTarg
         fevalCounter+=1
 
-        e = np.array([cErr, gammaErr]) # RESULT
-        # print(e)
+        e = np.array([cErr, gammaErr, tErr]) # RESULT
+        print(e)
 
         # finite difference in Fx
         Fx = Fx+hJ
         Fy = F[1]
-        J11, J21, dBetaG, xdisG, ydisG, dgdsLG, resG = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, False, itr, torqueStepRes)
+        J11, J21, dBeta, xdisG, ydisG, dgdsLG, resG = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, False, itr, torqueStepRes)
+        J31 = n*(rnX[0]*Fy-rnY[0]*Fx+E*cI_s(0, cICoeffs)*dgds0)-torqueTarg
         fevalCounter+=1
         # finite difference in Fy
         Fx = F[0]
         Fy = Fy+hJ
-        J12, J22, dBetaG, xdisG, ydisG, dgdsLG, resG = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, False, itr, torqueStepRes)
+        J12, J22, dBeta, xdisG, ydisG, dgdsLG, resG = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, False, itr, torqueStepRes)
+        J32 = n*(rnX[0]*Fy-rnY[0]*Fx+E*cI_s(0, cICoeffs)*dgds0)-torqueTarg
+        fevalCounter+=1
+        # finite difference in T
+        Fx = F[0]
+        Fy =  F[1]
+        torque = torque+hJ
+        dgds0 = (torque/(n) + rnY[0]*Fx - rnX[0]*Fy)/(E*cI_s(0, cICoeffs))
+        J13, J23, dBeta, xdisG, ydisG, dgdsLG, resG = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, False, itr, torqueStepRes)
+        J33 = n*(rnX[0]*Fy-rnY[0]*Fx+E*cI_s(0, cICoeffs)*dgds0)-torqueTarg
         fevalCounter+=1
         # approximate jacobian with small finite difference:
-        J = np.array([[J11-e[0],J12-e[0]],[J21-e[1],J22-e[1]]])*1/(hJ)
+        J = np.array([[J11-e[0],J12-e[0],J13-e[0]],[J21-e[1],J22-e[1],J23-e[1]],[J31-e[2],J32-e[2],J33-e[2]]])*1/(hJ)
         # print(J)
-        dF = np.array(lin.pinv(J).dot(-e))
-        dF = np.append(dF, 0)
-        # print(dF)
-
-        errorDecreaseCount = 0
-
-        while lin.norm(e)>10**-10:
-            F = F+dF
-            # see how good your jacobian approximation was
-            Fx = F[0]
-            Fy = F[1]
-            torque = F[2]
-            dgds0 = (torque/(n) + rnY[0]*Fx - rnX[0]*Fy)/(E*cI_s(0, cICoeffs))
-            gamma0 = np.array([0, dgds0])
-            
-            cErr, gammaErr, dBeta, xdis, ydis, dgdsL, res = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, plotBool, itr, torqueStepRes)
-            fevalCounter+=1
-
-            e = np.array([cErr, gammaErr])
-
-            # finite difference in Fx
-            Fx = Fx+hJ
-            Fy = F[1]
-            J11, J21, dBetaG, xdisG, ydisG, dgdsLG, resG = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, False, itr, torqueStepRes)
-            fevalCounter+=1
-            # finite difference in Fy
-            Fx = F[0]
-            Fy = Fy+hJ
-            J12, J22, dBetaG, xdisG, ydisG, dgdsLG, resG = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, False, itr, torqueStepRes)
-            fevalCounter+=1
-            # approximate jacobian with small finite difference:
-            J = np.array([[J11-e[0],J12-e[0]],[J21-e[1],J22-e[1]]])*1/(hJ)
-            # print(J)
-            dF = np.array(lin.pinv(J).dot(-e))
-            dF = np.append(dF, 0)
-            # print(dF)
-
-            errorDecreaseCount += 1
-
-        # if i >= torqueStepRes-1:
-        #     print("FINAL planar force vector:", F, "i", i)
-        # else:
-        if abs(torque-torqueTarg)>10e-10:
-            F[2] = F[2]+(torqueTarg - torque)*Tgain
-            torque = F[2]
-        else:
-            break
-        # print("Final planar force vector:", F)
-
-    # print("final torque try:", torque)
-    # print("ideal dgds0             ", (torqueTarg/(n) + rnY[0]*Fx - rnX[0]*Fy)/(E*cI_s(0, cICoeffs)))
-    # print("final dgds0 (calculated)", (torque/(n) + rnY[0]*Fx - rnX[0]*Fy)/(E*cI_s(0, cICoeffs)))
-    # print("final dgds0 (called)    ", dgds0)
-    # print("torque based on final dgds0: (calculated)", n*(Fy*rnX[0]-Fx*rnY[0]+E*cI_s(0, cICoeffs)*(torque/(n) + rnY[0]*Fx - rnX[0]*Fy)/(E*cI_s(0, cICoeffs))))
-    # print("torque based on final dgds0: (called)    ", n*(Fy*rnX[0]-Fx*rnY[0]+E*cI_s(0, cICoeffs)*dgds0))
-    # print("torque based on ideal dgds0:             ", n*(Fy*rnX[0]-Fx*rnY[0]+E*cI_s(0, cICoeffs)*(torque/(n) + rnY[0]*Fx - rnX[0]*Fy)/(E*cI_s(0, cICoeffs))))
-    # print("torque target                            ", torqueTarg)
-
-    dgds0 = (torque/(n) + rnY[0]*Fx - rnX[0]*Fy)/(E*cI_s(0, cICoeffs))
-    gamma0 = np.array([0, dgds0])
-    cErr, gammaErr, dBeta, xdis, ydis, dgdsL, res = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, plotBool, itr, torqueStepRes)
+        # print(lin.pinv(J))
+        # dF = np.array(lin.inv(J).dot(-e))
+        # print("orig dF", dF)
+        dF = np.array(lin.inv(J).dot(-e).dot(gains*(np.identity(3))))
+        print("new dF", dF)
 
     # print solid mechanics properties of result
     if plotBool:
@@ -437,17 +397,14 @@ def deform_spring_byTorque(alphaCoeffs, cICoeffs, torqueTarg, torqueStepRes, plo
         plt.axhline(torqueTarg/2) #torque reaction target
         plt.legend(loc='best')
 
-    # print("globalRes:", globalRes)
-    # print('feval per torque iteration:', fevalCounter/torqueStepRes)
-    # print('total feval', fevalCounter)
+    print("globalRes:", globalRes)
+    print('feval per torque iteration:', fevalCounter/torqueStepRes)
+    print('total feval', fevalCounter)
     # print("original torque:", torqueTarg)
-    
-
     initialTorque = n*(Fy*rnX[0]-Fx*rnY[0]+E*cI_s(0, cICoeffs)*dgds0)
     finalTorque = n*(Fy*xdis-Fx*ydis+E*cI_s(fullArcLength, cICoeffs)*dgdsL)
-    # print("Torque Integration Error:", finalTorque-torqueTarg)
-    # print("initial Torque Error:", initialTorque-torqueTarg)
-    print(globalRes, finalTorque-torqueTarg)
+    print("Torque Integration Error:", finalTorque-torqueTarg)
+    print("initial Torque Error:", initialTorque-torqueTarg)
 
     return dBeta, cErr, gammaErr
 
@@ -482,14 +439,14 @@ outPlaneThickness = 0.375
 [alphaCoeffs, cICoeffs, smesh] = create_initial_spring(alphas, cIs, si, sj, sk, sf)
 globalRes = 25
 globalLen = globalRes+1
-[dBeta, rErr, gammaErr] = deform_spring_byTorque(alphaCoeffs, cICoeffs, 13541.641, 50, False)
-for i in range(6):
-    globalRes = 2*globalRes
-    globalLen = globalRes+1
-    plotBool = False
-    if i == 5:
-        plotBool = True
-    [dBeta, rErr, gammaErr] = deform_spring_byTorque(alphaCoeffs, cICoeffs, 13541.641, 50, plotBool)
+[dBeta, rErr, gammaErr] = deform_spring_byTorque(alphaCoeffs, cICoeffs, 13541.641, 50, True)
+# for i in range(6):
+#     globalRes = 2*globalRes
+#     globalLen = globalRes+1
+#     plotBool = False
+#     if i == 5:
+#         plotBool = True
+#     [dBeta, rErr, gammaErr] = deform_spring_byTorque(alphaCoeffs, cICoeffs, 13541.641, 50, plotBool)
 
 print(dBeta*1/deg2rad)
 print(rErr, gammaErr)
