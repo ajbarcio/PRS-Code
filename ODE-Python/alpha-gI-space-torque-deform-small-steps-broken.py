@@ -158,41 +158,58 @@ def create_profiles(alphaCoeffs, cICoeffs, smesh, geoBool):
         return plotAlpha, plotCurvature, plotCI, plotRn
 
 def mesh_original_geometry(alphaCoeffs, smesh):
+    # Riemann Sum
+
     rnDx = np.empty(len(smesh))
     rnDy = np.empty(len(smesh))
-    rnX  = np.empty(len(smesh))
-    rnY  = np.empty(len(smesh))
+    rnXG  = np.empty(len(smesh))
+    rnYG  = np.empty(len(smesh))
     for i in range(len(smesh)):
         if i==0:
             rnDx[i]=0
             rnDy[i]=0
-            rnX[i] = xy0[0]
-            rnY[i] = xy0[1]
+            rnXG[i] = xy0[0]
+            rnYG[i] = xy0[1]
         else:
             step = smesh[i]-smesh[i-1]
             rnDx[i]=step*np.cos(alpha(i*step,alphaCoeffs))
             rnDy[i]=step*np.sin(alpha(i*step,alphaCoeffs))
-            rnX[i] = rnX[i-1]+rnDx[i]
-            rnY[i] = rnY[i-1]+rnDy[i]
+            rnXG[i] = rnXG[i-1]+rnDx[i]
+            rnYG[i] = rnYG[i-1]+rnDy[i]
+
+    # RK
+    
+    rnX = fixed_rk4(xdis_integrand, xy0[0], smesh, alphaCoeffs)
+    rnY = fixed_rk4(ydis_integrand, xy0[1], smesh, alphaCoeffs)
+
+    # print(rnX[-1]-rnXG[-1])
+    # print(rnY[-1]-rnYG[-1])
+
     return rnX, rnY
 
 def mesh_deformed_geometry(alphaCoeffs, gamma, smesh):
-    rnDx = np.empty(len(smesh))
-    rnDy = np.empty(len(smesh))
-    rnX  = np.empty(len(smesh))
-    rnY  = np.empty(len(smesh))
-    for i in range(len(smesh)):
-        if i==0:
-            rnDx[i]=0
-            rnDy[i]=0
-            rnX[i] = xy0[0]
-            rnY[i] = xy0[1]
-        else:
-            step = smesh[i]-smesh[i-1]
-            rnDx[i]=step*np.cos(alpha(i*step,alphaCoeffs)+gamma[i])
-            rnDy[i]=step*np.sin(alpha(i*step,alphaCoeffs)+gamma[i])
-            rnX[i] = rnX[i-1]+rnDx[i]
-            rnY[i] = rnY[i-1]+rnDy[i]
+
+    step = fullArcLength/globalRes
+
+    # rnDx = np.empty(len(smesh))
+    # rnDy = np.empty(len(smesh))
+    # rnX  = np.empty(len(smesh))
+    # rnY  = np.empty(len(smesh))
+    # for i in range(len(smesh)):
+    #     if i==0:
+    #         rnDx[i]=0
+    #         rnDy[i]=0
+    #         rnX[i] = xy0[0]
+    #         rnY[i] = xy0[1]
+    #     else:
+    #         step = smesh[i]-smesh[i-1]
+    #         rnDx[i]=step*np.cos(alpha(i*step,alphaCoeffs)+gamma[i])
+    #         rnDy[i]=step*np.sin(alpha(i*step,alphaCoeffs)+gamma[i])
+    #         rnX[i] = rnX[i-1]+rnDx[i]
+    #         rnY[i] = rnY[i-1]+rnDy[i]
+
+    rnX = fixed_rk4(xdis_integrand, xy0[0], smesh, alphaCoeffs, gamma, step)
+    rnY = fixed_rk4(ydis_integrand, xy0[1], smesh, alphaCoeffs, gamma, step)
 
     return rnX, rnY
     
@@ -205,40 +222,92 @@ def create_initial_spring(alphas, cIs, si, sj, sk, sf):
     
     return alphaCoeffs, cICoeffs, smesh
 
-def deform_ODE(s, alphaCoeffs, cICoeffs, gamma, Fx, Fy):
+def xdis_integrand(s, y, *args): # alphaCoeffs, gamma, step
+    # print(args[0][0])
+    alphaCoeffs = args[0][0][0]
     
+    # print("without gamma", alpha(s, alphaCoeffs))
+    if len(args[0][0])>1:
+        step = args[0][0][2]
+        i = int(s/step-1)
+        gamma   = args[0][0][1]
+        argument    = alpha(s, alphaCoeffs) + gamma[i]
+        argument = argument
+        # print("with gamma", argument)
+    else:
+        argument    = alpha(s, alphaCoeffs)   
+        argument = argument
+    return np.cos(argument)
+
+def ydis_integrand(s, y, *args):
+
+    alphaCoeffs = args[0][0][0]
+    # print("without gamma", alpha(s, alphaCoeffs))
+    if len(args[0][0])>1:
+        step = args[0][0][2]
+        i = int(s/step-1)
+        gamma   = args[0][0][1]
+        argument    = alpha(s, alphaCoeffs) + gamma[i]
+        argument = argument
+        # print("with gamma", argument)
+    else:
+        argument    = alpha(s, alphaCoeffs) 
+        argument = argument 
+    return np.sin(argument)
+
+def deform_ODE(s, gamma, *args): # alphaCoeffs, cICoeffs, Fx, Fy
+    
+    # print(args[0][0][0])
+
+    alphaCoeffs = args[0][0][0]
+    cICoeffs =    args[0][0][1]
+    Fx =          args[0][0][2]
+    Fy =          args[0][0][3]
+
     LHS = np.empty(2)
     LHS[0] = gamma[1]
     LHS[1] = (Fx*np.sin(alpha(s, alphaCoeffs)+gamma[0])-Fy*np.cos(alpha(s, alphaCoeffs)+gamma[0])-E*d_cI_d_s(s, cICoeffs)*gamma[1])/(cI_s(s, cICoeffs)*E)
     return LHS
 
-def rk4_step(fun, alphaCoeffs, cICoeffs, u0, gamma0, du, Fx, Fy):
+def rk4_step(fun, x0, y0, dx, *args): # (fun, alphaCoeffs, cICoeffs, x0, y0, du, Fx, Fy)
     #
     #  Get four sample values of the derivative.
     #
-    f1 = fun ( u0,            alphaCoeffs, cICoeffs, gamma0, Fx, Fy)
-    f2 = fun ( u0 + du / 2.0, alphaCoeffs, cICoeffs, gamma0 + du * f1 / 2.0, Fx, Fy)
-    f3 = fun ( u0 + du / 2.0, alphaCoeffs, cICoeffs, gamma0 + du * f2 / 2.0, Fx, Fy)
-    f4 = fun ( u0 + du,       alphaCoeffs, cICoeffs, gamma0 + du * f3, Fx, Fy)
+    f1 = fun ( x0,            y0, args)
+    f2 = fun ( x0 + dx / 2.0, y0 + dx * f1 / 2.0, args)
+    f3 = fun ( x0 + dx / 2.0, y0 + dx * f2 / 2.0, args)
+    f4 = fun ( x0 + dx,       y0 + dx * f3, args)
     #
     #  Combine them to estimate the solution gamma at time T1 = T0 + DT.
     #
-    gamma1 = gamma0 + du * ( f1 + 2.0 * f2 + 2.0 * f3 + f4 ) / 6.0
+    y1 = y0 + dx * ( f1 + 2.0 * f2 + 2.0 * f3 + f4 ) / 6.0
 
-    return gamma1
+    return y1
 
-def fixed_rk4(fun, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh):
-    res = np.empty((len(gamma0), len(smesh)))
-    step = smesh[1]-smesh[0]
-    for i in range(len(smesh)):
-        if i == 0:
-            res[0,i] = gamma0[0]
-            res[1,i] = gamma0[1]
-        else:
-            stepRes = rk4_step(fun, alphaCoeffs, cICoeffs, smesh[i-1], gamma0, step, Fx, Fy)
-            res[0,i] = stepRes[0]
-            res[1,i] = stepRes[1]
-            gamma0 = stepRes        
+def fixed_rk4(fun, y0, xmesh, *args): # (fun, alphaCoeffs, cICoeffs, y0, Fx, Fy, xmesh)
+    step = xmesh[1]-xmesh[0]
+    if hasattr(y0, '__len__'):
+        res = np.empty((len(y0), len(xmesh)))
+        for i in range(len(xmesh)):
+            if i == 0:
+                for j in range(len(y0)):
+                    res[j,i] = y0[j]
+            else:
+                stepRes = rk4_step(fun, xmesh[i], y0, step, args)
+                # print(stepRes)
+                for j in range(len(y0)):
+                    res[j,i] = stepRes[j]
+                y0 = stepRes
+    else:
+        res = np.empty((len(xmesh)))
+        for i in range(len(xmesh)):
+            if i == 0:
+                res[i] = y0
+            else:
+                stepRes = rk4_step(fun, xmesh[i], y0, step, args)
+                res[i] = stepRes
+                y0 = stepRes
+            
     return res
 
 def integral_s(fun, array, mesh):
@@ -259,7 +328,7 @@ def integrand_y(s, gamma):
 
 
 def forward_integration_result(fun, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, plotBool, itr, resolution):
-    res = fixed_rk4(fun, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh)
+    res = fixed_rk4(fun, gamma0, smesh, alphaCoeffs, cICoeffs, Fx, Fy) # fun, y0, xmesh, *args
     gamma = res[0,:]
     [rnXd, rnYd] = mesh_deformed_geometry(alphaCoeffs, gamma, smesh)
     [rnX, rnY]   = mesh_original_geometry(alphaCoeffs, smesh)
@@ -283,23 +352,24 @@ def forward_integration_result(fun, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh
     if plotBool:
         
         cmap = plt.get_cmap('cool')
-        color = cmap(itr/float(resolution))
+        color = cmap(itr/600.0)
         plt.figure(0)
         plt.plot(rnXd,rnYd, c=color, linewidth=3.0)
         plt.figure(1)
         cmap = plt.get_cmap('winter')
-        color = cmap(itr/float(resolution))
+        color = cmap(itr/600.0)
         if itr/float(resolution) == 1:
             color = 'orange'
         plt.plot(smesh, gamma/deg2rad, c = color)
         cmap = plt.get_cmap('autumn')
-        color = cmap(itr/float(resolution))
+        color = cmap(itr/600.0)
         plt.plot(smesh, res[1,:]/deg2rad, c = color)
         if itr == 0:
+            print("this should be original geometry")
             cmap = plt.get_cmap('cool')
             plt.figure(0)
-            color = cmap(1.0)
-            plt.plot(rnX,rnY, c=color, linewidth=3.0)
+            color = 'red'
+            plt.plot(rnX,rnY, c=color, linewidth=7.0)
             theta = np.linspace(0, 2*np.pi, 100)
             outerCircleX = rorg*np.cos(theta)
             outerCircleY = rorg*np.sin(theta)
@@ -328,8 +398,10 @@ def deform_spring_byTorque(alphaCoeffs, cICoeffs, torqueTarg, torqueStepRes, plo
 
     # test error for small amount of pure bending:
     while abs(torque-torqueTarg)>10e-10:
-
+        print("torque increasing step")
         [rnX, rnY]   = mesh_original_geometry(alphaCoeffs, smesh)
+        # print(rnX)
+        # print(rnY)
         dgds0 = (torque/(n) + rnY[0]*Fx - rnX[0]*Fy)/(E*cI_s(0, cICoeffs))
         torqueCheck = n*(Fy*rnX[0]-Fx*rnY[0]+E*cI_s(0, cICoeffs)*dgds0)
         # print("torquecheck error:",torqueCheck-torque)
@@ -341,21 +413,21 @@ def deform_spring_byTorque(alphaCoeffs, cICoeffs, torqueTarg, torqueStepRes, plo
 
         # above lines should be moved into forward_integration_result
 
-        cErr, gammaErr, dBeta, xdis, ydis, dgdsL, resG = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, plotBool, itr, torqueStepRes)
+        cErr, gammaErr, dBeta, xdis, ydis, dgdsL, resG = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, plotBool, fevalCounter, torqueStepRes)
         fevalCounter+=1
 
         e = np.array([cErr, gammaErr]) # RESULT
         # print(e)
 
         # finite difference in Fx
-        Fx = Fx+hJ
-        Fy = F[1]
-        J11, J21, dBetaG, xdisG, ydisG, dgdsLG, resG = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, False, itr, torqueStepRes)
+        Fx1 = Fx+hJ
+        Fy1 = F[1]
+        J11, J21, dBetaG, xdisG, ydisG, dgdsLG, resG = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx1, Fy1, smesh, False, fevalCounter, torqueStepRes)
         fevalCounter+=1
         # finite difference in Fy
-        Fx = F[0]
-        Fy = Fy+hJ
-        J12, J22, dBetaG, xdisG, ydisG, dgdsLG, resG = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, False, itr, torqueStepRes)
+        Fx2 = F[0]
+        Fy2 = Fy+hJ
+        J12, J22, dBetaG, xdisG, ydisG, dgdsLG, resG = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx2, Fy2, smesh, False, fevalCounter, torqueStepRes)
         fevalCounter+=1
         # approximate jacobian with small finite difference:
         J = np.array([[J11-e[0],J12-e[0]],[J21-e[1],J22-e[1]]])*1/(hJ)
@@ -367,6 +439,7 @@ def deform_spring_byTorque(alphaCoeffs, cICoeffs, torqueTarg, torqueStepRes, plo
         errorDecreaseCount = 0
 
         while lin.norm(e)>10**-10:
+            print("error decreasing step")
             F = F+dF
             # see how good your jacobian approximation was
             Fx = F[0]
@@ -375,20 +448,20 @@ def deform_spring_byTorque(alphaCoeffs, cICoeffs, torqueTarg, torqueStepRes, plo
             dgds0 = (torque/(n) + rnY[0]*Fx - rnX[0]*Fy)/(E*cI_s(0, cICoeffs))
             gamma0 = np.array([0, dgds0])
             
-            cErr, gammaErr, dBeta, xdis, ydis, dgdsL, res = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, plotBool, itr, torqueStepRes)
+            cErr, gammaErr, dBeta, xdis, ydis, dgdsL, res = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, plotBool, fevalCounter, torqueStepRes)
             fevalCounter+=1
 
             e = np.array([cErr, gammaErr])
 
             # finite difference in Fx
-            Fx = Fx+hJ
-            Fy = F[1]
-            J11, J21, dBetaG, xdisG, ydisG, dgdsLG, resG = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, False, itr, torqueStepRes)
+            Fx1 = Fx+hJ
+            Fy1 = F[1]
+            J11, J21, dBetaG, xdisG, ydisG, dgdsLG, resG = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx1, Fy1, smesh, False, fevalCounter, torqueStepRes)
             fevalCounter+=1
             # finite difference in Fy
-            Fx = F[0]
-            Fy = Fy+hJ
-            J12, J22, dBetaG, xdisG, ydisG, dgdsLG, resG = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, False, itr, torqueStepRes)
+            Fx2 = F[0]
+            Fy2 = Fy+hJ
+            J12, J22, dBetaG, xdisG, ydisG, dgdsLG, resG = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx2, Fy2, smesh, False, fevalCounter, torqueStepRes)
             fevalCounter+=1
             # approximate jacobian with small finite difference:
             J = np.array([[J11-e[0],J12-e[0]],[J21-e[1],J22-e[1]]])*1/(hJ)
@@ -396,8 +469,9 @@ def deform_spring_byTorque(alphaCoeffs, cICoeffs, torqueTarg, torqueStepRes, plo
             dF = np.array(lin.pinv(J).dot(-e))
             dF = np.append(dF, 0)
             # print(dF)
-
+            # print(lin.norm(e))
             errorDecreaseCount += 1
+            itr+=1
 
         # if i >= torqueStepRes-1:
         #     print("FINAL planar force vector:", F, "i", i)
@@ -407,8 +481,9 @@ def deform_spring_byTorque(alphaCoeffs, cICoeffs, torqueTarg, torqueStepRes, plo
             torque = F[2]
         else:
             break
+        itr+=1
         # print("Final planar force vector:", F)
-
+    print("total feval", fevalCounter)
     # print("final torque try:", torque)
     # print("ideal dgds0             ", (torqueTarg/(n) + rnY[0]*Fx - rnX[0]*Fy)/(E*cI_s(0, cICoeffs)))
     # print("final dgds0 (calculated)", (torque/(n) + rnY[0]*Fx - rnX[0]*Fy)/(E*cI_s(0, cICoeffs)))
@@ -420,7 +495,10 @@ def deform_spring_byTorque(alphaCoeffs, cICoeffs, torqueTarg, torqueStepRes, plo
 
     dgds0 = (torque/(n) + rnY[0]*Fx - rnX[0]*Fy)/(E*cI_s(0, cICoeffs))
     gamma0 = np.array([0, dgds0])
-    cErr, gammaErr, dBeta, xdis, ydis, dgdsL, res = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, plotBool, itr, torqueStepRes)
+    print(F)
+    cErrG, gammaErrG, dBetaG, xdis, ydis, dgdsL, res = forward_integration_result(deform_ODE, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh, plotBool, fevalCounter, torqueStepRes)
+    initialTorque = n*(Fy*rnX[0]-Fx*rnY[0]+E*cI_s(0, cICoeffs)*dgds0)
+    finalTorque = n*(Fy*xdis-Fx*ydis+E*cI_s(fullArcLength, cICoeffs)*dgdsL)
 
     # print solid mechanics properties of result
     if plotBool:
@@ -432,29 +510,25 @@ def deform_spring_byTorque(alphaCoeffs, cICoeffs, torqueTarg, torqueStepRes, plo
         Fsx = -Fs*np.sin(alpha(smesh, alphaCoeffs)+res[0,:])
         Fsy =  Fs*np.cos(alpha(smesh, alphaCoeffs)+res[0,:])
         plt.plot(smesh, rnXd*Fy-rnYd*Fx, label="M due to force?") # shear MOMENT along the beam
-        Tt = (res[1,:]*E*(cI_s(smesh, cICoeffs)))+rnXd*Fy-rnYd*Fx #vs Fsy and Fsx
+        Tt = (res[1,:]*E*(cI_s(smesh, cICoeffs)))+rnXd*Fy-rnYd*Fx 
         plt.plot(smesh, Tt, label="total torque reaction") # total torque load
-        plt.axhline(torqueTarg/2) #torque reaction target
-        plt.legend(loc='best')
+        TtAlt = (res[1,:]*E*(cI_s(smesh, cICoeffs)))+rnX*Fy-rnY*Fx # ???
+        # plt.plot(smesh, TtAlt, label="total torque reaction (but I fucked with it)") # total torque load
+        plt.axhline(torqueTarg/2,0,fullArcLength) #torque reaction target
+        plt.legend(loc='best')   
 
-    # print("globalRes:", globalRes)
-    # print('feval per torque iteration:', fevalCounter/torqueStepRes)
-    # print('total feval', fevalCounter)
-    # print("original torque:", torqueTarg)
-    
 
-    initialTorque = n*(Fy*rnX[0]-Fx*rnY[0]+E*cI_s(0, cICoeffs)*dgds0)
-    finalTorque = n*(Fy*xdis-Fx*ydis+E*cI_s(fullArcLength, cICoeffs)*dgdsL)
     # print("Torque Integration Error:", finalTorque-torqueTarg)
     # print("initial Torque Error:", initialTorque-torqueTarg)
     print(globalRes, finalTorque-torqueTarg)
-
-    return dBeta, cErr, gammaErr
+    # print(cErr, gammaErr)
+    # print(cErrG, gammaErrG)
+    return dBeta, cErr, gammaErr, res
 
 
 deg2rad = np.pi/180
-# E = 27.5*10**6
-E = 1000000
+E = 27.5*10**6
+# E = 1000000
 
 fullArcLength = 6
 globalRes = 100
@@ -466,11 +540,11 @@ alphas  = [0,100*deg2rad,190*deg2rad,135*deg2rad]
 # alphas = [0,0,0,0]
 # alphas  = [0,30*deg2rad,60*deg2rad,90*deg2rad]
 # alphas  = [0,30*deg2rad,-30*deg2rad,0]
-cIs     = [.1,.05,.1]
+cIs     = [.005,.001,.005]
 # alphas = [0,45*deg2rad,135*deg2rad,180*deg2rad]
 # cIs     = [.05,.05,.05]
 
-xy0    = [1,0]
+xy0    = np.array([1,0])
 
 si = fullArcLength/3.0
 sj = 2.0*fullArcLength/3.0
@@ -478,22 +552,31 @@ sk = fullArcLength/2.0
 sf = fullArcLength
 
 outPlaneThickness = 0.375
-
-[alphaCoeffs, cICoeffs, smesh] = create_initial_spring(alphas, cIs, si, sj, sk, sf)
-globalRes = 25
+globalRes = 1000 # 2284 for desired acuracy
 globalLen = globalRes+1
-[dBeta, rErr, gammaErr] = deform_spring_byTorque(alphaCoeffs, cICoeffs, 13541.641, 50, True)
-for i in range(0):
+[alphaCoeffs, cICoeffs, smesh] = create_initial_spring(alphas, cIs, si, sj, sk, sf)
+
+[dBeta, cErr, gammaErr, res] = deform_spring_byTorque(alphaCoeffs, cICoeffs, 13541.641, globalRes, True)
+improvements = 0
+for i in range(improvements):
     globalRes = 2*globalRes
     globalLen = globalRes+1
     plotBool = False
-    if i == 5:
+    if i == improvements-1:
         plotBool = True
-    [dBeta, rErr, gammaErr] = deform_spring_byTorque(alphaCoeffs, cICoeffs, 13541.641, 50, plotBool)
+    [dBeta, cErr, gammaErr, res] = deform_spring_byTorque(alphaCoeffs, cICoeffs, 13541.641, 50, plotBool)
 
 print(dBeta*1/deg2rad)
-print(rErr, gammaErr)
+print(cErr, gammaErr)
+print(lin.norm([cErr, gammaErr]))
 plt.show()
+meshAlpha, meshCurvature, meshCI, meshRn, meshAB, meshH = create_profiles(alphaCoeffs, cICoeffs, smesh, True)
+sigmaA = abs(E*(1-meshRn/meshAB[:][0])*meshRn*res[1,:])
+sigmaB = abs(E*(1-meshRn/meshAB[:][0])*meshRn*res[1,:])
+maxSigma = max(np.max(sigmaA), np.max(sigmaB))
+print(maxSigma)
+yield_stress=309700
+print(yield_stress)
 
 #  [alph, curvature, cI, rn, ab, h] = create_profiles(alphaCoeffs, cICoeffs, smesh, True)
 # dBetaTarg = 10*deg2rad
