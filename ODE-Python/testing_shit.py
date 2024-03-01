@@ -9,6 +9,7 @@ from matplotlib.colors import BoundaryNorm
 from matplotlib.ticker import MaxNLocator
 from materials import *
 from openpyxl import *
+import random
 
 # jac = np.array([[1,2],[2,1]])
 # jacInv = lin.inv(jac)
@@ -17,11 +18,13 @@ from openpyxl import *
 # print(jacInv.dot(vector))
 # print(vector.dot(jacInv))
 
-s = np.array([1,2,3,4])
-t = np.array([4, 3, 2, 1])
-# U = np.array([s**4, s**3, s**2, s, 1])
+# s = np.array([1,2,3,4])
+# t = np.array([4, 3, 2, 1])
+# # U = np.array([s**4, s**3, s**2, s, 1])
 
-print(s.dot(np.identity(4)))
-print(s)
-print(np.identity(4).dot(s))
-print(np.identity(4)*(s))
+# print(s.dot(np.identity(4)))
+# print(s)
+# print(np.identity(4).dot(s))
+# print(np.identity(4)*(s))
+
+print((-1)**random.randint(1,2))

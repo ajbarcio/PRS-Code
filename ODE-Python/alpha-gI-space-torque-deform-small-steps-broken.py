@@ -7,6 +7,7 @@ from openpyxl import *
 from scipy.integrate import solve_ivp as ODE45
 from scipy import optimize as op
 import os
+import random
 
 def cI_poly(cIs, sk, sf):
     Mat = np.array([[0,0,0,0,1], \
@@ -137,13 +138,15 @@ def create_profiles(alphaCoeffs, cICoeffs, smesh, geoBool):
         if geoBool:
         # print("starting to rootfind", i)
             plotAB[i] = a_b_rootfinding(i*globalStep,alphaCoeffs,cICoeffs,False)
-            print("im trying")
+            # print("im trying")
         # print("finished rootfinding")
     # print("alpha:",plot0)
     # print("dalpha/ds:",plot1)
     # print("rn:",plot3)
     for i in range(len(smesh)):
-        plotH[i] = plotAB[i][1]-plotAB[i][0] 
+        plotH[i] = plotAB[i][1]-plotAB[i][0]
+        if np.isnan(plotH[i]):
+            plotH[i] = np.cbrt(12*cI_s(smesh[i], cICoeffs)/outPlaneThickness)
     if geoBool:
         plt.figure(98)
         plt.plot(smesh, plotAlpha)
@@ -392,11 +395,10 @@ def forward_integration_result(fun, alphaCoeffs, cICoeffs, gamma0, Fx, Fy, smesh
 
     return rErr, gammaErr, dBeta, xdis, ydis, dgdsL, res
 
-def deform_spring_byDeflection(alphaCoeffs, cICoeffs, torqueTarg):
-    n=2
-
 def deform_spring_byTorque(alphaCoeffs, cICoeffs, torqueTarg, torqueStepRes, plotBool):  
-    Tgain = .35
+    Tgain = 0.9999
+
+    divergingFlag = 0
     
     n = 2
     itr = 0
@@ -470,7 +472,10 @@ def deform_spring_byTorque(alphaCoeffs, cICoeffs, torqueTarg, torqueStepRes, plo
 
             e = np.array([cErr, gammaErr])
             if lin.norm(e)>lin.norm(eprev):
+                divergingFlag = 1
                 print("diverging")
+            # if divergingFlag:
+            #     break
 
             # finite difference in Fx
             Fx1 = Fx+hJ
@@ -496,12 +501,14 @@ def deform_spring_byTorque(alphaCoeffs, cICoeffs, torqueTarg, torqueStepRes, plo
         # if i >= torqueStepRes-1:
         #     print("FINAL planar force vector:", F, "i", i)
         # else:
+
         if abs(torque-torqueTarg)>10e-10:
-            F[2] = F[2]+(torqueTarg - torque)*Tgain
+            F[2] = F[2]+(torqueTarg-torque)*Tgain
             torque = F[2]
         else:
             break
         itr+=1
+        
         # print("Final planar force vector:", F)
     print("total feval", fevalCounter)
     # print("final torque try:", torque)
@@ -547,6 +554,52 @@ def deform_spring_byTorque(alphaCoeffs, cICoeffs, torqueTarg, torqueStepRes, plo
     # print(cErrG, gammaErrG)
     return dBeta, cErr, gammaErr, res
 
+def tune_stiffness(desiredStiffness):
+    # constants:
+    outerRadius = 5.5
+    
+    # first guess:
+    fullArcLength = 6
+    innerRadius = 0.5  
+
+    xy0      = np.array([innerRadius,0])
+    alphas   = np.array([0,90*deg2rad,180*deg2rad,162*deg2rad])
+    cIs      = np.array([.01,.005,.01])
+    s_checks = np.array([0.25,0.5,0.333])
+
+    si = s_checks[0]
+    sj = s_checks[1]
+    sk = s_checks[2]
+    sf = fullArcLength
+    
+    outPlaneThickness = 0.375
+
+    init_perturb = 0.01
+
+    parameterVector = np.concatenate((alphas[1:-1],cIs,s_checks,outPlaneThickness))
+    err = 1
+    while err>0.01:
+        springK = check_stiffness(parameterVector)
+
+
+def check_stiffness(parameterVector, torque):
+    alphas =   parameterVector[0:2]
+    cIs    =   parameterVector[3:5]
+    s_checks = parameterVector[6:8]
+
+    si = s_checks[0]
+    sj = s_checks[1]
+    sk = s_checks[2]
+    sf = fullArcLength
+
+    outPlaneThickness = parameterVector[-1]
+
+    [alphaCoeffs, cICoeffs, smesh] = create_initial_spring(alphas, cIs, si, sj, sk, sf)
+    [dBeta, cErr, gammaErr, res] = deform_spring_byTorque(alphaCoeffs, cICoeffs, torque, 50, True)
+    springK = torque/dBeta
+
+    return springK
+
 
 deg2rad = np.pi/180
 E = 27.5*10**6
@@ -558,29 +611,29 @@ globalLen = globalRes+1
 globalStep = fullArcLength/globalRes
 globalMaxIndex = globalLen-1
 
-alphas  = [0,120*deg2rad,190*deg2rad,135*deg2rad]
+xy0    = np.array([.25,0])
+
+alphas  = [0,90*deg2rad,180*deg2rad,162*deg2rad]
 # alphas = [0,0,0,0]
 # alphas  = [0,15*deg2rad,30*deg2rad,45*deg2rad]
 # alphas  = [0,30*deg2rad,-30*deg2rad,0]
-cIs     = np.array([.005,.001,.005]) / 2
+cIs     = np.array([.01,.005,.01])
 # alphas = [0,45*deg2rad,135*deg2rad,180*deg2rad]
-# cIs     = [.05,.05,.05]
+# cIs     = [.05,.005,.05]
 
-xy0    = np.array([1,0])
-
-si = fullArcLength/3*.9
-sj = 2.0*fullArcLength/3.0
-sk = fullArcLength/2.0
+si = fullArcLength/4.0
+sj = fullArcLength/2.0
+sk = fullArcLength*1/3.0
 sf = fullArcLength
 
-outPlaneThickness = 0.375
+outPlaneThickness = 0.25
 globalRes = 100 # 2284 for desired acuracy
 globalLen = globalRes+1
 globalStep = fullArcLength/globalRes
 globalMaxIndex = globalLen-1
 [alphaCoeffs, cICoeffs, smesh] = create_initial_spring(alphas, cIs, si, sj, sk, sf)
 
-[dBeta, cErr, gammaErr, res] = deform_spring_byTorque(alphaCoeffs, cICoeffs, 13541.641, globalRes, True)
+[dBeta, cErr, gammaErr, res] = deform_spring_byTorque(alphaCoeffs, cICoeffs, 13541.641, 50, True)
 improvements = 0
 for i in range(improvements):
     globalRes = 2*globalRes
@@ -597,7 +650,7 @@ print(cErr, gammaErr)
 print(lin.norm([cErr, gammaErr]))
 # plt.show()
 meshAlpha, meshCurvature, meshCI, meshRn, meshAB, meshH = create_profiles(alphaCoeffs, cICoeffs, smesh, True)
-print(meshAB)
+# print(meshAB)
 
 meshA = np.empty(len(smesh))
 meshB = np.empty(len(smesh))
@@ -605,21 +658,28 @@ meshB = np.empty(len(smesh))
 for i in range(len(smesh)):
         meshA[i] = meshAB[i][0]
         meshB[i] = meshAB[i][1]
-
-sigmaA = abs(E*(1-meshRn/meshA)*meshRn*res[1,:])
-print(sigmaA)
-sigmaB = abs(E*(1-meshRn/meshB)*meshRn*res[1,:])
-print(sigmaB)
-maxSigma = max(np.max(sigmaA), np.max(sigmaB))
+# print(meshA)
+# print(meshB)
+# print(meshH)
+sigmaA = (E*(1-meshRn/meshA)*meshRn*res[1,:])
+# print(sigmaA)
+sigmaB = (E*(1-meshRn/meshB)*meshRn*res[1,:])
+# print(sigmaB)
+for i in range(len(smesh)):
+    if np.isnan(sigmaA[i]) and np.isnan(sigmaB[i]):
+        sigmaA[i] = -E*res[1,i]*0.5*meshH[i]
+        sigmaB[i] =  E*res[1,i]*0.5*meshH[i]
+maxSigma = max(np.max(abs(sigmaA)), np.max(abs(sigmaB)))
 print(maxSigma)
 yield_stress=309700
 print(yield_stress)
-
 
 plt.figure(99)
 plt.plot(smesh,sigmaA)
 plt.plot(smesh,sigmaB)
 plt.plot(smesh,meshRn)
+plt.plot(smesh,meshH*10**5)
+plt.plot(smesh,-meshH*10**5)
 plt.axhline(yield_stress, xmin = 0, xmax = fullArcLength)
 plt.show()
 
