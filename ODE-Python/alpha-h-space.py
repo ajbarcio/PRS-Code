@@ -53,9 +53,18 @@ def h_poly():
     return hCoeffs
 
 def h_s(s, hCoeffs):
-    U = np.array([s**4, s**3, s**2, s, 1])
-    h = U.dot(hCoeffs)
-    return h[0]
+    if hasattr(s, "__len__"):
+        h = np.empty(len(s))
+        i = 0
+        for value in s:
+            U = np.array([value**4, value**3, value**2, value, 1])
+            h[i] = U.dot(hCoeffs)[0]
+            i+=1
+        return h
+    else:
+        U = np.array([s**4, s**3, s**2, s, 1])
+        h = U.dot(hCoeffs)
+        return h[0]
 
 def alpha_poly():
     Mat = np.array([[0,0,0,0,0,1], \
@@ -114,7 +123,7 @@ def rc_rootfinding(s, alphaCoeffs, hCoeffs, printBool):
         print(x)
         print(rn)
         print(err)
-    return x
+    return x # this is rc
 
 def create_initial_spring():
     

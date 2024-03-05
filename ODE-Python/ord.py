@@ -5,7 +5,7 @@ def ordset(n,x=0):
         x = (x or[]) + [x]
         # time.sleep(5.5)
 
-number = 5
+number = 7
 
 a = ordset(number, x=[])
 

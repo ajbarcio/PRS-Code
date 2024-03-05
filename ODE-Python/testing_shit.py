@@ -27,4 +27,7 @@ import random
 # print(np.identity(4).dot(s))
 # print(np.identity(4)*(s))
 
-print((-1)**random.randint(1,2))
+def function(a, b):
+    return a, b, 3
+
+print(function(1,2)[0])

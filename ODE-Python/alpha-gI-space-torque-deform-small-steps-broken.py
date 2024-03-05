@@ -136,10 +136,10 @@ def create_profiles(alphaCoeffs, cICoeffs, smesh, geoBool):
         plotCI[i] = cI_s(i*globalStep,cICoeffs)
         plotRn[i] = r_n(i*globalStep,alphaCoeffs)
         if geoBool:
-        # print("starting to rootfind", i)
+            print("starting to rootfind", i)
             plotAB[i] = a_b_rootfinding(i*globalStep,alphaCoeffs,cICoeffs,False)
             # print("im trying")
-        # print("finished rootfinding")
+            print("finished rootfinding")
     # print("alpha:",plot0)
     # print("dalpha/ds:",plot1)
     # print("rn:",plot3)
@@ -147,6 +147,7 @@ def create_profiles(alphaCoeffs, cICoeffs, smesh, geoBool):
         plotH[i] = plotAB[i][1]-plotAB[i][0]
         if np.isnan(plotH[i]):
             plotH[i] = np.cbrt(12*cI_s(smesh[i], cICoeffs)/outPlaneThickness)
+    # finished 
     if geoBool:
         plt.figure(98)
         plt.plot(smesh, plotAlpha)
@@ -605,19 +606,19 @@ deg2rad = np.pi/180
 E = 27.5*10**6
 # E = 1000000
 
-fullArcLength = 6
+fullArcLength = 7
 globalRes = 100
 globalLen = globalRes+1
 globalStep = fullArcLength/globalRes
 globalMaxIndex = globalLen-1
 
-xy0    = np.array([.25,0])
+xy0    = np.array([.55,0])
 
 alphas  = [0,90*deg2rad,180*deg2rad,162*deg2rad]
 # alphas = [0,0,0,0]
 # alphas  = [0,15*deg2rad,30*deg2rad,45*deg2rad]
 # alphas  = [0,30*deg2rad,-30*deg2rad,0]
-cIs     = np.array([.01,.005,.01])
+cIs     = np.array([.01,.005,.01])*0.7
 # alphas = [0,45*deg2rad,135*deg2rad,180*deg2rad]
 # cIs     = [.05,.005,.05]
 
@@ -650,6 +651,7 @@ print(cErr, gammaErr)
 print(lin.norm([cErr, gammaErr]))
 # plt.show()
 meshAlpha, meshCurvature, meshCI, meshRn, meshAB, meshH = create_profiles(alphaCoeffs, cICoeffs, smesh, True)
+print("created profiles")
 # print(meshAB)
 
 meshA = np.empty(len(smesh))
