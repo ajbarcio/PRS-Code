@@ -13,7 +13,7 @@ import math
 finiteDifferenceLength = 0.0000001
 
 fullArcLength = 6.2
-globalRes = 100 # 2284 for desired acuracy
+globalRes = 500 # 2284 for desired acuracy
 globalLen = globalRes+1
 globalStep = fullArcLength/globalRes
 globalMaxIndex = globalLen-1
@@ -231,7 +231,7 @@ def deform_ODE_Barcio_to_Thomas(s, p, *args):
 
 def deform_ODE_Thomas(s, p, *args): #Fx, Fy, geometryDef, dgds0
 
-    # print(args)
+    # deal with args in the shittiest way possible
 
     Fx          = args[0][0][0][0]
     Fy          = args[0][0][0][1]
@@ -242,27 +242,43 @@ def deform_ODE_Thomas(s, p, *args): #Fx, Fy, geometryDef, dgds0
     yCoeffs = geometryDef[1]
     hCoeffs = geometryDef[2]
 
-    Tdim = E*cI_s(s, xCoeffs, yCoeffs, hCoeffs)
-    yorg = coord(s, yCoeffs)
+    # Tdim = EI (dimensionalize bending moment)
+    # dxds, dyds are ANALYTICAL derivatives based on x/y polynomials
+
+    Mdim = E*cI_s(s, xCoeffs, yCoeffs, hCoeffs)
+
     xorg = coord(s, xCoeffs)
+    yorg = coord(s, yCoeffs)
+
     dxds = d_coord_d_s(s, xCoeffs)
     dyds = d_coord_d_s(s, yCoeffs)
 
-    r = np.sqrt(yorg**2+xorg**2)
+    dydx = dyds/dxds
 
     alpha = alpha_xy(s, xCoeffs, yCoeffs)
     # constants
     LHS = np.empty(3)
 
     LHS[0] = dgds0 # - Fx/Tdim*yorg + Fy/Tdim*xorg
-    LHS[1] = 0 #-dxds
-    LHS[2] = 0 #-dyds
+    # LHS[1] = 0 #-dxds
+    # LHS[2] = 0 #-dyds
 
     # print(LHS[0], LHS[1], LHS[2])
     
-    LHS[0] = LHS[0] + Fy/Tdim*p[1] - Fx/Tdim*p[2]
-    LHS[1] = np.cos(np.arctan2(dyds,dxds)+p[0])
+    # rateMag1 = lin.norm([p[1], p[2]])
+    rateMag = lin.norm([dyds, dxds])
+    # rateMag =  np.average([rateMag1, rateMag2])
+
+    LHS[0] = LHS[0] + Fy/Mdim*p[1] - Fx/Mdim*p[2]
+    LHS[1] = np.cos(np.arctan2(dyds,dxds)+p[0]) # -(g*y +/- (g^2 - y^2 + 1)^(1/2))/(g^2 + 1)
     LHS[2] = np.sin(np.arctan2(dyds,dxds)+p[0])
+    print(LHS[1], LHS[2])
+    print("=>")
+    LHS[1] = LHS[1]*dxds/np.cos(np.arctan2(dyds,dxds))
+    LHS[2] = LHS[2]*dyds/np.sin(np.arctan2(dyds,dxds))
+    print(LHS[1], LHS[2])
+    print(dxds, dyds)
+    print("--------------")
 
     # print(LHS[0], LHS[1], LHS[2])
     # print(dxds, np.cos(alpha+p[0]), dxds/np.cos(alpha))
@@ -316,7 +332,7 @@ def rk4_step(fun, x0, y0, dx, *args): # (fun, alphaCoeffs, cICoeffs, x0, y0, du,
 
 geometryDef = form_spring(pts, hs, ctrlLengths, ctrlHs)
 smesh = np.linspace(0, fullArcLength, globalLen)
-res = fixed_rk4(deform_ODE_Thomas, np.array([0,x0,y0]), smesh, (0, 0, geometryDef, 0))
+res = fixed_rk4(deform_ODE_Thomas, np.array([15*deg2rad,x0,y0]), smesh, (0, 0, geometryDef, 0))
 # res2 = fixed_rk4(deform_ODE_Barcio, np.array([0,0]), smesh, (0, 0, geometryDef, 0))
 
 xorg = coord(smesh, geometryDef[0])
@@ -344,7 +360,7 @@ plt.figure(0)
 plt.plot(np.transpose(res))
 plt.plot(xorg)
 plt.plot(yorg)
-for i in range(len(smesh)):
-    print(xorg[i], yorg[i], res[1,i], res[2,i])
+# for i in range(len(smesh)):
+#     print(xorg[i], yorg[i], res[1,i], res[2,i])
 
 plt.show()
