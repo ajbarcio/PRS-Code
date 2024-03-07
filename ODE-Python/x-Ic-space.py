@@ -10,72 +10,21 @@ import os
 import random
 import math
 
-finiteDifferenceLength = 0.0000001
-finiteDifferenceForce  = 0.5
-finiteDifferenceTorque = 1
-
-fullArcLength = 4
-globalRes = 200 
-globalLen = globalRes+1
-globalStep = fullArcLength/globalRes
-globalMaxIndex = globalLen-1
-
-deg2rad = np.pi/180
-
-E = 10000000
-outPlaneThickness = .375
-
-# profile parameters:
-#   R0: inner radius
-#   R3: outer radius
-#   R1: radius ctrl. pt. 1
-#   R2: radius ctrl. pt. 2
-#   beta0/betaD: angle of final point
-#   betaB:       angle ctrl. pt. 1
-#   betaC:       angle ctrl. pt. 2
-#   hs:          spline with 3 controlled in-plane thicknesses
-#   ctrlHs:      arc-length positions of thicknesses: only ctrlHs[1] is a parameter
-#   ctrlLengths: arc-length positions of ctrl points: only ctrlLengths[1] and ctrlLengths[2] are parameters
-
-# Total # of parameters: 13 :((((((((((
-
-
-R0 = 2.2/2
-R3 = 5.9/2
-
-R1 = (R0+R3)/2
-R2 = (R0+R3)/2
-
-
-betaB = 45*deg2rad
-betaC = 90*deg2rad
-betaD = 135*deg2rad
-beta0 = betaD
-
-x0 = R0
-y0 = 0
-
-pts = np.array([[x0, y0],[R1*np.cos(betaB),R1*np.sin(betaB)],[R2*np.cos(betaC),R2*np.sin(betaC)],[R3*np.cos(betaD),R3*np.sin(betaD)]])
-hs  = np.array([.75, .25, .6])
-
-ctrlHs      = np.array([0,fullArcLength*.5,fullArcLength])
-ctrlLengths = np.array([0,fullArcLength*0.333,fullArcLength*0.667,fullArcLength])
-
-def h_poly(hs, ctrlHs):
+def cI_poly(cIs, ctrlcIs):
     Mat = np.array([[0,0,0,0,1], \
-                    [ctrlHs[1]**4,ctrlHs[1]**3,ctrlHs[1]**2,ctrlHs[1],1], \
-                    [ctrlHs[2]**4,ctrlHs[2]**3,ctrlHs[2]**2,ctrlHs[2],1], \
+                    [ctrlcIs[1]**4,ctrlcIs[1]**3,ctrlcIs[1]**2,ctrlcIs[1],1], \
+                    [ctrlcIs[2]**4,ctrlcIs[2]**3,ctrlcIs[2]**2,ctrlcIs[2],1], \
                     [0,0,0,1,0], \
-                    [4*ctrlHs[2]**3,3*ctrlHs[2]**2,2*ctrlHs[2]**1,1,0], \
+                    [4*ctrlcIs[2]**3,3*ctrlcIs[2]**2,2*ctrlcIs[2]**1,1,0], \
                     ])
-    Targ = np.array([[hs[0]], \
-                     [hs[1]], \
-                     [hs[2]], \
+    Targ = np.array([[cIs[0]], \
+                     [cIs[1]], \
+                     [cIs[2]], \
                      [0], \
                      [0], \
                      ])
-    hCoeffs = lin.solve(Mat, Targ)
-    return hCoeffs
+    cICoeffs = lin.solve(Mat, Targ)
+    return cICoeffs
 
 def xy_poly(pts, ctrlLengths):
     xTarg = np.array([[pts[0,0]], \
@@ -109,7 +58,6 @@ def xy_poly(pts, ctrlLengths):
     yCoeffs = lin.solve(Mat,yTarg)
 
     return xCoeffs, yCoeffs
-
 
 def coord(s, coeffs):
     
@@ -184,30 +132,53 @@ def r_n(s, xCoeffs, yCoeffs):
     dyds   = d_coord_d_s  (s, yCoeffs)
     dxds   = d_coord_d_s  (s, xCoeffs)
     # dAlphadS = (d2yds2/dxds-d2xds2*dyds/dxds)/(1+dyds**2/dxds)
-    rn = abs((1+dyds**2/dxds)/(d2yds2/dxds-d2xds2*dyds/dxds))
+    if (d2yds2/dxds-d2xds2*dyds/dxds)==0:
+        rn = float('inf')
+    else:
+        rn = abs((1+dyds**2/dxds**2)/(d2yds2/dxds-d2xds2*dyds/dxds))
     # if s == fullArcLength:
     #     print("-----------------------------------------")
     #     print(dyds, dxds, d2yds2, d2xds2)
     #     print("-----------------------------------------")
     return rn
+    
 
-def h_s(s, hCoeffs):
+def cI_s(s, cICoeffs):
     if hasattr(s, "__len__"):
-        h = np.empty(len(s))
+        cI = np.empty(len(s))
         i = 0
         for value in s:
             U = np.array([value**4, value**3, value**2, value, 1])
-            h[i] = U.dot(hCoeffs)[0]
+            cI[i] = U.dot(cICoeffs)[0]
             i+=1
-        return h
+        return cI
     else:
         U = np.array([s**4, s**3, s**2, s, 1])
-        h = U.dot(hCoeffs)
-        return h[0]
+        cI = U.dot(cICoeffs)
+        return cI[0]
 
-def rc_rootfinding(s, xCoeffs, yCoeffs, hCoeffs, printBool):
+# def d_cI_d_s(s, xCoeffs, yCoeffs, hCoeffs):
+#     dcIds = (cI_s(s+finiteDifferenceLength, xCoeffs, yCoeffs, hCoeffs)-cI_s(s-finiteDifferenceLength, xCoeffs, yCoeffs, hCoeffs))/(2*finiteDifferenceLength)
+#     return dcIds
+
+def d_cI_d_s(s, cICoeffs):
+    if hasattr(s, "__len__"):
+        dcIcs = np.empty(len(s))
+        i = 0
+        for value in s:
+            U = np.array([4*value**3, 3*value**2, 2*value**1, 1, 0])
+            dcIcs[i] = U.dot(cICoeffs)[0]
+            i+=1
+        return dcIcs
+    else:
+        U = np.array([4*s**3, 3*s**2, 2*s, 1, 0])
+        dcIcs = U.dot(cICoeffs)
+        return dcIcs[0]
+
+def rc_rootfinding(s, xCoeffs, yCoeffs, cICoeffs, printBool):
     rn =  r_n(s, xCoeffs, yCoeffs)
-    h = h_s(s, hCoeffs)
+    cI = cI_s(s, cICoeffs)
+    # h = (cI/(outPlaneThickness*(x-rn)*rn))
 
     def func(x, rn, h):
         f1 = h/((np.log((x+0.5*h)/(x-0.5*h))))-rn
@@ -216,14 +187,19 @@ def rc_rootfinding(s, xCoeffs, yCoeffs, hCoeffs, printBool):
         jac = 4*h**2/((4*x**2-h**2)*np.log((x+0.5*h)/(x-0.5*h))**2)
         return jac 
     err = 1
-    x0 = h*1.5
+    
+    # x0 = h*1.5
+    x0 = 1000
     x = x0
+    ii = 0
     if np.isinf(rn):
         x = float('inf')
     else:
-        ii = 0
-        while err > 10**-6 and ii < 1500:
+        while err > 10**-6 and ii < 3000:
             xprev = x
+            h = (cI/(outPlaneThickness*(x-rn)*rn))
+            # if ii==0:
+            #     print(x,h)
             x = x - (func(x, rn, h))/jac(x, rn, h)
             if x < h/2:
                 x = h/2+0.00001
@@ -232,31 +208,66 @@ def rc_rootfinding(s, xCoeffs, yCoeffs, hCoeffs, printBool):
     if(printBool):
         print(x0)
         print(x)
+        print(ii)
         print(rn)
         print(err)
     # here x represents rc
     return x
 
-def cI_s(s, xCoeffs, yCoeffs, hCoeffs):
-    if r_n(s, xCoeffs, yCoeffs) == float('inf'):
-        cI = h_s(s, hCoeffs)**3*outPlaneThickness/12
+def a_b_rootfinding(s, xCoeffs, yCoeffs, cICoeffs, printBool):
+    rn =  r_n(s, xCoeffs, yCoeffs)
+    cI = cI_s(s, cICoeffs)
+    def func(x, rn, cI):
+        # x0 = a, x1 = b
+        f1 = (x[1]-x[0])/(np.log(x[1]/x[0]))-rn
+        f2 = outPlaneThickness*(x[1]-x[0])*((x[1]+x[0])/2-rn)*rn-cI        
+        return np.array([f1, f2])
+    def jac(x, rn, cI):
+        return np.array([[(x[1]-x[0])/(x[0]*np.log(x[1]/x[0])**2)-1/(np.log(x[1]/x[0])), \
+                          (x[1]*np.log(x[1]/x[0])-x[1]+x[0])/(x[1]*np.log(x[1]/x[0])**2)], \
+                         [-rn*outPlaneThickness*(x[0]-rn), rn*outPlaneThickness*(x[1]-rn)]])
+    err = 1
+    # establish expected closesness range for a/b compared to rn to establish initial guess based on linearization about 1
+    factor = 1.2
+    # approimation: ln(x)=c(x-1), c such that c(x-1) = ln(factor)
+    c = (np.log(factor)-np.log(1))/(factor-1)
+    a0 = c*rn
+    b0 = rn + np.sqrt(rn**2+4*0.5*((c-c**2/2)*rn-cI/(outPlaneThickness*rn)))
+    x0 = [a0, b0]
+    x = x0
+    ii = 0
+    if np.isinf(rn):
+        x = np.array([float('inf'), float('inf')])
     else:
-        cI = h_s(s, hCoeffs)*outPlaneThickness* \
+        while err > 10**-6 or ii < 3000:
+            xprev = x
+            x = x - np.transpose(lin.inv(jac(x, rn, cI)).dot(func(x, rn, cI)))
+            err = lin.norm(x-xprev)
+            ii+=1
+    if(printBool):
+        print(x0)
+        print(x)
+        print(ii)
+        print(rn)
+        print(err)
+    return x # here x is (a,b)??
+
+# def cI_s(s, xCoeffs, yCoeffs, hCoeffs):
+    if r_n(s, xCoeffs, yCoeffs) == float('inf'):
+        cI = cI_s(s, hCoeffs)**3*outPlaneThickness/12
+    else:
+        cI = cI_s(s, hCoeffs)*outPlaneThickness* \
             (rc_rootfinding(s, xCoeffs, yCoeffs, hCoeffs, False)-r_n(s, xCoeffs, yCoeffs)) \
             *r_n(s, xCoeffs, yCoeffs)
     return cI
 
-def d_cI_d_s(s, xCoeffs, yCoeffs, hCoeffs):
-    dcIds = (cI_s(s+finiteDifferenceLength, xCoeffs, yCoeffs, hCoeffs)-cI_s(s-finiteDifferenceLength, xCoeffs, yCoeffs, hCoeffs))/(2*finiteDifferenceLength)
-    return dcIds
-
-def form_spring(pts, hs, ctrlLengths, ctrlHs):
+def form_spring(pts, hs, ctrlLengths, ctrlcIs):
     xCoeffs = xy_poly(pts, ctrlLengths)[0]
     yCoeffs = xy_poly(pts, ctrlLengths)[1]
-    hCoeffs = h_poly(hs, ctrlHs)
-    return xCoeffs, yCoeffs, hCoeffs
+    cICoeffs = cI_poly(cIs, ctrlcIs)
+    return xCoeffs, yCoeffs, cICoeffs
 
-def deform_ODE_Barcio(s, p, *args): #Fx, Fy, geometryDef, dgds0
+# def deform_ODE_Barcio(s, p, *args): #Fx, Fy, geometryDef, dgds0
 
     Fx          = args[0][0][0][0]
     Fy          = args[0][0][0][1]
@@ -265,9 +276,9 @@ def deform_ODE_Barcio(s, p, *args): #Fx, Fy, geometryDef, dgds0
 
     xCoeffs = geometryDef[0]
     yCoeffs = geometryDef[1]
-    hCoeffs = geometryDef[2]
+    cICoeffs = geometryDef[2]
 
-    Tdim = E*cI_s(s, xCoeffs, yCoeffs, hCoeffs)
+    Tdim = E*cI_s(s, xCoeffs, yCoeffs, cICoeffs)
     yorg = coord(s, yCoeffs)
     xorg = coord(s, xCoeffs)
     dxds = d_coord_d_s(s, xCoeffs)
@@ -277,15 +288,15 @@ def deform_ODE_Barcio(s, p, *args): #Fx, Fy, geometryDef, dgds0
 
     LHS = np.empty(2)
     LHS[0] = p[1]
-    LHS[1] = (Fx*np.sin(alpha+p[0])-Fy*np.cos(alpha+p[0])-E*d_cI_d_s(s, xCoeffs, yCoeffs, hCoeffs)*p[1])/(cI_s(s, xCoeffs, yCoeffs, hCoeffs)*E)
+    LHS[1] = (Fx*np.sin(alpha+p[0])-Fy*np.cos(alpha+p[0])-E*d_cI_d_s(s, xCoeffs, yCoeffs, cICoeffs)*p[1])/(cI_s(s, xCoeffs, yCoeffs, cICoeffs)*E)
     return LHS
 
-def deform_ODE_Barcio_to_Thomas(s, p, *args):
+# def deform_ODE_Barcio_to_Thomas(s, p, *args):
     
     
     pass
 
-def deform_ODE_Thomas(s, p, *args): #Fx, Fy, geometryDef, dgds0
+def deform_ODE(s, p, *args): #Fx, Fy, geometryDef, dgds0
 
     # deal with args in the shittiest way possible
 
@@ -296,33 +307,19 @@ def deform_ODE_Thomas(s, p, *args): #Fx, Fy, geometryDef, dgds0
 
     xCoeffs = geometryDef[0]
     yCoeffs = geometryDef[1]
-    hCoeffs = geometryDef[2]
+    cICoeffs = geometryDef[2]
 
     # Tdim = EI (dimensionalize bending moment)
     # dxds, dyds are ANALYTICAL derivatives based on x/y polynomials
 
-    Mdim = E*cI_s(s, xCoeffs, yCoeffs, hCoeffs)
-
-    
+    Mdim = E*cI_s(s, cICoeffs)
 
     dxds = d_coord_d_s(s, xCoeffs)
     dyds = d_coord_d_s(s, yCoeffs)
-
-    dydx = dyds/dxds
-
-    alpha = alpha_xy(s, xCoeffs, yCoeffs)
     # constants
     LHS = np.empty(3)
 
-    LHS[0] = dgds0 # - Fx/Tdim*yorg + Fy/Tdim*xorg
-    # LHS[1] = 0 #-dxds
-    # LHS[2] = 0 #-dyds
-
-    # print(LHS[0], LHS[1], LHS[2])
-    
-    # rateMag1 = lin.norm([p[1], p[2]])
-    rateMag = lin.norm([dyds, dxds])
-    # rateMag =  np.average([rateMag1, rateMag2])
+    LHS[0] = dgds0
 
     LHS[0] = LHS[0] + Fy/Mdim*p[1] - Fx/Mdim*p[2]
     LHS[1] = np.cos(np.arctan2(dyds,dxds)+p[0]) # -(g*y +/- (g^2 - y^2 + 1)^(1/2))/(g^2 + 1)
@@ -388,7 +385,7 @@ def rk4_step(fun, x0, y0, dx, *args): # (fun, alphaCoeffs, cICoeffs, x0, y0, du,
 def deform_spring_by_torque(torqueTarg, geometryDef):
     xCoeffs = geometryDef[0]
     yCoeffs = geometryDef[1]
-    hCoeffs = geometryDef[2]
+    cICoeffs = geometryDef[2]
 
     xorg = coord(fullArcLength, xCoeffs)
     yorg = coord(fullArcLength, yCoeffs)
@@ -398,37 +395,36 @@ def deform_spring_by_torque(torqueTarg, geometryDef):
     i = 0
     while lin.norm(err) > 10e-6:
         # establish results of guess
-        err, res = int_error_result(SF, xCoeffs, yCoeffs, hCoeffs, xorg, yorg)
+        err, res = int_error_result(SF, xCoeffs, yCoeffs, cICoeffs, xorg, yorg)
         # estimate jacobian with finite difference
-        J = fd_J(SF, xCoeffs, yCoeffs, hCoeffs, xorg, yorg)
+        J = fd_J(SF, xCoeffs, yCoeffs, cICoeffs, xorg, yorg)
         # establish next guess:
         SF = SF - lin.pinv(J).dot(err)
         print(lin.norm(err))
 
     return res
         
-        
 
-def fd_J(SF, xCoeffs, yCoeffs, hCoeffs, xorg, yorg):
+def fd_J(SF, xCoeffs, yCoeffs, cICoeffs, xorg, yorg):
     # finite difference in Fx
     SFback = SF-np.array([finiteDifferenceForce,0,0])
     SFfrwd = SF+np.array([finiteDifferenceForce,0,0])
-    errBack, resG = int_error_result(SFback, xCoeffs, yCoeffs, hCoeffs, xorg, yorg)
-    errFrwd, resG = int_error_result(SFfrwd, xCoeffs, yCoeffs, hCoeffs, xorg, yorg)
+    errBack, resG = int_error_result(SFback, xCoeffs, yCoeffs, cICoeffs, xorg, yorg)
+    errFrwd, resG = int_error_result(SFfrwd, xCoeffs, yCoeffs, cICoeffs, xorg, yorg)
     derrRdFx = (errFrwd[0]-errBack[0])/(2*finiteDifferenceForce)
     derrGdFx = (errFrwd[1]-errBack[1])/(2*finiteDifferenceForce)
     # finite difference in Fy
     SFback = SF-np.array([0,finiteDifferenceForce,0])
     SFfrwd = SF+np.array([0,finiteDifferenceForce,0])
-    errBack, resG = int_error_result(SFback, xCoeffs, yCoeffs, hCoeffs, xorg, yorg)
-    errFrwd, resG = int_error_result(SFfrwd, xCoeffs, yCoeffs, hCoeffs, xorg, yorg)
+    errBack, resG = int_error_result(SFback, xCoeffs, yCoeffs, cICoeffs, xorg, yorg)
+    errFrwd, resG = int_error_result(SFfrwd, xCoeffs, yCoeffs, cICoeffs, xorg, yorg)
     derrRdFy = (errFrwd[0]-errBack[0])/(2*finiteDifferenceForce)
     derrGdFy = (errFrwd[1]-errBack[1])/(2*finiteDifferenceForce)
     # finite difference in T
     SFback = SF-np.array([0,0,finiteDifferenceTorque])
     SFfrwd = SF+np.array([0,0,finiteDifferenceTorque])
-    errBack, resG = int_error_result(SFback, xCoeffs, yCoeffs, hCoeffs, xorg, yorg)
-    errFrwd, resG = int_error_result(SFfrwd, xCoeffs, yCoeffs, hCoeffs, xorg, yorg)
+    errBack, resG = int_error_result(SFback, xCoeffs, yCoeffs, cICoeffs, xorg, yorg)
+    errFrwd, resG = int_error_result(SFfrwd, xCoeffs, yCoeffs, cICoeffs, xorg, yorg)
     derrRdT = (errFrwd[0]-errBack[0])/(2*finiteDifferenceTorque)
     derrGdT = (errFrwd[1]-errBack[1])/(2*finiteDifferenceTorque)
 
@@ -436,10 +432,10 @@ def fd_J(SF, xCoeffs, yCoeffs, hCoeffs, xorg, yorg):
 
     return J
 
-def int_error_result(SF, xCoeffs, yCoeffs, hCoeffs, xorg, yorg):
+def int_error_result(SF, xCoeffs, yCoeffs, cICoeffs, xorg, yorg):
 
-    dgds0 = (SF[2]/(n) + yorg*SF[0] - xorg*SF[1])/(E*cI_s(0, xCoeffs, yCoeffs, hCoeffs))
-    res = fixed_rk4(deform_ODE_Thomas, np.array([0,x0,y0]), smesh, (SF[0], SF[1], geometryDef, dgds0))
+    dgds0 = (SF[2]/(n) + yorg*SF[0] - xorg*SF[1])/(E*cI_s(0, cICoeffs))
+    res = fixed_rk4(deform_ODE, np.array([0,x0,y0]), smesh, (SF[0], SF[1], geometryDef, dgds0))
     Rinitial = lin.norm([xorg,yorg])
     Rfinal   = lin.norm([res[1,-1],res[2,-1]])
     dBeta = (np.arctan2(res[2,-1],res[1,-1])-np.arctan2(yorg,xorg))
@@ -449,9 +445,142 @@ def int_error_result(SF, xCoeffs, yCoeffs, hCoeffs, xorg, yorg):
 
     return err, res
 
-n = 2
+def tune_stiffness(stiffnessTarg, dBetaTarg):
+    
+    torqueTarg = dBetaTarg*stiffnessTarg
 
-geometryDef = form_spring(pts, hs, ctrlLengths, ctrlHs)
+    # treat out of plane thickness, # of arms as constant
+    dragVector0 = [R0, R1, R2, R3, \
+                  betaB, betaC, beta0, \
+                  cIs[0], cIs[1], cIs[2], \
+                  ctrlcIs[1], \
+                  ctrlLengths[1], ctrlLengths[2],
+                  fullArcLength]
+    dragVector = dragVector0
+    err = 1
+    stepSize = 0.5
+
+    while err>10e-6:
+        # create spring for guess
+        geometryDef, smesh = drag_vector_spring(dragVector)
+        # establish error in stiffness as a result of guess
+        res = deform_spring_by_torque(torqueTarg, geometryDef)
+        dBeta = (np.arctan2(res[2,-1],res[1,-1])-np.arctan2(yorg,xorg))
+        stiffness = torqueTarg/dBeta
+        err = stiffness - stiffnessTarg
+        print(err)
+        # estimate gradient (pain)
+        grad = estimate_grad(dragVector, torqueTarg, stiffness, err)
+        # determine next set of parameters
+        dragVector = dragVector - stepSize*grad
+
+    return stiffness, dragVector
+    
+def estimate_grad(dragVector, torqueTarg, stiffness, err):
+    grad = np.empty(len(dragVector))
+    # take a different finite difference based on unit of axis
+    for i in range(len(dragVector)):
+        if i < 4 or i>9:
+            dragVector[i]+=finiteDifferenceLength
+            geometryDefNew, smesh = drag_vector_spring(dragVector)
+            res = deform_spring_by_torque(torqueTarg, geometryDefNew)
+            dBeta = (np.arctan2(res[2,-1],res[1,-1])-np.arctan2(yorg,xorg))
+            stiffnessd = torqueTarg/dBeta
+            errf = stiffness - stiffnessd
+            grad[i]=(errf-err)/(finiteDifferenceLength)
+            dragVector[i]=dragVector[i]-finiteDifferenceLength
+        if i>3 and i<7:
+            dragVector[i]+=finiteDifferenceAngle
+            geometryDefNew, smesh = drag_vector_spring(dragVector)
+            res = deform_spring_by_torque(torqueTarg, geometryDefNew)
+            dBeta = (np.arctan2(res[2,-1],res[1,-1])-np.arctan2(yorg,xorg))
+            stiffnessd = torqueTarg/dBeta
+            errf = stiffness - stiffnessd
+            grad[i]=(errf-err)/(finiteDifferenceAngle)
+            dragVector[i]=dragVector[i]-finiteDifferenceAngle
+        if i>6 and i<10:
+            dragVector[i]+=finiteDifferenceCI
+            geometryDefNew, smesh = drag_vector_spring(dragVector)
+            res = deform_spring_by_torque(torqueTarg, geometryDefNew)
+            dBeta = (np.arctan2(res[2,-1],res[1,-1])-np.arctan2(yorg,xorg))
+            stiffnessd = torqueTarg/dBeta
+            errf = stiffness - stiffnessd
+            grad[i]=(errf-err)/(finiteDifferenceCI)
+            dragVector[i]=dragVector[i]-finiteDifferenceCI
+
+        return grad
+    
+def drag_vector_spring(dragVector):
+    x0 = dragVector[0]
+    y0 = 0
+    pts = np.array([[x0, y0],[dragVector[1]*np.cos(dragVector[4]),dragVector[1]*np.sin(dragVector[4])], \
+                    [dragVector[2]*np.cos(dragVector[5]),dragVector[2]*np.sin(dragVector[5])], \
+                    [dragVector[3]*np.cos(dragVector[6]),dragVector[3]*np.sin(dragVector[6])]])
+    cIs  = np.array([dragVector[7], dragVector[8], dragVector[9]])
+
+    ctrlcIs      = np.array([0,dragVector[10],dragVector[13]])
+    ctrlLengths = np.array([0,dragVector[11],dragVector[12],dragVector[13]])
+
+    geometryDef = form_spring(pts, cIs, ctrlLengths, ctrlcIs)
+    smesh = np.linspace(0, fullArcLength, globalLen)
+
+    return geometryDef, smesh
+
+deg2rad = np.pi/180
+n = 2
+finiteDifferenceLength = 0.0001
+finiteDifferenceAngle  = 1*deg2rad
+finiteDifferenceForce  = 0.5
+finiteDifferenceTorque = 1
+finiteDifferenceCI     = 0.00001
+
+fullArcLength = 5.2
+globalRes = 200 
+globalLen = globalRes+1
+globalStep = fullArcLength/globalRes
+globalMaxIndex = globalLen-1
+
+
+
+E = 10000000
+outPlaneThickness = .375
+
+# profile design variables:
+#   R0: inner radius
+#   R3: outer radius
+#   R1: radius ctrl. pt. 1
+#   R2: radius ctrl. pt. 2
+#   beta0/betaD: angle of final point
+#   betaB:       angle ctrl. pt. 1
+#   betaC:       angle ctrl. pt. 2
+#   hs:          spline with 3 controlled in-plane thicknesses
+#   ctrlHs:      arc-length positions of thicknesses: only ctrlHs[1] is a parameter
+#   ctrlLengths: arc-length positions of ctrl points: only ctrlLengths[1] and ctrlLengths[2] are parameters
+
+# Total # of design variables: 13 :((((((((((
+
+
+R0 = 2.2/2
+R3 = 5.9/2
+
+R1 = (R0+R3)/2+.25
+R2 = (R0+R3)/2-.25
+
+betaB = 160/3*deg2rad*.5
+betaC = 2*160/3*deg2rad
+betaD = 160*deg2rad
+beta0 = betaD
+
+x0 = R0
+y0 = 0
+
+pts = np.array([[x0, y0],[R1*np.cos(betaB),R1*np.sin(betaB)],[R2*np.cos(betaC),R2*np.sin(betaC)],[R3*np.cos(betaD),R3*np.sin(betaD)]])
+cIs  = np.array([.01, .001, .01])
+
+ctrlcIs      = np.array([0,fullArcLength*.5,fullArcLength])
+ctrlLengths = np.array([0,fullArcLength*0.333,fullArcLength*0.667,fullArcLength])
+
+geometryDef = form_spring(pts, cIs, ctrlLengths, ctrlcIs)
 smesh = np.linspace(0, fullArcLength, globalLen)
 # res = fixed_rk4(deform_ODE_Thomas, np.array([15*deg2rad,x0,y0]), smesh, (0, 0, geometryDef, 0))
 # res2 = fixed_rk4(deform_ODE_Barcio, np.array([0,0]), smesh, (0, 0, geometryDef, 0))
@@ -459,69 +588,9 @@ smesh = np.linspace(0, fullArcLength, globalLen)
 xorg = coord(smesh, geometryDef[0])
 yorg = coord(smesh, geometryDef[1])
 
-rPureTorque = lin.norm([x0-xorg[-1],y0-yorg[-1]])
-
-# print(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
-
-iterationValues = [25, 50, 100, 200, 400, 800]
-
-# for value in iterationValues:
-#     fullArcLength = 6.2
-#     globalRes = value # 2284 for desired acuracy
-#     globalLen = globalRes+1
-#     globalStep = fullArcLength/globalRes
-#     globalMaxIndex = globalLen-1
-
-#     print("step size:",fullArcLength/globalRes," ", end='')
-#     smesh = np.linspace(0, fullArcLength, globalLen)
-#     res = fixed_rk4(deform_ODE_Thomas, np.array([0,x0,y0]), smesh, (0, 0, geometryDef, 0*deg2rad))
-#     # print("error:",lin.norm([xorg[-1]-res[1,-1],yorg[-1]-res[2,-1]]))
-#     res_final  = np.array([res[0,-1],res[1,-1],res[2,-1]])
-#     base_final = np.array([0,xorg[-1],yorg[-1]])
-#     err = res_final-base_final
-#     print("actual fucking error you dumbass:",lin.norm(err))
-#     # print(len(res[2,:]))
-#     plt.plot(xorg, yorg)
-#     plt.plot(res[1,:],res[2,:])
-
-
-# plt.plot(xorg, yorg)
-# plt.plot(res[1,:],res[2,:])
 res = deform_spring_by_torque(1000,geometryDef)
-plt.figure("thomas method")
+plt.figure("geometry results")
 plt.plot(xorg, yorg)
-rc = np.empty(len(smesh))
-rn = np.empty(len(smesh))
-Ic = np.empty(len(smesh))
-for i in range(len(smesh)):
-    rc[i] = rc_rootfinding(smesh[i], geometryDef[0], geometryDef[1], geometryDef[2], False)
-    rn[i] = r_n(smesh[i], geometryDef[0], geometryDef[1])
-    Ic[i] = cI_s(smesh[i], geometryDef[0], geometryDef[1], geometryDef[2])
-e = rc-rn
-for i in range(len(e)):
-    if np.isnan(e[i]):
-        e[i] = 0
-# print(e)
-print(rn)
-rcx = xorg-e*np.sin(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
-rcy = yorg+e*np.cos(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
-# print("sin",np.sin(alpha_xy(smesh, geometryDef[0], geometryDef[1])))
-# print("cos",np.cos(alpha_xy(smesh, geometryDef[0], geometryDef[1])))
-plt.plot(rcx,rcy)
-
-# print(rc)
-# print(rn)
-# print(Ic)
-nb = h_s(smesh, geometryDef[2])/2+(rc-rn)
-na = h_s(smesh, geometryDef[2])/2-(rc-rn)
-xb = -nb*np.sin(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
-xa = -na*np.sin(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
-yb = nb*np.cos(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
-ya = na*np.cos(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
-plt.plot(xorg+xb, yorg+yb)
-plt.plot(xorg-xa, yorg-ya)
-
-plt.plot()
 plt.plot(res[1,:],res[2,:])
 theta = np.linspace(0, 2*np.pi, 100)
 outerCircleX = R3*np.cos(theta)
@@ -531,10 +600,25 @@ innerCircleY = R0*np.sin(theta)
 plt.plot(outerCircleX,outerCircleY)
 plt.plot(innerCircleX,innerCircleY)
 plt.axis('equal')
-
-# plt.figure("barcio method")
-# plt.plot(xorg, yorg)
-# plt.plot(xorg)
+rc = np.empty(len(smesh))
+rn = np.empty(len(smesh))
+Ic = np.empty(len(smesh))
+for i in range(len(smesh)):
+    rc[i] = rc_rootfinding(smesh[i], geometryDef[0], geometryDef[1], geometryDef[2], False)
+    rn[i] = r_n(smesh[i], geometryDef[0], geometryDef[1])
+    Ic[i] = cI_s(smesh[i], geometryDef[2])
+e = rc-rn
+for i in range(len(e)):
+    if np.isnan(e[i]):
+        e[i] = 0
+# print(e)
+# print(rn)
+print(rc[5])
+rcx = xorg-e*np.sin(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
+rcy = yorg+e*np.cos(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
+# print("sin",np.sin(alpha_xy(smesh, geometryDef[0], geometryDef[1])))
+# print("cos",np.cos(alpha_xy(smesh, geometryDef[0], geometryDef[1])))
+plt.plot(rcx,rcy)
 
 plt.figure(0)
 plt.plot(np.transpose(res), label='results')
@@ -543,15 +627,42 @@ plt.plot(yorg)
 plt.legend()
 # for i in range(len(smesh)):
 #     print(xorg[i], yorg[i], res[1,i], res[2,i])
+a = np.empty(len(smesh))
+b = np.empty(len(smesh))
+h = np.empty(len(smesh))
+for i in range(len(smesh)):
+    AB = a_b_rootfinding(smesh[i], geometryDef[0], geometryDef[1], geometryDef[2], False)
+    # print(AB)
+    a[i] = AB[0]
+    b[i] = AB[1]
+    if np.isinf(a[i]) or np.isinf(b[i]):
+        h[i] = np.cbrt(12*cI_s(smesh[i],geometryDef[2])/outPlaneThickness)
+    else:
+        h[i] = b[i]-a[i]
+
+e = Ic/(outPlaneThickness*h*rn)
+nb = h/2+e
+na = h/2-e
+
+xb = -nb*np.sin(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
+xa = -na*np.sin(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
+yb = nb*np.cos(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
+ya = na*np.cos(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
+
+plt.figure("geometry results")
+plt.plot(xorg+xb,yorg+yb)
+plt.plot(xorg-xa,yorg-ya)
+plt.plot(-(xorg+xb),-(yorg+yb))
+plt.plot(-(xorg-xa),-(yorg-ya))
 
 plt.figure(99)
-plt.plot(rc)
-plt.plot(rn)
-plt.plot(rc-rn)
-plt.plot(Ic)
-plt.plot(h_s(smesh, geometryDef[2]))
+plt.plot(smesh, cI_s(smesh, geometryDef[2]))
+plt.plot(smesh, h)
+plt.plot(smesh,a)
+plt.plot(smesh,b)
+plt.plot(smesh,rn)
 
-for i in range(len(smesh)):
-    print(coord(smesh[i],geometryDef[0]), coord(smesh[i],geometryDef[1]))
+# for i in range(len(smesh)):
+#     print(coord(smesh[i],geometryDef[0]), coord(smesh[i],geometryDef[1]))
 
 plt.show()
