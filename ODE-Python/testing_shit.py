@@ -31,3 +31,10 @@ def function(a, b):
     return a, b, 3
 
 print(function(1,2)[0])
+
+var = [0, 1]
+for i in range(7):
+    tempVar = var
+    tempVar[0] = tempVar[0]+i
+    print("tempVar:", tempVar)
+    print("var:",var)
