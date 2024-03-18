@@ -152,11 +152,11 @@ def cI_s(s, cICoeffs):
             U = np.array([value**4, value**3, value**2, value, 1])
             cI[i] = U.dot(cICoeffs)[0]
             i+=1
-        return abs(cI)
+        return (cI)
     else:
         U = np.array([s**4, s**3, s**2, s, 1])
         cI = U.dot(cICoeffs)
-        return abs(cI[0])
+        return (cI[0])
 
 # def d_cI_d_s(s, xCoeffs, yCoeffs, hCoeffs):
 #     dcIds = (cI_s(s+finiteDifferenceLength, xCoeffs, yCoeffs, hCoeffs)-cI_s(s-finiteDifferenceLength, xCoeffs, yCoeffs, hCoeffs))/(2*finiteDifferenceLength)
@@ -708,8 +708,6 @@ print("straights", straights)
 xorg = coord(smesh, geometryDef[0])
 yorg = coord(smesh, geometryDef[1])
 
-
-
 R0 = dragVector[0]
 R1 = dragVector[1]
 R2 = dragVector[2]
@@ -753,6 +751,9 @@ plt.plot(rcx,rcy)
 
 plt.figure(0)
 plt.plot(np.transpose(res), label='results')
+plt.plot(res[1,:]-xorg)
+plt.plot(res[2,:]-yorg)
+plt.plot(np.sqrt((res[1,:]-xorg)**2+(res[2,:]-yorg)**2))
 plt.plot(xorg)
 plt.plot(yorg)
 plt.legend()

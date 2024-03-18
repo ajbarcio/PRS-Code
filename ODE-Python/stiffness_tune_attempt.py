@@ -56,19 +56,19 @@ R2 = (R0+R3)/2-.25
 
 betaB = 150/3*deg2rad*.5
 betaC = 2*150/3*deg2rad
-betaD = 150*deg2rad
+betaD = 160*deg2rad
 beta0 = betaD
 
 x0 = R0
 y0 = 0
 
 pts = np.array([[x0, y0],[R1*np.cos(betaB),R1*np.sin(betaB)],[R2*np.cos(betaC),R2*np.sin(betaC)],[R3*np.cos(betaD),R3*np.sin(betaD)]])
-cIs  = np.array([.008, .001, .008])
+cIs  = np.array([.005, .001, .005])
 
-ctrlcIs      = np.array([0,fullArcLength*.6,fullArcLength])
+ctrlcIs      = np.array([0,fullArcLength*.5,fullArcLength])
 ctrlLengths = np.array([0,fullArcLength*0.333,fullArcLength*0.667,fullArcLength])
 
-maxTorque = 13541.64
+maxTorque = 4554.5938
 maxDBeta  = 0.087266463
 
 dragVector0 = [R0, R1, R2, R3, \
@@ -92,18 +92,39 @@ discludeVector = [0,0,0,0,0,0,0,1,1,1,0,0,0,0]
 # print(geometryDef[2])
 # assert(False)
 
+print("FIRST ATTEMPT; DRAG ONLY IC")
 stiffness, res, dragVector, dragVector0 = tune_stiffness(maxTorque/maxDBeta, maxDBeta, dragVector0, discludeVector)
 geometryDef, smesh = drag_vector_spring(dragVector)
-
-assert(not violates_bounds(dragVector))
-
 
 print("overall relative change", dragVector/dragVector0)
 print("target stiffness:", maxTorque/maxDBeta)
 print("acheived stiffness:", stiffness)
 print("original guess", dragVector0)
 print("final guess", dragVector)
-print("straights", straights)
+
+dragVector0 = dc(dragVector)
+print("STARTING OVER, USING BEST PREVIOUS TO START")
+stiffness, res, dragVector, dragVector0 = tune_stiffness(maxTorque/maxDBeta, maxDBeta, dragVector0, discludeVector)
+geometryDef, smesh = drag_vector_spring(dragVector)
+
+print("overall relative change", dragVector/dragVector0)
+print("target stiffness:", maxTorque/maxDBeta)
+print("acheived stiffness:", stiffness)
+print("original guess", dragVector0)
+print("final guess", dragVector)
+
+# discludeVector = [0,0,0,0,1,1,1,0,0,0,0,0,0,0]
+# print("SECOND ATTEMPT; DRAG ONLY CONTROL POINT ANGLES")
+# stiffness, res, dragVector, dragVector0 = tune_stiffness(maxTorque/maxDBeta, maxDBeta, dragVector0, discludeVector)
+# geometryDef, smesh = drag_vector_spring(dragVector)
+
+# print("overall relative change", dragVector/dragVector0)
+# print("target stiffness:", maxTorque/maxDBeta)
+# print("acheived stiffness:", stiffness)
+# print("original guess", dragVector0)
+# print("final guess", dragVector)
+
+assert(not violates_bounds(dragVector))
 
 xorg = coord(smesh, geometryDef[0])
 yorg = coord(smesh, geometryDef[1])
@@ -196,7 +217,7 @@ plt.plot(-(xorg-xa),-(yorg-ya))
 plt.plot(xorg+xrc, yorg+yrc)
 
 plt.figure(99)
-plt.plot(smesh, cI_s(smesh, geometryDef[2]))
+plt.plot(smesh, cI_s(smesh, geometryDef[2])*1000)
 plt.plot(smesh, h)
 plt.plot(smesh,a)
 plt.plot(smesh,b)

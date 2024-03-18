@@ -26,7 +26,7 @@ fullArcLength = 5.2
 pts = np.array([[x0, y0],[R1*np.cos(betaB),R1*np.sin(betaB)],[R2*np.cos(betaC),R2*np.sin(betaC)],[R3*np.cos(betaD),R3*np.sin(betaD)]])
 cIs  = np.array([.008, .001, .008])
 
-ctrlcIs      = np.array([0,fullArcLength*.6,fullArcLength])
+ctrlcIs      = np.array([0,fullArcLength*.5,fullArcLength])
 ctrlLengths = np.array([0,fullArcLength*0.333,fullArcLength*0.667,fullArcLength])
 
 maxTorque = 13541.64
@@ -47,3 +47,5 @@ assert(round(st.cI_s(ctrlcIs[1], cICoeffs), 3)==cIs[1])
 print(round(st.cI_s(ctrlcIs[1], cICoeffs), 3))
 assert(round(st.cI_s(fullArcLength,cICoeffs),3)==cIs[2])
 print(st.cI_s(fullArcLength,cICoeffs))
+plt.plot(st.cI_s(smesh, cICoeffs))
+plt.show()

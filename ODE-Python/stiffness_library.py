@@ -118,7 +118,7 @@ def d2_coord_d_s2(s, coeffs):
 
 def alpha_xy(s, xCoeffs, yCoeffs):
     if hasattr(s, "__len__"):
-        alphaList = np.arctan2(d_coord_d_s(smesh, yCoeffs),d_coord_d_s(smesh, xCoeffs))
+        alphaList = np.arctan2(d_coord_d_s(s, yCoeffs),d_coord_d_s(s, xCoeffs))
         for i in range(len(alphaList)):
             if alphaList[i]<0:
                 alphaList[i]=alphaList[i]+2*math.pi
@@ -398,7 +398,7 @@ def deform_spring_by_torque(torqueTarg, geometryDef):
     # print("before forward integration", SF[2])
     err = np.ones(2)
     i = 0
-    while lin.norm(err) > 10e-6:
+    while lin.norm(err) > 10e-6 and i<500:
         # establish results of guess
         errPrev = err
         err, res = int_error_result(SF, xCoeffs, yCoeffs, cICoeffs, xorg, yorg)
@@ -409,7 +409,7 @@ def deform_spring_by_torque(torqueTarg, geometryDef):
         # print("torque deform error:",lin.norm(err))
         i+=1
         if lin.norm(err)>lin.norm(errPrev):
-            print("torque deform diverging")
+            print("torque deform diverging", i)
     # print("torque iterations: ",i)
     # print("after forward integration", SF[2])
     return res
@@ -477,10 +477,11 @@ def tune_stiffness(stiffnessTarg, dBetaTarg, dragVector, discludeVector):
     relErr = 1
     convErr = 1
     stepSizeCoeff = 1
-    i = 0
+    j = 0
     resetCounter = 0
-    while relErr>10e-3 and convErr>10e-3:
-        print("stiffness refinement iteration:",i)
+    resetStatus  = 0
+    while relErr>10e-3 and convErr>10e-6:
+        print("stiffness refinement iteration:",j)
         # create spring for guess
         
         geometryDef, smesh = drag_vector_spring(dragVector)
@@ -492,7 +493,7 @@ def tune_stiffness(stiffnessTarg, dBetaTarg, dragVector, discludeVector):
         res = deform_spring_by_torque(torqueTarg, geometryDef)
         dBeta = (np.arctan2(res[2,-1],res[1,-1])-np.arctan2(yorg[-1],xorg[-1]))
         stiffness = torqueTarg/dBeta
-        err = stiffness - stiffnessTarg
+        err = abs(stiffness - stiffnessTarg)
         relErr = abs(err/stiffnessTarg)
         convErr = abs(relErr-relErrPrev)
         print("stiffness error:",err)
@@ -500,20 +501,27 @@ def tune_stiffness(stiffnessTarg, dBetaTarg, dragVector, discludeVector):
         print("chenge in rel error", convErr)
         # estimate gradient (pain)
         # print(dragVector0)
-        grad = estimate_grad(dragVector, torqueTarg, stiffness, err, yorg, xorg)
-        for i in range(len(grad)):
-            if discludeVector[i]==1:
-                grad[i]=0
-            #### WTF IS GOING ON HERE
-        # print(dragVector0)
-        # print('grad', grad)
-        # print("next step:",lin.norm(stepSize*grad))
-        # Jinv = 1/grad
-        # print('jinv', Jinv)
-        # determine next set of parameters
-        stepSize = stepSizeCoeff*lin.norm(grad)
-        dragVectorPrev = dc(dragVector)
-        dragVector = dragVector - stepSize*grad
+        if abs(relErr) > abs(relErrPrev):
+            dragVector = dc(dragVectorPrev)
+            convErr = 0
+        else:
+            grad = estimate_grad(dragVector, torqueTarg, stiffness, err, yorg, xorg)
+            Jinv = 1/grad
+            for i in range(len(grad)):
+                if discludeVector[i]==False:
+                    grad[i]=0
+                    Jinv[i]=0
+                #### WTF IS GOING ON HERE
+            # print(dragVector0)
+            # print('grad', grad)
+            # print("next step:",lin.norm(stepSize*grad))
+            # Jinv = 1/grad
+            # print('jinv', Jinv)
+            # determine next set of parameters
+            stepSize = stepSizeCoeff*lin.norm(grad)
+            dragVectorPrev = dc(dragVector)
+            # dragVector = dragVector + stepSize*grad
+            dragVector = dragVector + err*Jinv*stepSize
         if violates_bounds(dragVector):
             print("reset---------------------------------------------------reset")
             # print(dragVector)
@@ -521,17 +529,25 @@ def tune_stiffness(stiffnessTarg, dBetaTarg, dragVector, discludeVector):
             dragVector = dc(dragVectorPrev)
             # print(dragVector0)
             # print(dragVector)
-            stepSizeCoeff = stepSizeCoeff*0.1
+            if resetStatus==0:
+                if j==0:
+                    stepSizeCoeff = stepSizeCoeff*0.1
+                else:
+                    stepSizeCoeff = stepSizeCoeff*0.1
+            else:
+                stepSizeCoeff = stepSizeCoeff*0.1
             relErr = 1
             resetCounter+=1
+            resetStatus = 1
             print("this is the ",resetCounter,"th reset")
         else:
             assert(not violates_bounds(dragVector))
             print("reduction:", stepSizeCoeff)
-            i+=1
+            j+=1
             resetCounter = 0
+            resetStatus  = 0
     assert(not violates_bounds(dragVector))
-    print("stiffness refinement iterations:", i)
+    print("stiffness refinement iterations:", j)
     return stiffness, res, dragVector, dragVector0
 
 def violates_bounds(dragVector):
