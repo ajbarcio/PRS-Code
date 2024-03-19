@@ -462,9 +462,10 @@ def int_error_result(SF, xCoeffs, yCoeffs, cICoeffs, xorg, yorg):
 def tune_stiffness(stiffnessTarg, dBetaTarg, dragVector, discludeVector):
     
     torqueTarg = dBetaTarg*stiffnessTarg
-
+    print("initial guess check,", dragVector)
     # treat out of plane thickness, # of arms as constant
     # #PASS DRAG VECTOR
+    dragVector0=dc(dragVector)
     # dragVector0 = [R0, R1, R2, R3, \
     #               betaB, betaC, beta0, \
     #               cIs[0], cIs[1], cIs[2], \
@@ -480,7 +481,7 @@ def tune_stiffness(stiffnessTarg, dBetaTarg, dragVector, discludeVector):
     j = 0
     resetCounter = 0
     resetStatus  = 0
-    while relErr>10e-3 and convErr>10e-6:
+    while relErr>10e-6 and convErr>10e-6:
         print("stiffness refinement iteration:",j)
         # create spring for guess
         
@@ -521,7 +522,12 @@ def tune_stiffness(stiffnessTarg, dBetaTarg, dragVector, discludeVector):
             stepSize = stepSizeCoeff*lin.norm(grad)
             dragVectorPrev = dc(dragVector)
             # dragVector = dragVector + stepSize*grad
+            # print(Jinv)
             dragVector = dragVector + err*Jinv*stepSize
+            # print(dragVector-dragVectorPrev)
+            for i in range(len(grad)):
+                if discludeVector[i]==False:
+                    assert(dragVector0[i]==dragVector[i])
         if violates_bounds(dragVector):
             print("reset---------------------------------------------------reset")
             # print(dragVector)
@@ -543,10 +549,17 @@ def tune_stiffness(stiffnessTarg, dBetaTarg, dragVector, discludeVector):
         else:
             assert(not violates_bounds(dragVector))
             print("reduction:", stepSizeCoeff)
+            # stepSizeCoeff = stepSizeCoeff*1.1
             j+=1
             resetCounter = 0
             resetStatus  = 0
     assert(not violates_bounds(dragVector))
+    for i in range(len(dragVector)):
+                if discludeVector[i]==False:
+                    # if not dragVector0[i]==dragVector[i]:
+                    #     print(dragVector0[i], dragVector[i])
+                    assert(dragVector0[i]==dragVector[i])
+                    # print(i)
     print("stiffness refinement iterations:", j)
     return stiffness, res, dragVector, dragVector0
 

@@ -11,6 +11,7 @@ import random
 import math
 from stiffness_library import *
 from copy import deepcopy as dc
+import winsound as ws
 
 deg2rad = np.pi/180
 n = 2
@@ -63,7 +64,7 @@ x0 = R0
 y0 = 0
 
 pts = np.array([[x0, y0],[R1*np.cos(betaB),R1*np.sin(betaB)],[R2*np.cos(betaC),R2*np.sin(betaC)],[R3*np.cos(betaD),R3*np.sin(betaD)]])
-cIs  = np.array([.005, .001, .005])
+cIs  = np.array([.008, .004, .008])
 
 ctrlcIs      = np.array([0,fullArcLength*.5,fullArcLength])
 ctrlLengths = np.array([0,fullArcLength*0.333,fullArcLength*0.667,fullArcLength])
@@ -79,7 +80,7 @@ dragVector0 = [R0, R1, R2, R3, \
                fullArcLength]
 print("initial initial guess", dragVector0)
 
-discludeVector = [0,0,0,0,0,0,0,1,1,1,0,0,0,0]
+
 
 # geometryDef = form_spring(pts, cIs, ctrlLengths, ctrlcIs)
 # res = deform_spring_by_torque(maxTorque/2, geometryDef)
@@ -91,6 +92,11 @@ discludeVector = [0,0,0,0,0,0,0,1,1,1,0,0,0,0]
 #     print(value)
 # print(geometryDef[2])
 # assert(False)
+# ws.Beep(831,200)
+
+discludeVector = [False,False,False,False,False,False,False, \
+                  True,True,True, \
+                  False,False,False,False]
 
 print("FIRST ATTEMPT; DRAG ONLY IC")
 stiffness, res, dragVector, dragVector0 = tune_stiffness(maxTorque/maxDBeta, maxDBeta, dragVector0, discludeVector)
@@ -102,19 +108,22 @@ print("acheived stiffness:", stiffness)
 print("original guess", dragVector0)
 print("final guess", dragVector)
 
-dragVector0 = dc(dragVector)
-print("STARTING OVER, USING BEST PREVIOUS TO START")
-stiffness, res, dragVector, dragVector0 = tune_stiffness(maxTorque/maxDBeta, maxDBeta, dragVector0, discludeVector)
-geometryDef, smesh = drag_vector_spring(dragVector)
+# dragVector0 = dc(dragVector)
+# assert(np.all(dragVector0==dragVector))
+# print("STARTING OVER, USING BEST PREVIOUS TO START")
+# stiffness, res, dragVector, dragVector0 = tune_stiffness(maxTorque/maxDBeta, maxDBeta, dragVector0, discludeVector)
+# geometryDef, smesh = drag_vector_spring(dragVector)
+# # ws.Beep(831,200)
+# print("overall relative change", dragVector/dragVector0)
+# print("target stiffness:", maxTorque/maxDBeta)
+# print("acheived stiffness:", stiffness)
+# print("original guess", dragVector0)
+# print("final guess", dragVector)
 
-print("overall relative change", dragVector/dragVector0)
-print("target stiffness:", maxTorque/maxDBeta)
-print("acheived stiffness:", stiffness)
-print("original guess", dragVector0)
-print("final guess", dragVector)
-
-# discludeVector = [0,0,0,0,1,1,1,0,0,0,0,0,0,0]
-# print("SECOND ATTEMPT; DRAG ONLY CONTROL POINT ANGLES")
+# discludeVector = [True,True,True,True, \
+#                   False,False,False,False,False,False,False,False,False,False]
+# dragVector0 = dc(dragVector)
+# print("SECOND ATTEMPT; DRAG ONLY Radii")
 # stiffness, res, dragVector, dragVector0 = tune_stiffness(maxTorque/maxDBeta, maxDBeta, dragVector0, discludeVector)
 # geometryDef, smesh = drag_vector_spring(dragVector)
 
@@ -124,12 +133,12 @@ print("final guess", dragVector)
 # print("original guess", dragVector0)
 # print("final guess", dragVector)
 
+ws.Beep(831,200)
+
 assert(not violates_bounds(dragVector))
 
 xorg = coord(smesh, geometryDef[0])
 yorg = coord(smesh, geometryDef[1])
-
-
 
 R0 = dragVector[0]
 R1 = dragVector[1]
