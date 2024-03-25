@@ -6,9 +6,7 @@ from materials import *
 from openpyxl import *
 from scipy.integrate import solve_ivp as ODE45
 from scipy import optimize as op
-import os
-import random
-import math
+import time
 from stiffness_library import *
 from copy import deepcopy as dc
 import winsound as ws
@@ -79,8 +77,6 @@ dragVector0 = [R0, R1, R2, R3, \
                ctrlLengths[1], ctrlLengths[2],
                fullArcLength]
 print("initial initial guess", dragVector0)
-
-
 
 # geometryDef = form_spring(pts, cIs, ctrlLengths, ctrlcIs)
 # res = deform_spring_by_torque(maxTorque/2, geometryDef)
@@ -158,28 +154,31 @@ innerCircleY = R0*np.sin(theta)
 plt.plot(outerCircleX,outerCircleY)
 plt.plot(innerCircleX,innerCircleY)
 plt.axis('equal')
-rc = np.empty(len(smesh))
+# rc = np.empty(len(smesh))
 rn = np.empty(len(smesh))
 Ic = np.empty(len(smesh))
+start = time.time()
 for i in range(len(smesh)):
-    rc[i] = rc_rootfinding(smesh[i], geometryDef[0], geometryDef[1], geometryDef[2], False)
+    # rc[i] = rc_rootfinding(smesh[i], geometryDef[0], geometryDef[1], geometryDef[2], True)
     rn[i] = r_n(smesh[i], geometryDef[0], geometryDef[1])
     Ic[i] = cI_s(smesh[i], geometryDef[2])
-e = rc-rn
+# e = rc-rn
+# end = time.time()
+# print("RC Rootfinding", end-start)
 # print(e)
+# rn = r_n(smesh, geometryDef[0], geometryDef[1])
+# index_max = max(range(len(rn[1:-2])), key=rn[1:-2].__getitem__)
+# plt.arrow(0,0,xorg[index_max],yorg[index_max])
 
-index_max = max(range(len(rn[1:-2])), key=rn[1:-2].__getitem__)
-plt.arrow(0,0,xorg[index_max],yorg[index_max])
+# for i in range(len(e)):
+#     if np.isnan(e[i]):
+#         e[i] = 0
 
-for i in range(len(e)):
-    if np.isnan(e[i]):
-        e[i] = 0
-
-rcx = xorg-e*np.sin(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
-rcy = yorg+e*np.cos(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
-# print("sin",np.sin(alpha_xy(smesh, geometryDef[0], geometryDef[1])))
-# print("cos",np.cos(alpha_xy(smesh, geometryDef[0], geometryDef[1])))
-plt.plot(rcx,rcy)
+# rcx = xorg-e*np.sin(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
+# rcy = yorg+e*np.cos(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
+# # print("sin",np.sin(alpha_xy(smesh, geometryDef[0], geometryDef[1])))
+# # print("cos",np.cos(alpha_xy(smesh, geometryDef[0], geometryDef[1])))
+# plt.plot(rcx,rcy, label='rc_rootfinding centroidal axis')
 
 plt.figure(0)
 plt.plot(np.transpose(res), label='results')
@@ -188,30 +187,29 @@ plt.plot(yorg)
 plt.legend()
 # for i in range(len(smesh)):
 #     print(xorg[i], yorg[i], res[1,i], res[2,i])
-a = np.empty(len(smesh))
-b = np.empty(len(smesh))
+la = np.empty(len(smesh))
+lb = np.empty(len(smesh))
 h = np.empty(len(smesh))
+start = time.time()
+lABPrev = [0, 0]
 for i in range(len(smesh)):
-    AB = a_b_rootfinding(smesh[i], geometryDef[0], geometryDef[1], geometryDef[2], False)
+    lAB = l_a_l_b_rootfinding(smesh[i], lABPrev, geometryDef[0], geometryDef[1], geometryDef[2], False)
     # print(AB)
-    a[i] = AB[0]
-    b[i] = AB[1]
-    if np.isinf(a[i]) or np.isinf(b[i]):
-        h[i] = np.cbrt(12*cI_s(smesh[i],geometryDef[2])/outPlaneThickness)
-    else:
-        h[i] = b[i]-a[i]
-
+    la[i] = lAB[0]
+    lb[i] = lAB[1]
+    h[i] = lb[i]+la[i]
+end=time.time()
 ecc = Ic/(outPlaneThickness*h*rn)
-
+print("rootfinding time,", end-start)
 # print(ecc)
 
-nb = h/2+ecc
-na = h/2-ecc
+# nb = h/2+ecc
+# na = h/2-ecc
 
-xb = -nb*np.sin(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
-xa = -na*np.sin(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
-yb = nb*np.cos(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
-ya = na*np.cos(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
+xb = -lb*np.sin(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
+xa = -la*np.sin(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
+yb = lb*np.cos(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
+ya = la*np.cos(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
 
 xrc = ecc*np.sin(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
 yrc = ecc*np.cos(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
@@ -223,16 +221,18 @@ plt.plot(xorg+xb,yorg+yb)
 plt.plot(xorg-xa,yorg-ya)
 plt.plot(-(xorg+xb),-(yorg+yb))
 plt.plot(-(xorg-xa),-(yorg-ya))
-plt.plot(xorg+xrc, yorg+yrc)
+plt.plot(xorg+xrc, yorg+yrc, label="AB rootfinding centroidal axis")
+plt.legend()
 
 plt.figure(99)
 plt.plot(smesh, cI_s(smesh, geometryDef[2])*1000)
 plt.plot(smesh, h)
-plt.plot(smesh,a)
-plt.plot(smesh,b)
+plt.plot(smesh,la)
+plt.plot(smesh,lb)
 plt.plot(smesh,rn)
 
 # for i in range(len(smesh)):
 #     print(coord(smesh[i],geometryDef[0]), coord(smesh[i],geometryDef[1]))
+res, SF = deform_spring_by_torque(maxTorque, geometryDef)
 
 plt.show()

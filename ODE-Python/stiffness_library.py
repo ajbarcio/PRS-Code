@@ -193,7 +193,7 @@ def rc_rootfinding(s, xCoeffs, yCoeffs, cICoeffs, printBool):
     err = 1
     
     # x0 = h*1.5
-    x0 = 1000
+    x0 = rn*1.1
     x = x0
     ii = 0
     if np.isinf(rn):
@@ -202,9 +202,11 @@ def rc_rootfinding(s, xCoeffs, yCoeffs, cICoeffs, printBool):
         while err > 10**-6 and ii < 3000:
             xprev = x
             h = (cI/(outPlaneThickness*(x-rn)*rn))
+            print('h,',h)
             # if ii==0:
             #     print(x,h)
             x = x - (func(x, rn, h))/jac(x, rn, h)
+            print("next x")
             if x < h/2:
                 x = h/2+0.00001
             err = abs(x-xprev)
@@ -243,7 +245,7 @@ def a_b_rootfinding(s, xCoeffs, yCoeffs, cICoeffs, printBool):
     if np.isinf(rn):
         x = np.array([float('inf'), float('inf')])
     else:
-        while err > 10**-6 or ii < 3000:
+        while err > 10**-6 and ii < 3000:
             xprev = x
             x = x - np.transpose(lin.inv(jac(x, rn, cI)).dot(func(x, rn, cI)))
             err = lin.norm(x-xprev)
@@ -255,6 +257,86 @@ def a_b_rootfinding(s, xCoeffs, yCoeffs, cICoeffs, printBool):
         print(rn)
         print(err)
     return x # here x is (a,b)??
+
+def h_e_rootfinding(s, xCoeffs, yCoeffs, cICoeffs, printbool):
+    rn = r_n(s, xCoeffs, yCoeffs)
+    cI = cI_s(s, cICoeffs)
+    # x = [e h]
+    def func(x, rn, cI):
+        f1 = (x[1])/(np.log((rn+x[0]+x[1]/2)/(rn+x[0]-x[1]/2)))-rn
+        f2 = cI/(outPlaneThickness*x[0]*rn)-x[1]
+        return np.array([f1, f2])
+    def jac(x, rn, cI):
+        return np.array([[1/(np.log((rn+x[1])/(rn-x[0])))-(x[0]+x[1])/(((np.log((rn+x[1])/(rn-x[0])))**2)*(rn-x[0])), \
+                          1/(np.log((rn+x[1])/(rn-x[0])))-(x[0]+x[1])/(((np.log((rn+x[1])/(rn-x[0])))**2)*(rn+x[1]))], \
+                         [cI/(2*rn*outPlaneThickness*(x[1]-(x[1]+x[0])/2)**2)-1, -cI/(2*rn*outPlaneThickness*(x[1]-(x[1]+x[0])/2)**2)-1]])
+
+
+def l_a_l_b_rootfinding(s, lABPrev, xCoeffs, yCoeffs, cICoeffs, printBool):
+    rn = r_n(s, xCoeffs, yCoeffs)
+    cI = cI_s(s, cICoeffs)
+    def func(x, rn, cI):
+        f1 = (x[0]+x[1])/(np.log((rn+x[1])/(rn-x[0])))-rn
+        f2 = (x[0]+x[1])*(outPlaneThickness*(x[1]-(x[1]+x[0])/2)*rn)-cI
+        return np.array([f1, f2])
+    def jac(x, rn, cI):
+        return np.array([[1/(np.log((rn+x[1])/(rn-x[0])))-(x[0]+x[1])/(((np.log((rn+x[1])/(rn-x[0])))**2)*(rn-x[0])), \
+                          1/(np.log((rn+x[1])/(rn-x[0])))-(x[0]+x[1])/(((np.log((rn+x[1])/(rn-x[0])))**2)*(rn+x[1]))], \
+                         [-rn*outPlaneThickness*x[0], rn*outPlaneThickness*x[1]]])
+    # print(rn)
+    if not np.isinf(rn):
+        # INITIAL GUESS WHO??? SAME WAY AS BEFORE BITCH
+        if lABPrev[0]==lABPrev[1]:
+            x0 = [lABPrev[0], lABPrev[1]+0.001]
+        else:
+            x0 = lABPrev
+        # factor = 1.01
+        # # approimation: ln(x)=c(x-1), c such that c(x-1) = ln(factor)
+        # c = (np.log(factor)-np.log(1))/(factor-1)
+        # a0 = c*rn
+        # b0 = rn + np.sqrt(rn**2+4*0.5*((c-c**2/2)*rn-cI/(outPlaneThickness*rn)))
+        # x0 = [rn-a0, b0-rn]
+        # print("x0",x0)
+        err = 1
+    else:
+        err = 0
+        l = np.cbrt(12*cI/outPlaneThickness)/2
+        x0 = [l, l]
+        # print("entered")
+    
+    # TODO: (search for symbolic solution)
+    
+    x = x0
+    # print("x0:",x0)
+    iii = 0
+    while err > 10**-6 and iii <5:
+        # print("entered while")
+        xprev = x
+        # if not np.linalg.matrix_rank(jac(x, rn, cI))==jac(x, rn, cI).shape[0]:
+        #     # print("jacobian:", jac(x, rn, cI))
+        #     err = 0
+        #     l = np.cbrt(12*cI/outPlaneThickness)/2
+        #     x = np.array([l, l])
+        #     err = lin.norm(x-xprev)
+        # else:
+        # print(np.log((rn+x[1])/(rn-x[0])))
+        x = x - np.transpose(lin.inv(jac(x, rn, cI)).dot(func(x, rn, cI)))
+        # print(x)
+        err = lin.norm(x-xprev)
+        iii+=1
+    if(printBool):
+        print(x0)
+        print(x)
+        print(iii)
+        print(rn)
+        print(err)
+        if iii > 2999:
+            print("--------------------DID NOT CONVERGE-------------------------")
+
+    # print("DONE WITH S = ",s)
+    return x    # here x is [la, lb] 
+
+
 
 # def cI_s(s, xCoeffs, yCoeffs, hCoeffs):
     if r_n(s, xCoeffs, yCoeffs) == float('inf'):
@@ -412,7 +494,7 @@ def deform_spring_by_torque(torqueTarg, geometryDef):
             print("torque deform diverging", i)
     # print("torque iterations: ",i)
     # print("after forward integration", SF[2])
-    return res
+    return res, SF
         
 
 def fd_J(SF, xCoeffs, yCoeffs, cICoeffs, xorg, yorg):
@@ -491,7 +573,7 @@ def tune_stiffness(stiffnessTarg, dBetaTarg, dragVector, discludeVector):
         yorg = coord(smesh, geometryDef[1])
         # establish error in stiffness as a result of guess
         relErrPrev = relErr
-        res = deform_spring_by_torque(torqueTarg, geometryDef)
+        res, SFG = deform_spring_by_torque(torqueTarg, geometryDef)
         dBeta = (np.arctan2(res[2,-1],res[1,-1])-np.arctan2(yorg[-1],xorg[-1]))
         stiffness = torqueTarg/dBeta
         err = abs(stiffness - stiffnessTarg)
@@ -604,7 +686,7 @@ def estimate_grad(dragVector, torqueTarg, stiffness, err, yorg, xorg):
             dragVectorFD=dc(dragVectorBase)
             dragVectorFD[i]=dragVectorFD[i]+finiteDifferenceLength
             geometryDefNew, smesh = drag_vector_spring(dragVectorFD)
-            res = deform_spring_by_torque(torqueTarg, geometryDefNew)
+            res, SFG = deform_spring_by_torque(torqueTarg, geometryDefNew)
             dBeta = (np.arctan2(res[2,-1],res[1,-1])-np.arctan2(yorg[-1],xorg[-1]))
             stiffnessd = torqueTarg/dBeta
             errf = stiffness - stiffnessd
@@ -615,7 +697,7 @@ def estimate_grad(dragVector, torqueTarg, stiffness, err, yorg, xorg):
             dragVectorFD=dc(dragVectorBase)
             dragVectorFD[i]=dragVectorFD[i]+finiteDifferenceAngle
             geometryDefNew, smesh = drag_vector_spring(dragVectorFD)
-            res = deform_spring_by_torque(torqueTarg, geometryDefNew)
+            res, SFG = deform_spring_by_torque(torqueTarg, geometryDefNew)
             dBeta = (np.arctan2(res[2,-1],res[1,-1])-np.arctan2(yorg[-1],xorg[-1]))
             stiffnessd = torqueTarg/dBeta
             errf = stiffness - stiffnessd
@@ -626,7 +708,7 @@ def estimate_grad(dragVector, torqueTarg, stiffness, err, yorg, xorg):
             dragVectorFD=dc(dragVectorBase)
             dragVectorFD[i]=dragVectorFD[i]+finiteDifferenceCI
             geometryDefNew, smesh = drag_vector_spring(dragVectorFD)
-            res = deform_spring_by_torque(torqueTarg, geometryDefNew)
+            res, SFG = deform_spring_by_torque(torqueTarg, geometryDefNew)
             dBeta = (np.arctan2(res[2,-1],res[1,-1])-np.arctan2(yorg[-1],xorg[-1]))
             stiffnessd = torqueTarg/dBeta
             errf = stiffness - stiffnessd
