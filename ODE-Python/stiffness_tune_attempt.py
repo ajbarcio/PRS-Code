@@ -3,13 +3,12 @@ import numpy as np
 import numpy.linalg as lin
 import matplotlib.pyplot as plt
 from materials import *
-from openpyxl import *
 from scipy.integrate import solve_ivp as ODE45
 from scipy import optimize as op
 import time
 from stiffness_library import *
 from copy import deepcopy as dc
-import winsound as ws
+import winsound as ws # comment out these lines if on linux
 
 deg2rad = np.pi/180
 n = 2
@@ -96,25 +95,18 @@ discludeVector = [False,False,False,False,False,False,False, \
 
 print("FIRST ATTEMPT; DRAG ONLY IC")
 stiffness, res, dragVector, dragVector0 = tune_stiffness(maxTorque/maxDBeta, maxDBeta, dragVector0, discludeVector)
+
 geometryDef, smesh = drag_vector_spring(dragVector)
+lAB0 = np.cbrt(12*cI_s(0, geometryDef[2])/outPlaneThickness)/2
+res = fixed_rk4(geo_ODE, lAB0, smesh, geometryDef)
+laForward = res[:,0]
+lbForward = res[:,1]
 
 print("overall relative change", dragVector/dragVector0)
 print("target stiffness:", maxTorque/maxDBeta)
 print("acheived stiffness:", stiffness)
 print("original guess", dragVector0)
 print("final guess", dragVector)
-
-# dragVector0 = dc(dragVector)
-# assert(np.all(dragVector0==dragVector))
-# print("STARTING OVER, USING BEST PREVIOUS TO START")
-# stiffness, res, dragVector, dragVector0 = tune_stiffness(maxTorque/maxDBeta, maxDBeta, dragVector0, discludeVector)
-# geometryDef, smesh = drag_vector_spring(dragVector)
-# # ws.Beep(831,200)
-# print("overall relative change", dragVector/dragVector0)
-# print("target stiffness:", maxTorque/maxDBeta)
-# print("acheived stiffness:", stiffness)
-# print("original guess", dragVector0)
-# print("final guess", dragVector)
 
 # discludeVector = [True,True,True,True, \
 #                   False,False,False,False,False,False,False,False,False,False]
@@ -154,57 +146,35 @@ innerCircleY = R0*np.sin(theta)
 plt.plot(outerCircleX,outerCircleY)
 plt.plot(innerCircleX,innerCircleY)
 plt.axis('equal')
-# rc = np.empty(len(smesh))
 rn = np.empty(len(smesh))
 Ic = np.empty(len(smesh))
 start = time.time()
 for i in range(len(smesh)):
-    # rc[i] = rc_rootfinding(smesh[i], geometryDef[0], geometryDef[1], geometryDef[2], True)
     rn[i] = r_n(smesh[i], geometryDef[0], geometryDef[1])
     Ic[i] = cI_s(smesh[i], geometryDef[2])
-# e = rc-rn
-# end = time.time()
-# print("RC Rootfinding", end-start)
-# print(e)
-# rn = r_n(smesh, geometryDef[0], geometryDef[1])
-# index_max = max(range(len(rn[1:-2])), key=rn[1:-2].__getitem__)
-# plt.arrow(0,0,xorg[index_max],yorg[index_max])
-
-# for i in range(len(e)):
-#     if np.isnan(e[i]):
-#         e[i] = 0
-
-# rcx = xorg-e*np.sin(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
-# rcy = yorg+e*np.cos(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
-# # print("sin",np.sin(alpha_xy(smesh, geometryDef[0], geometryDef[1])))
-# # print("cos",np.cos(alpha_xy(smesh, geometryDef[0], geometryDef[1])))
-# plt.plot(rcx,rcy, label='rc_rootfinding centroidal axis')
-
 plt.figure(0)
 plt.plot(np.transpose(res), label='results')
 plt.plot(xorg)
 plt.plot(yorg)
 plt.legend()
-# for i in range(len(smesh)):
-#     print(xorg[i], yorg[i], res[1,i], res[2,i])
 la = np.empty(len(smesh))
 lb = np.empty(len(smesh))
 h = np.empty(len(smesh))
 start = time.time()
 lABPrev = [0, 0]
 for i in range(len(smesh)):
-    lAB = l_a_l_b_rootfinding(smesh[i], lABPrev, geometryDef[0], geometryDef[1], geometryDef[2], False)
+    print(i)
+    lAB = l_a_l_b_rootfinding(smesh[i], lABPrev, geometryDef[0], geometryDef[1], geometryDef[2], True)
     # print(AB)
     la[i] = lAB[0]
     lb[i] = lAB[1]
     h[i] = lb[i]+la[i]
+    lABPrev = lAB
 end=time.time()
 ecc = Ic/(outPlaneThickness*h*rn)
 print("rootfinding time,", end-start)
-# print(ecc)
-
-# nb = h/2+ecc
-# na = h/2-ecc
+print(smesh)
+print(rn)
 
 xb = -lb*np.sin(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
 xa = -la*np.sin(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
@@ -231,8 +201,6 @@ plt.plot(smesh,la)
 plt.plot(smesh,lb)
 plt.plot(smesh,rn)
 
-# for i in range(len(smesh)):
-#     print(coord(smesh[i],geometryDef[0]), coord(smesh[i],geometryDef[1]))
 res, SF = deform_spring_by_torque(maxTorque, geometryDef)
 
 plt.show()

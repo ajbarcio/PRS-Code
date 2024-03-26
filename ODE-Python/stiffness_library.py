@@ -3,7 +3,6 @@ import numpy as np
 import numpy.linalg as lin
 import matplotlib.pyplot as plt
 from materials import *
-from openpyxl import *
 from scipy.integrate import solve_ivp as ODE45
 from scipy import optimize as op
 import os
@@ -105,6 +104,20 @@ def d2_coord_d_s2(s, coeffs):
         dCds = U.dot(coeffs)
         return dCds[0]
 
+def d3_coord_d_s3(s, coeffs):
+    if hasattr(s, "__len__"):
+        dCds = np.empty(len(s))
+        i=0
+        for value in s:
+            U = np.array([210*value**4, 120*value**3, 60*value**2, 24*value**1, 6, 0, 0, 0])
+            dCds[i] = U.dot(coeffs)[0]
+            i+=1
+        return dCds
+    else:
+        U = np.array([210*s**4, 120*s**3, 60*s**2, 24*s**1, 6, 0, 0, 0])
+        dCds = U.dot(coeffs)
+        return dCds[0]
+
 # def alpha_polyfit(smesh,yCoeffs, xCoeffs ):
 
 #     alphaList = np.arctan2(d_coord_d_s(smesh, yCoeffs),d_coord_d_s(smesh, xCoeffs))
@@ -144,7 +157,27 @@ def r_n(s, xCoeffs, yCoeffs):
     #     print(dyds, dxds, d2yds2, d2xds2)
     #     print("-----------------------------------------")
     return rn
-    
+
+def d_rn_d_s(s, xCoeffs, yCoeffs):
+    d3yds3 = d3_coord_d_s3(s, yCoeffs)
+    d3xds3 = d3_coord_d_s3(s, xCoeffs)
+    d2yds2 = d2_coord_d_s2(s, yCoeffs)
+    d2xds2 = d2_coord_d_s2(s, xCoeffs)
+    dyds   = d_coord_d_s  (s, yCoeffs)
+    dxds   = d_coord_d_s  (s, xCoeffs)
+    n1=dxds**2
+    n2=d2xds2
+    n3=d2yds2
+    n4=dyds**2
+    n5=dxds**3
+    num1=2*dyds*n3/n1-2*n4*n2/n5
+    den1=n3-dyds*n2/n1
+
+    num2=(n4/n1+1)*(2*dyds*n2**2/n5-dyds*d3xds3/n1-n2*n3/n1+d3yds3)
+    den2=(n3-n2*dyds/n1)**2
+
+    drnds = num1/den1-num2/den2
+    return drnds       
 
 def cI_s(s, cICoeffs):
     if hasattr(s, "__len__"):
@@ -303,9 +336,6 @@ def l_a_l_b_rootfinding(s, lABPrev, xCoeffs, yCoeffs, cICoeffs, printBool):
         l = np.cbrt(12*cI/outPlaneThickness)/2
         x0 = [l, l]
         # print("entered")
-    
-    # TODO: (search for symbolic solution)
-    
     x = x0
     # print("x0:",x0)
     iii = 0
@@ -424,6 +454,29 @@ def deform_ODE(s, p, *args): #Fx, Fy, geometryDef, dgds0
     # print("--------------------")
 
     return LHS
+
+def geo_ODE(s, p, geometryDef):
+    geometryDef = geometryDef[0][0]
+    # print(geometryDef)
+    
+    rn    = r_n(s, geometryDef[0], geometryDef[1])
+    drnds = d_rn_d_s(s, geometryDef[0], geometryDef[1])
+    cI    = cI_s(s, geometryDef[2])
+    dcIds = d_cI_d_s(s, geometryDef[2])
+    print(rn, s)
+    geoFunc1 = dcIds*1/rn+cI*(drnds)/-rn
+    geoFunc2 = drnds*(rn*(p[0]**2-p[1]**2)+(p[0]**2*p[1]+p[0]*p[1]**2))
+    print(geoFunc1, geoFunc2)
+    geoFuncs = np.array([[geoFunc1], [geoFunc2]])
+    states   = np.array([[p[0], p[1]], [p[0]*p[1]*rn-p[0]*rn**2, p[0]*p[1]*rn-p[1]*rn**2]])
+    print(states)
+    if p[0]==p[1]:
+        LHS = lin.pinv(states).dot(geoFuncs)
+        print("------------------------------------------p--------------------")
+    else:
+        LHS = lin.inv(states).dot(geoFuncs)
+    print(LHS)
+    return LHS[0]
 
 def fixed_rk4(fun, y0, xmesh, *args): # (fun, alphaCoeffs, cICoeffs, y0, Fx, Fy, xmesh)
     step = xmesh[1]-xmesh[0]
@@ -559,7 +612,7 @@ def tune_stiffness(stiffnessTarg, dBetaTarg, dragVector, discludeVector):
     err = 1
     relErr = 1
     convErr = 1
-    stepSizeCoeff = 1
+    stepSizeCoeff = 1*10**-7
     j = 0
     resetCounter = 0
     resetStatus  = 0
