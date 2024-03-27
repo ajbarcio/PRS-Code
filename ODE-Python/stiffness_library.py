@@ -160,14 +160,17 @@ def r_n(s, xCoeffs, yCoeffs):
     dyds   = d_coord_d_s  (s, yCoeffs)
     dxds   = d_coord_d_s  (s, xCoeffs)
     # dAlphadS = (d2yds2/dxds-d2xds2*dyds/dxds)/(1+dyds**2/dxds)
-    if (d2yds2/dxds-d2xds2*dyds/dxds**2)==0:
-        rn = float('inf')
-    else:
+    if hasattr(s, "__len__"):
         rn = abs((1+dyds**2/dxds**2)/(d2yds2/dxds-d2xds2*dyds/dxds**2))
-    # if s == fullArcLength:
-    #     print("-----------------------------------------")
-    #     print(dyds, dxds, d2yds2, d2xds2)
-    #     print("-----------------------------------------")
+    else:
+        if (d2yds2/dxds-d2xds2*dyds/dxds**2)==0:
+            rn = float('inf')
+        else:
+            rn = abs((1+dyds**2/dxds**2)/(d2yds2/dxds-d2xds2*dyds/dxds**2))
+        # if s == fullArcLength:
+        #     print("-----------------------------------------")
+        #     print(dyds, dxds, d2yds2, d2xds2)
+        #     print("-----------------------------------------")
     return rn
 
 def d_rn_d_s(s, xCoeffs, yCoeffs):
@@ -319,7 +322,10 @@ def h_e_rootfinding(s, xCoeffs, yCoeffs, cICoeffs, printbool):
 
 def l_a_l_b_rootfinding(s, lABPrev, xCoeffs, yCoeffs, cICoeffs, printBool):
     rn = r_n(s, xCoeffs, yCoeffs)
-    cI = cI_s(s, cICoeffs)
+    if hasattr(cI, "__len__"):
+        cI = cI_s(s, cICoeffs)
+    else:
+        cI = cICoeffs
     def func(x, rn, cI):
         f1 = (x[0]+x[1])/(np.log((rn+x[1])/(rn-x[0])))-rn
         f2 = (x[0]+x[1])*(outPlaneThickness*(x[1]-(x[1]+x[0])/2)*rn)-cI
@@ -424,6 +430,62 @@ def form_spring(pts, cIs, ctrlLengths, ctrlcIs):
     
     pass
 
+def deform_with_stress_ODE(s, p, *args):
+    Fx          = args[0][0][0][0]
+    Fy          = args[0][0][0][1]
+    geometryDef = args[0][0][0][2]
+    dgds0       = args[0][0][0][3]
+    stressTarg  = args[0][0][0][4]
+
+    xCoeffs = geometryDef[0]
+    yCoeffs = geometryDef[1]
+    cICoeffs = geometryDef[2]
+    rn     = r_n(s, geometryDef[0], geometryDef[1])
+    cI     = cI_s(s, geometryDef[2])
+    cIPrev = cI
+    Mdim = E*cI_s(s, cICoeffs)
+
+    dxds = d_coord_d_s(s, xCoeffs)
+    dyds = d_coord_d_s(s, yCoeffs)
+    stressError = 1
+    lABPrev = [0,0]
+    while stressError>10^-6:
+        LHS = np.empty(3)
+
+        LHS[0] = dgds0
+
+        LHS[0] = LHS[0] + Fy/Mdim*p[1] - Fx/Mdim*p[2]
+        LHS[1] = np.cos(np.arctan2(dyds,dxds)+p[0]) # -(g*y +/- (g^2 - y^2 + 1)^(1/2))/(g^2 + 1)
+        LHS[2] = np.sin(np.arctan2(dyds,dxds)+p[0])
+        # print(LHS[1], LHS[2])
+        # print("=>")
+        LHS[1] = LHS[1]*dxds/np.cos(np.arctan2(dyds,dxds))
+        LHS[2] = LHS[2]*dyds/np.sin(np.arctan2(dyds,dxds))
+
+        lAB = l_a_l_b_rootfinding(s, lABPrev, geometryDef[0], geometryDef[1], cI, False)
+        lABPrev = lAB
+        stressMax = np.max([E*(1-rn/(rn-lAB[0]))*rn*LHS[0], E*(1-rn/(rn+lAB[1]))*rn*LHS[0]])
+        err = stressMax-stressTarg
+
+        ## CALCULATING FINITE DIFFERENCE:
+        stressFD = np.empty(2)
+        i = 0
+        for x in [-1, 1]:
+            cI = 0.00001*x
+            lAB = l_a_l_b_rootfinding(s, lABPrev, geometryDef[0], geometryDef[1], geometryDef[2], False)
+            stressMax = np.max([E*(1-rn/(rn-lAB[0]))*rn*LHS[0], E*(1-rn/(rn+lAB[1]))*rn*LHS[0]])
+            stressFD[i]=stressMax
+            i+=1
+        dStressMax = (stressFD[1]-stressFD[0])/(0.00001*2)
+
+        # [calcualte max stress jacobian] with logic for which side is limiting]
+        cI = cIPrev-stressMax/dStressMax
+        cIPrev = cI
+    globalCIList[i] = cI
+
+    return LHS
+
+
 def deform_ODE(s, p, *args): #Fx, Fy, geometryDef, dgds0
 
     # deal with args in the shittiest way possible
@@ -486,22 +548,23 @@ def geo_ODE(s, p, geometryDef):
     states   = np.array([[-p[0], p[1]], [1/(rn-p[0])+1/rn, 1/rn-1/(rn+p[1])]])# [p[0]*p[1]*rn-p[0]*rn**2, p[0]*p[1]*rn-p[1]*rn**2]])
     # print(states)
     print("next states:", p[0], p[1])
-    print("rootfinding states:", l_a_l_b_rootfinding(s, [0, 0], geometryDef[0], geometryDef[1], geometryDef[2], False))
     if p[0]==p[1]:
+        print("rootfinding states:", l_a_l_b_rootfinding(s, [0, 0], geometryDef[0], geometryDef[1], geometryDef[2], False))
         lABPrev = [0,0]
         lAB   = l_a_l_b_rootfinding(s, lABPrev, geometryDef[0], geometryDef[1], geometryDef[2], False)
         lABPrev = lAB
         lABfd = l_a_l_b_rootfinding(s+0.0052, lABPrev, geometryDef[0], geometryDef[1], geometryDef[2], False)
-        print(lABPrev, lABfd)
+        print("forward difference:", lABPrev, lABfd)
         LHS = np.array([(lABfd[0]-lAB[0])/0.0052,(lABfd[1]-lAB[1])/0.0052])
         # print(LHS)
-        print("returning:", LHS)
+        print("state rate of change:", LHS)
         # print("-----------------------p--------------------")
         return LHS
         # LHS = lin.pinv(states).dot(geoFuncs)
     else:
+        print(lin.inv(states), geoFuncs)
         LHS = lin.inv(states).dot(geoFuncs)
-        print("returning:", np.array([LHS[0][0], LHS[1][0]]))
+        print("state rate of change:", np.array([LHS[0][0], LHS[1][0]]))
         return np.array([LHS[0][0], LHS[1][0]])
 
 def fixed_rk4(fun, y0, xmesh, *args): # (fun, alphaCoeffs, cICoeffs, y0, Fx, Fy, xmesh)
@@ -556,6 +619,7 @@ def deform_spring_by_torque(torqueTarg, geometryDef):
     yorg = coord(fullArcLength, yCoeffs)
 
     SF = np.array([0, 0, torqueTarg])
+    # SF = Fx Fy T
     # print("before forward integration", SF[2])
     err = np.ones(2)
     i = 0
@@ -723,6 +787,128 @@ def tune_stiffness(stiffnessTarg, dBetaTarg, dragVector, discludeVector):
                     # print(i)
     print("stiffness refinement iterations:", j)
     return stiffness, res, dragVector, dragVector0
+
+def stiffness_stress_error(stiffnessTarg, torqueTarg, allowStress, dragVector):
+    geometryDef, smesh = drag_vector_spring(dragVector)
+    # print(geometryDef[2],dragVector[7])
+    xorg = coord(smesh, geometryDef[0])
+    yorg = coord(smesh, geometryDef[1])
+    # establish error in stiffness and max stress as a result of guess
+    res, SF = deform_spring_by_torque(torqueTarg, geometryDef)
+    la, lb   = outer_geometry(smesh, geometryDef, False)
+
+    rn = r_n(smesh, geometryDef[0], geometryDef[1])
+    dgds0 = (SF[2]/(n) + yorg*SF[0] - xorg*SF[1])/(E*cI_s(0, geometryDef[2]))
+    Fx  = SF[0]
+    Fy  = SF[1]
+    Mdim = E*cI_s(smesh, geometryDef[2])
+    dgds = dgds0 + Fy/Mdim*res[1,:] - Fx/Mdim*res[2,:]
+
+    maxInnerStress = np.max(E*(1-rn/(rn-la))*rn*dgds)
+    maxOuterStress = np.max(E*(1-rn/(rn-lb))*rn*dgds)
+    maxStress     = np.max([maxInnerStress, maxOuterStress])
+
+    dBeta = (np.arctan2(res[2,-1],res[1,-1])-np.arctan2(yorg[-1],xorg[-1]))
+    stiffness = torqueTarg/dBeta
+    
+    errStiffness = abs(stiffness - stiffnessTarg)
+    errStress    = abs(maxStress - allowStress)
+    return errStiffness, errStress, stiffness, maxStress, res
+
+def stress_stiffness_tuning(stiffnessTarg, dBetaTarg, allowStress, dragVector, discludeVector):
+    torqueTarg = dBetaTarg*stiffnessTarg
+    print("initial guess check,", dragVector)
+    # treat out of plane thickness, # of arms as constant
+    # #PASS DRAG VECTOR
+    dragVector0=dc(dragVector)
+    #set up iteration variables
+    err = 1
+    relErr = 1
+    convErr = 1
+    # in general case, set  this to 1
+    stepSizeCoeff = 1*10**-7
+    j = 0
+    resetCounter = 0
+    resetStatus  = 0
+    
+    while relErr>10e-6 and convErr>10e-6: # quit when you either reach the target or can't go any further
+        print("stiffness refinement iteration:",j)
+        geometryDef, smesh = drag_vector_spring(dragVector)
+        xorg = coord(smesh, geometryDef[0])
+        yorg = coord(smesh, geometryDef[1])
+        relErrPrev = relErr
+        errStiffness, errStress, stiffness, maxStress, res = stiffness_stress_error(stiffnessTarg, torqueTarg, allowStress, dragVector)
+        relErr = lin.norm(np.array([(errStiffness/stiffnessTarg), (errStress/allowStress)]))
+        convErr = abs(relErr-relErrPrev)
+        print("stiffness error:",err)
+        print("stiffness relative error:",relErr)
+        print("chenge in rel error", convErr)
+        # estimate gradient (pain)
+        if abs(relErr) > abs(relErrPrev):
+            dragVector = dc(dragVectorPrev)
+            convErr = 0
+        else:
+            grad = estimate_grad(dragVector, torqueTarg, stiffness, err, yorg, xorg)
+            Jinv = 1/grad
+            for i in range(len(grad)):
+                if discludeVector[i]==False:
+                    grad[i]=0
+                    Jinv[i]=0
+            # determine next set of parameters
+            stepSize = stepSizeCoeff*lin.norm(grad)
+            dragVectorPrev = dc(dragVector)
+            dragVector = dragVector + err*Jinv*stepSize
+            for i in range(len(grad)):
+                if discludeVector[i]==False:
+                    assert(dragVector0[i]==dragVector[i])
+        if violates_bounds(dragVector):
+            print("reset---------------------------------------------------reset")
+            # print(dragVector)
+            # print(dragVector0)
+            dragVector = dc(dragVectorPrev)
+            # print(dragVector0)
+            # print(dragVector)
+            if resetStatus==0:
+                if j==0:
+                    stepSizeCoeff = stepSizeCoeff*0.1
+                else:
+                    stepSizeCoeff = stepSizeCoeff*0.1
+            else:
+                stepSizeCoeff = stepSizeCoeff*0.1
+            relErr = 1
+            resetCounter+=1
+            resetStatus = 1
+            print("this is the ",resetCounter,"th reset")
+        else:
+            assert(not violates_bounds(dragVector))
+            print("reduction:", stepSizeCoeff)
+            # stepSizeCoeff = stepSizeCoeff*1.1
+            j+=1
+            resetCounter = 0
+            resetStatus  = 0
+    assert(not violates_bounds(dragVector))
+    for i in range(len(dragVector)):
+                if discludeVector[i]==False:
+                    # if not dragVector0[i]==dragVector[i]:
+                    #     print(dragVector0[i], dragVector[i])
+                    assert(dragVector0[i]==dragVector[i])
+                    # print(i)
+    print("stiffness refinement iterations:", j)
+    return stiffness, maxStress, res, dragVector, dragVector0
+
+def outer_geometry(smesh, geometryDef, printBool):
+    la = np.empty(len(smesh))
+    lb = np.empty(len(smesh))
+    hLALB = np.empty(len(smesh))
+    lABPrev = [0, 0]
+    for i in range(len(smesh)):
+        lAB = l_a_l_b_rootfinding(smesh[i], lABPrev, geometryDef[0], geometryDef[1], geometryDef[2], printBool)
+        # print(AB)
+        la[i] = lAB[0]
+        lb[i] = lAB[1]
+        hLALB[i] = lb[i]+la[i]
+        lABPrev = lAB
+    return la, lb
 
 def violates_bounds(dragVector):
     truth0 = dragVector[0] < globalInnerRadiusLimit or dragVector[0] > globalOuterRadiusLimit
