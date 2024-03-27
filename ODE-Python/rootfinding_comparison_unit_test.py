@@ -130,7 +130,7 @@ start = time.time()
 lAB0 = np.cbrt(12*cI_s(0, geometryDef[2])/outPlaneThickness)/2
 lAB0 = np.array([lAB0, lAB0])
 
-res = fixed_rk4(geo_ODE, lAB0, smesh, geometryDef)
+res = fixed_rk4(geo_ODE, lAB0, smesh[0:5], geometryDef)
 # print(res)
 laForward = res[0,:]
 lbForward = res[1,:]

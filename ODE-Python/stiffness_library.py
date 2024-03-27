@@ -141,6 +141,18 @@ def alpha_xy(s, xCoeffs, yCoeffs):
         if alpha<0:
             alpha=alpha+2*math.pi
         return alpha
+    
+def d_alpha_d_s(s, xCoeffs, yCoeffs):
+    d2yds2 = d2_coord_d_s2(s, yCoeffs)
+    d2xds2 = d2_coord_d_s2(s, xCoeffs)
+    dyds   = d_coord_d_s  (s, yCoeffs)
+    dxds   = d_coord_d_s  (s, xCoeffs)
+    dads = ((d2yds2/dxds-d2xds2*dyds/dxds**2)/(1+dyds**2/dxds**2))
+    return dads
+
+def d_2_alpha_d_s_2(s, xCoeffs, yCoeffs):
+    d2ads2 = -d_alpha_d_s(s, xCoeffs, yCoeffs)**2*d_rn_d_s(s, xCoeffs, yCoeffs)
+    return d2ads2
 
 def r_n(s, xCoeffs, yCoeffs):
     d2yds2 = d2_coord_d_s2(s, yCoeffs)
@@ -459,24 +471,38 @@ def geo_ODE(s, p, geometryDef):
     geometryDef = geometryDef[0][0]
     # print(geometryDef)
     
-    rn    = r_n(s, geometryDef[0], geometryDef[1])
-    drnds = d_rn_d_s(s, geometryDef[0], geometryDef[1])
-    cI    = cI_s(s, geometryDef[2])
-    dcIds = d_cI_d_s(s, geometryDef[2])
-    print(rn, s)
-    geoFunc1 = dcIds*1/rn+cI*(drnds)/-rn
-    geoFunc2 = drnds*(rn*(p[0]**2-p[1]**2)+(p[0]**2*p[1]+p[0]*p[1]**2))
-    print(geoFunc1, geoFunc2)
+    rn     = r_n(s, geometryDef[0], geometryDef[1])
+    drnds  = d_rn_d_s(s, geometryDef[0], geometryDef[1])
+    cI     = cI_s(s, geometryDef[2])
+    dcIds  = d_cI_d_s(s, geometryDef[2])
+    dads   = d_alpha_d_s(s, geometryDef[0], geometryDef[1])
+    d2ads2 = d_2_alpha_d_s_2(s, geometryDef[0], geometryDef[1])
+    # print(rn, s)
+    geoFunc1 = dcIds*dads+cI*d2ads2
+    # geoFunc2 = drnds*(1/dads*(p[0]**2-p[1]**2)+(p[0]**2*p[1]+p[0]*p[1]**2))
+    geoFunc2 = drnds*((p[0]+p[1])/(rn**2+rn*(p[1]-p[0])+p[1]*p[0])+(p[1]+p[0])/rn)
+    # print(geoFunc1, geoFunc2)
     geoFuncs = np.array([[geoFunc1], [geoFunc2]])
-    states   = np.array([[p[0], p[1]], [p[0]*p[1]*rn-p[0]*rn**2, p[0]*p[1]*rn-p[1]*rn**2]])
-    print(states)
+    states   = np.array([[-p[0], p[1]], [1/(rn-p[0])+1/rn, 1/rn-1/(rn+p[1])]])# [p[0]*p[1]*rn-p[0]*rn**2, p[0]*p[1]*rn-p[1]*rn**2]])
+    # print(states)
+    print("next states:", p[0], p[1])
+    print("rootfinding states:", l_a_l_b_rootfinding(s, [0, 0], geometryDef[0], geometryDef[1], geometryDef[2], False))
     if p[0]==p[1]:
-        LHS = lin.pinv(states).dot(geoFuncs)
-        print("------------------------------------------p--------------------")
+        lABPrev = [0,0]
+        lAB   = l_a_l_b_rootfinding(s, lABPrev, geometryDef[0], geometryDef[1], geometryDef[2], False)
+        lABPrev = lAB
+        lABfd = l_a_l_b_rootfinding(s+0.0052, lABPrev, geometryDef[0], geometryDef[1], geometryDef[2], False)
+        print(lABPrev, lABfd)
+        LHS = np.array([(lABfd[0]-lAB[0])/0.0052,(lABfd[1]-lAB[1])/0.0052])
+        # print(LHS)
+        print("returning:", LHS)
+        # print("-----------------------p--------------------")
+        return LHS
+        # LHS = lin.pinv(states).dot(geoFuncs)
     else:
         LHS = lin.inv(states).dot(geoFuncs)
-    print(LHS)
-    return LHS[0]
+        print("returning:", np.array([LHS[0][0], LHS[1][0]]))
+        return np.array([LHS[0][0], LHS[1][0]])
 
 def fixed_rk4(fun, y0, xmesh, *args): # (fun, alphaCoeffs, cICoeffs, y0, Fx, Fy, xmesh)
     step = xmesh[1]-xmesh[0]
