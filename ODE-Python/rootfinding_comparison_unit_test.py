@@ -1,108 +1,29 @@
 import numpy as np
+from scipy.integrate import solve_ivp as variable_mesh_solve
 import numpy.linalg as lin
 import matplotlib.pyplot as plt
 import time
 from stiffness_library import *
 from StatProfiler import SSProfile
 
-# deg2rad = np.pi/180
-# n = 2
-# finiteDifferenceLength = 0.01
-# finiteDifferenceAngle  = 5*deg2rad
-# finiteDifferenceForce  = 0.5
-# finiteDifferenceTorque = 1
-# finiteDifferenceCI     = 0.000001
 
-# straights = []
-
-# fullArcLength = 5.2
-# globalRes = 200 
-# globalLen = globalRes+1
-# globalStep = fullArcLength/globalRes
-# globalMaxIndex = globalLen-1
-
-# E = 27.5*10**6
-# outPlaneThickness = .375
-
-# # profile design variables:
-# #   R0: inner radius
-# #   R3: outer radius
-# #   R1: radius ctrl. pt. 1
-# #   R2: radius ctrl. pt. 2
-# #   beta0/betaD: angle of final point
-# #   betaB:       angle ctrl. pt. 1
-# #   betaC:       angle ctrl. pt. 2
-# #   hs:          spline with 3 controlled in-plane thicknesses
-# #   ctrlHs:      arc-length positions of thicknesses: only ctrlHs[1] is a parameter
-# #   ctrlLengths: arc-length positions of ctrl points: only ctrlLengths[1] and ctrlLengths[2] are parameters
-
-# # Total # of design variables: 13 :((((((((((
-
-# globalInnerRadiusLimit = 0.73
-# globalOuterRadiusLimit = 5.9/2
-
-# R0 = 2.1/2
-# R3 = 5.7/2*.9
-
-# R1 = (R0+R3)/2+.27
-# R2 = (R0+R3)/2-.26
-
-# betaB = 152/3*deg2rad*.5
-# betaC = 2*153/3*deg2rad
-# betaD = 158*deg2rad
-# beta0 = betaD
-
-# x0 = R0
-# y0 = 0
-
-# pts = np.array([[x0, y0],[R1*np.cos(betaB),R1*np.sin(betaB)],[R2*np.cos(betaC),R2*np.sin(betaC)],[R3*np.cos(betaD),R3*np.sin(betaD)]])
-# cIs  = np.array([.008, .004, .008])
-
-# ctrlcIs      = np.array([0,fullArcLength*.5,fullArcLength])
-# ctrlLengths = np.array([0,fullArcLength*0.333,fullArcLength*0.667,fullArcLength])
-
-# maxTorque = 4554.5938
-# maxDBeta  = 0.087266463
-
-# dragVector0 = [R0, R1, R2, R3, \
-#                betaB, betaC, beta0, \
-#                cIs[0], cIs[1], cIs[2], \
-#                ctrlcIs[1], \
-#                ctrlLengths[1], ctrlLengths[2],
-#                fullArcLength]
-
-dragVector0 = [1.10000000e+00, 2.13750000e+00, 1.62750000e+00, 2.65500000e+00,
- 4.36332313e-01, 1.74532925e+00, 2.79252680e+00, 4.74085857e-03,
- 7.40837797e-04, 4.74084339e-03, 2.60000000e+00, 1.73160000e+00,
- 3.46840000e+00, 5.20000000e+00]
+fullArcLength = 4.1
+deg2rad = np.pi/180
+dragVector0 = [1, 2, 2.7, 4, \
+               5*deg2rad, 10*deg2rad, 15*deg2rad,  \
+               .001, .0005, .001, \
+               fullArcLength/2,  fullArcLength/3, 2*fullArcLength/3, fullArcLength]
+# dragVector0 = [1.0, 2.0, 6.0, 10.0, 1*deg2rad, 2*deg2rad, 3*deg2rad, 0.5, 0.5, 0.5, \
+            #    6, 4, 8, 12]
 print("initial initial guess", dragVector0)
 
 geometryDef, smesh = drag_vector_spring(dragVector0)
-smesh = np.linspace(0, fullArcLength, 1001)
+smesh = np.linspace(0, fullArcLength, 5005)
 rn = np.empty(len(smesh))
+Ic = np.empty(len(smesh))
 for i in range(len(smesh)):
     rn[i] = r_n(smesh[i], geometryDef[0], geometryDef[1])
-
-print("start AB method")
-start = time.time()
-a = np.empty(len(smesh))
-b = np.empty(len(smesh))
-hAB = np.empty(len(smesh))
-for i in range(len(smesh)):
-    SSProfile("AB Rootfinding").tic()
-    AB = a_b_rootfinding(smesh[i], geometryDef[0], geometryDef[1], geometryDef[2], False)
-    # print(AB)
-    a[i] = AB[0]
-    b[i] = AB[1]
-    if np.isinf(a[i]) or np.isinf(b[i]):
-        hAB[i] = np.cbrt(12*cI_s(smesh[i],geometryDef[2])/outPlaneThickness)
-    else:
-        hAB[i] = b[i]-a[i]
-    SSProfile("AB Rootfinding").toc()
-end = time.time()
-print("end AB method")
-abtime = end-start
-print("AB time:",end-start)
+    Ic[i] = cI_s(smesh[i], geometryDef[2])
 
 print("start lAB method")
 start = time.time()
@@ -112,8 +33,9 @@ hLALB = np.empty(len(smesh))
 lABPrev = [0, 0]
 for i in range(len(smesh)):
     SSProfile("lAB Rootfinding").tic()
-    lAB = l_a_l_b_rootfinding(smesh[i], lABPrev, geometryDef[0], geometryDef[1], geometryDef[2], False)
-    # print(AB)
+    s = smesh[i]
+    lAB = l_a_l_b_rootfinding(s, lABPrev, geometryDef[0], geometryDef[1], geometryDef[2], False)
+    # print(lAB)
     la[i] = lAB[0]
     lb[i] = lAB[1]
     hLALB[i] = lb[i]+la[i]
@@ -123,14 +45,155 @@ end = time.time()
 print("end lAB method")
 labtime = end-start
 print("lAB time:",end-start)
-print("ratio:", labtime/abtime)
+
+checkcI = outPlaneThickness*rn*(lb+la)*(lb/2-la/2)
+checkrn = (la+lb)/(np.log((rn+lb)/(rn-la)))
+plt.figure("Checking rootfinding accuracy")
+plt.plot(smesh, checkcI-cI_s(smesh, geometryDef[2]), label="cI error")
+plt.plot(smesh, checkrn-r_n(smesh, geometryDef[0], geometryDef[1]), label="rn error")
+plt.legend()
+
+numericalDerivatives = np.empty([2, len(smesh)])
+
+for i in range(len(smesh)):
+    if i==0:
+        numericalDerivatives[0,i]=(la[i+1]-la[i])/(smesh[i+1])
+        numericalDerivatives[1,i]=(lb[i+1]-lb[i])/(smesh[i+1])
+    if i==len(smesh)-1:
+        numericalDerivatives[0,i]=(la[i]-la[i-1])/(smesh[i]-smesh[i-1])
+        numericalDerivatives[1,i]=(lb[i]-lb[i-1])/(smesh[i]-smesh[i-1])
+    else:
+        numericalDerivatives[0,i]=(la[i+1]-la[i-1])/(smesh[i+1]-smesh[i-1])
+        numericalDerivatives[1,i]=(lb[i+1]-lb[i-1])/(smesh[i+1]-smesh[i-1])
+
+dcIds  = d_cI_d_s(smesh, geometryDef[2])
+dads   = d_alpha_d_s(smesh, geometryDef[0], geometryDef[1])
+d2ads2 = d_2_alpha_d_s_2(smesh, geometryDef[0], geometryDef[1])
+drnds  = d_rn_d_s(smesh, geometryDef[0], geometryDef[1])
+cI     = cI_s(smesh, geometryDef[2])
+
+geoFunc1 = (dcIds*1/rn-cI*drnds/rn**2)/outPlaneThickness
+geoFunc2 = rn*(-drnds*((la+lb)/rn**2+(-la-lb)/((rn+lb)*(rn-la))))
+# # print(geoFunc1, geoFunc2)
+geoFuncs = np.array([geoFunc1, geoFunc2])
+
+altAlgebraicDerivatives = np.empty([2, len(smesh)])
+for i in range(len(smesh)):
+    altAlgebraicDerivatives[0,i], altAlgebraicDerivatives[1,i] = geo_ODE(smesh[i], [la[i], lb[i]], [[geometryDef]])
+
+plt.figure("check derivatives")
+plt.plot(geoFunc1-(-la*altAlgebraicDerivatives[0,:]+lb*altAlgebraicDerivatives[1,:]))
+plt.plot(geoFunc2-((rn/(rn-la)-1)*altAlgebraicDerivatives[0,:] + (rn/(rn+lb)-1)*altAlgebraicDerivatives[1,:]))
+# THE ROOTFINDING-BASED VALUES SATISFY THE ALGEBRAIC FOMRULATION OF THE DERIVATIVES (THIS IS CIRCULAR BUT IT PROVES OUR ALGEBRA IS INTERNALLY CONSISTEN)
+plt.plot((geoFunc1-(-la*numericalDerivatives[0,:]+lb*numericalDerivatives[1,:]))/drnds)
+plt.plot((geoFunc2-((rn/(rn-la)-1)*numericalDerivatives[0,:] + (rn/(rn+lb)-1)*numericalDerivatives[1,:]))/drnds)
+
+# BUT THE NUMERICAL DERIVATIVES DO NOT SATISFY THE ALGEBRAIC RELATIONS
+
+# ARE THE NUMERICAL DERIVATIVES SELF CONSISTENT (DO THEY INTEGRATE BACK UP TO THE CORRECT VALUES)?
+step = smesh[1]-smesh[0]
+laIntegrated = np.empty(len(smesh))
+lbIntegrated = np.empty(len(smesh))
+laIntegrated[0]  = la[0]
+lbIntegrated[0]  = lb[0]
+for i in range(len(smesh[1:-1])):
+    laIntegrated[i+1] = laIntegrated[i] + numericalDerivatives[0,i+1]*step
+    lbIntegrated[i+1] = lbIntegrated[i] + numericalDerivatives[0,i+1]*step
+plt.figure("integration error")
+plt.plot(la-laIntegrated)
+plt.plot(lb-lbIntegrated)
+
+rnIntegrated = np.empty(len(smesh))
+cIIntegrated = np.empty(len(smesh))
+rnIntegrated[0]  = r_n(0, geometryDef[0], geometryDef[1])
+cIIntegrated[0]  = cI_s(0, geometryDef[2])
+for i in range(len(smesh[1:-1])):
+    rnIntegrated[i+1] = rnIntegrated[i] + d_rn_d_s(smesh[i+1], geometryDef[0], geometryDef[1])*step
+    lbIntegrated[i+1] = lbIntegrated[i] + d_cI_d_s(smesh[i+1], geometryDef[2])*step
+plt.figure("analytical integration error")
+plt.plot(rn-rnIntegrated)
+plt.plot(cI-cIIntegrated)
+plt.figure("rn, cI")
+plt.plot(smesh, rn)
+plt.plot(smesh, cI)
+
+
+ecc = Ic/(outPlaneThickness*hLALB*rn)
+xb = -lb*np.sin(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
+xa = -la*np.sin(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
+yb = lb*np.cos(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
+ya = la*np.cos(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
+
+xrc = ecc*np.sin(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
+yrc = ecc*np.cos(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
+
+# print(xrc, yrc)
+xorg = coord(smesh, geometryDef[0])
+yorg = coord(smesh, geometryDef[1])
+
+plt.figure("geometry results")
+plt.plot(xorg+xb,yorg+yb)
+plt.plot(xorg-xa,yorg-ya)
+plt.plot(-(xorg+xb),-(yorg+yb))
+plt.plot(-(xorg-xa),-(yorg-ya))
+plt.plot(xorg+xrc, yorg+yrc, label="AB rootfinding centroidal axis")
+plt.plot(xorg, yorg, label="rn")
+plt.axis('equal')
+plt.legend()
+
+plt.show()
+assert(False)
+
+backwardsGeoFunctions = np.empty([2, len(smesh)])
+independentCheck = np.empty(len(smesh))
+for i in range(len(smesh)):
+    states   = np.array([[-la[i], lb[i]], [rn[i]/(rn[i]-la[i])-1, rn[i]/(rn[i]+lb[i])-1]])
+    # states   = np.array([[-la[i], lb[i]], [-1/la[i], 1/lb[i]]])
+    qdot     = np.array([[numericalDerivatives[0,i]], [numericalDerivatives[0,i]]])
+    
+    backwardsGeoFunctions[0,i], backwardsGeoFunctions[1,i] = (states.dot(qdot))
+    independentCheck[i] = backwardsGeoFunctions[0,i]/backwardsGeoFunctions[1,i]
+
+candidate = (geoFunc1/geoFunc2)
+
+plt.figure(1000)
+plt.plot(smesh, np.transpose(backwardsGeoFunctions), label="apparent functions")
+plt.plot(smesh, np.transpose(geoFuncs), label="derived functions")
+# plt.plot(smesh, la, label = "la")
+# plt.plot(smesh, lb, label = "lb")
+plt.ylim(-.1, .2)
+plt.legend()
+# plt.figure(1001)
+# plt.plot(smesh, independentCheck, label="ratio between backwards geofunctions")
+# # plt.plot(smesh, -hLALB/independentCheck, label = "ratio between thickness and geofunctions")
+# # plt.plot(smesh, -hLALB/6, label="negative thickness")
+# plt.plot(smesh, rn, label="rn/smesh")
+# plt.ylim(-3, 3)
+# plt.legend()
+# plt.plot(smesh, candidate)
+
+plt.figure("derivative compare")
+plt.plot(smesh, np.transpose(numericalDerivatives), label="numerical rootfinding derivatives")
+# plt.plot(smesh, np.transpose(algebraicDerivatives), label="calculated algebraic derivatives")
+plt.plot(smesh, np.transpose(altAlgebraicDerivatives), label="ODE algebraic derivatives")
+plt.axhline(0)
+plt.ylim(-0.3, 0.5)
+plt.legend()
+
 
 print("start forward integration process")
 start = time.time()
-lAB0 = np.cbrt(12*cI_s(0, geometryDef[2])/outPlaneThickness)/2
-lAB0 = np.array([lAB0, lAB0])
+lABprev = [0, 0]
+lAB0 = l_a_l_b_rootfinding(smesh[1], lABPrev, geometryDef[0], geometryDef[1], geometryDef[2], False)
+# lAB0 = np.array([lAB0, lAB0])
 
-res = fixed_rk4(geo_ODE, lAB0, smesh[0:5], geometryDef)
+res    =           fixed_rk4(geo_ODE, lAB0, smesh[1:-1], geometryDef)
+print([[[geometryDef]]])
+# print("about to variable mesh solve")
+
+# altRes = variable_mesh_solve(geo_ODE, [smesh[1], smesh[-1]], lAB0, args=[[[geometryDef]]])
+
+# print("done variable mesh solving")
 # print(res)
 laForward = res[0,:]
 lbForward = res[1,:]
@@ -139,26 +202,29 @@ end = time.time()
 print("end forward integration method")
 forwardTime = end-start
 print("forward time", forwardTime)
+print(altAlgebraicDerivatives[0,0], altAlgebraicDerivatives[1,0])
+print(altAlgebraicDerivatives[0,1]-altAlgebraicDerivatives[1,1], numericalDerivatives[0,1]-numericalDerivatives[1,1])
 
-plt.figure(0)
-plt.ylim(0, 1)
-plt.plot(smesh, hAB, label='old way')
-plt.plot(smesh, hLALB, label='new way')
-plt.plot(smesh, hLALBF, label='forward integration way')
-plt.legend()
-plt.figure(2)
+
+# plt.figure(0)
+# plt.ylim(0, 1)
+# plt.plot(smesh, hAB, label='old way')
+# plt.plot(smesh, hLALB, label='new way')
+# plt.plot(smesh[0:-1], hLALBF, label='forward integration way')
+# plt.legend()
+plt.figure("direct result compare")
 plt.ylim(0, 1)
 plt.plot(smesh, la, label='rootfinding la')
 plt.plot(smesh, lb, label='rootfinding lb')
-plt.plot(smesh, laForward, label='rootfinding laF')
-plt.plot(smesh, lbForward, label='rootfinding lbF')
-plt.legend()
-plt.figure(1)
-plt.ylim(0, 1)
-plt.plot(smesh, (a+b)/2, label="centroidal radius, ab method")
-plt.plot(smesh, (2*rn-la+lb)/2, label="centroidal radius, lab method")
-plt.plot(smesh, (2*rn-laForward+lbForward)/2, label="centroidal radius, forward method")
+plt.plot(smesh[1:-1], laForward, label='laF')
+plt.plot(smesh[1:-1], lbForward, label='lbF')
+# plt.plot(altRes.t, altRes.y, label="variable size attempt")
+# plt.legend()
+# plt.figure(1)
+# plt.ylim(0, 1)
+# plt.plot(smesh, (a+b)/2, label="centroidal radius, ab method")
+# plt.plot(smesh, (2*rn-la+lb)/2, label="centroidal radius, lab method")
+# plt.plot(smesh[0:-1], (2*rn[0:-1]-laForward+lbForward)/2, label="centroidal radius, forward method")
 # plt.plot(smesh, rn, label="neutral radius")
-plt.legend()
-print(lin.norm(hLALB-hAB))
+# plt.legend()
 plt.show()

@@ -161,12 +161,12 @@ def r_n(s, xCoeffs, yCoeffs):
     dxds   = d_coord_d_s  (s, xCoeffs)
     # dAlphadS = (d2yds2/dxds-d2xds2*dyds/dxds)/(1+dyds**2/dxds)
     if hasattr(s, "__len__"):
-        rn = abs((1+dyds**2/dxds**2)/(d2yds2/dxds-d2xds2*dyds/dxds**2))
+        rn = ((1+dyds**2/dxds**2)/(d2yds2/dxds-d2xds2*dyds/dxds**2))
     else:
         if (d2yds2/dxds-d2xds2*dyds/dxds**2)==0:
             rn = float('inf')
         else:
-            rn = abs((1+dyds**2/dxds**2)/(d2yds2/dxds-d2xds2*dyds/dxds**2))
+            rn = ((1+dyds**2/dxds**2)/(d2yds2/dxds-d2xds2*dyds/dxds**2))
         # if s == fullArcLength:
         #     print("-----------------------------------------")
         #     print(dyds, dxds, d2yds2, d2xds2)
@@ -322,13 +322,11 @@ def h_e_rootfinding(s, xCoeffs, yCoeffs, cICoeffs, printbool):
 
 def l_a_l_b_rootfinding(s, lABPrev, xCoeffs, yCoeffs, cICoeffs, printBool):
     rn = r_n(s, xCoeffs, yCoeffs)
-    if hasattr(cI, "__len__"):
-        cI = cI_s(s, cICoeffs)
-    else:
-        cI = cICoeffs
+    cI = cI_s(s, cICoeffs)
     def func(x, rn, cI):
         f1 = (x[0]+x[1])/(np.log((rn+x[1])/(rn-x[0])))-rn
-        f2 = (x[0]+x[1])*(outPlaneThickness*(x[1]-(x[1]+x[0])/2)*rn)-cI
+        # f2 = (x[0]+x[1])*(outPlaneThickness*(x[1]-(x[1]+x[0])/2)*rn)-cI
+        f2 = outPlaneThickness*rn*(x[0]+x[1])*(x[1]/2-x[0]/2)-cI
         return np.array([f1, f2])
     def jac(x, rn, cI):
         return np.array([[1/(np.log((rn+x[1])/(rn-x[0])))-(x[0]+x[1])/(((np.log((rn+x[1])/(rn-x[0])))**2)*(rn-x[0])), \
@@ -336,18 +334,10 @@ def l_a_l_b_rootfinding(s, lABPrev, xCoeffs, yCoeffs, cICoeffs, printBool):
                          [-rn*outPlaneThickness*x[0], rn*outPlaneThickness*x[1]]])
     # print(rn)
     if not np.isinf(rn):
-        # INITIAL GUESS WHO??? SAME WAY AS BEFORE BITCH
         if lABPrev[0]==lABPrev[1]:
             x0 = [lABPrev[0], lABPrev[1]+0.001]
         else:
             x0 = lABPrev
-        # factor = 1.01
-        # # approimation: ln(x)=c(x-1), c such that c(x-1) = ln(factor)
-        # c = (np.log(factor)-np.log(1))/(factor-1)
-        # a0 = c*rn
-        # b0 = rn + np.sqrt(rn**2+4*0.5*((c-c**2/2)*rn-cI/(outPlaneThickness*rn)))
-        # x0 = [rn-a0, b0-rn]
-        # print("x0",x0)
         err = 1
     else:
         err = 0
@@ -357,20 +347,13 @@ def l_a_l_b_rootfinding(s, lABPrev, xCoeffs, yCoeffs, cICoeffs, printBool):
     x = x0
     # print("x0:",x0)
     iii = 0
-    while err > 10**-6 and iii <5:
+    while err > 10**-6 and iii <500:
         # print("entered while")
         xprev = x
-        # if not np.linalg.matrix_rank(jac(x, rn, cI))==jac(x, rn, cI).shape[0]:
-        #     # print("jacobian:", jac(x, rn, cI))
-        #     err = 0
-        #     l = np.cbrt(12*cI/outPlaneThickness)/2
-        #     x = np.array([l, l])
-        #     err = lin.norm(x-xprev)
-        # else:
-        # print(np.log((rn+x[1])/(rn-x[0])))
         x = x - np.transpose(lin.inv(jac(x, rn, cI)).dot(func(x, rn, cI)))
         # print(x)
         err = lin.norm(x-xprev)
+        # err = lin.norm(func(x, rn, cI))
         iii+=1
     if(printBool):
         print(x0)
@@ -540,32 +523,29 @@ def geo_ODE(s, p, geometryDef):
     dads   = d_alpha_d_s(s, geometryDef[0], geometryDef[1])
     d2ads2 = d_2_alpha_d_s_2(s, geometryDef[0], geometryDef[1])
     # print(rn, s)
-    geoFunc1 = dcIds*dads+cI*d2ads2
+    geoFunc1 = (dcIds*dads+cI*d2ads2)/outPlaneThickness
     # geoFunc2 = drnds*(1/dads*(p[0]**2-p[1]**2)+(p[0]**2*p[1]+p[0]*p[1]**2))
-    geoFunc2 = drnds*((p[0]+p[1])/(rn**2+rn*(p[1]-p[0])+p[1]*p[0])+(p[1]+p[0])/rn)
+    # geoFunc2 = drnds*((p[0]+p[1])/(rn**2+rn*(p[1]-p[0])+p[1]*p[0])+(p[1]+p[0])/rn)
+    geoFunc2 = rn*(-drnds*((p[0]+p[1])/rn**2+(-p[0]-p[1])/((rn+p[1])*(rn-p[0]))))
     # print(geoFunc1, geoFunc2)
     geoFuncs = np.array([[geoFunc1], [geoFunc2]])
-    states   = np.array([[-p[0], p[1]], [1/(rn-p[0])+1/rn, 1/rn-1/(rn+p[1])]])# [p[0]*p[1]*rn-p[0]*rn**2, p[0]*p[1]*rn-p[1]*rn**2]])
-    # print(states)
-    print("next states:", p[0], p[1])
-    if p[0]==p[1]:
-        print("rootfinding states:", l_a_l_b_rootfinding(s, [0, 0], geometryDef[0], geometryDef[1], geometryDef[2], False))
-        lABPrev = [0,0]
-        lAB   = l_a_l_b_rootfinding(s, lABPrev, geometryDef[0], geometryDef[1], geometryDef[2], False)
-        lABPrev = lAB
-        lABfd = l_a_l_b_rootfinding(s+0.0052, lABPrev, geometryDef[0], geometryDef[1], geometryDef[2], False)
-        print("forward difference:", lABPrev, lABfd)
-        LHS = np.array([(lABfd[0]-lAB[0])/0.0052,(lABfd[1]-lAB[1])/0.0052])
-        # print(LHS)
-        print("state rate of change:", LHS)
-        # print("-----------------------p--------------------")
-        return LHS
-        # LHS = lin.pinv(states).dot(geoFuncs)
+    states   = np.array([[-p[0], p[1]], [rn/(rn-p[0])-1, rn/(rn+p[1])-1]])# [p[0]*p[1]*rn-p[0]*rn**2, p[0]*p[1]*rn-p[1]*rn**2]])
+    # print("states matrix:",states)
+    fuckYou = False
+    for i in [0,1]:
+        for j in [0,1]:
+            if np.isnan(states[i,j]):
+                fuckYou = True
+    if not fuckYou:
+        if lin.matrix_rank(states) < 2:
+            LHS = np.array([float("nan"), float("nan")])
+            return LHS
+        else:
+            LHS = lin.inv(states).dot(geoFuncs)    
     else:
-        print(lin.inv(states), geoFuncs)
         LHS = lin.inv(states).dot(geoFuncs)
-        print("state rate of change:", np.array([LHS[0][0], LHS[1][0]]))
-        return np.array([LHS[0][0], LHS[1][0]])
+    # print("state rate of change:", np.array([LHS[0][0], LHS[1][0]]))
+    return np.array([LHS[0][0], LHS[1][0]])
 
 def fixed_rk4(fun, y0, xmesh, *args): # (fun, alphaCoeffs, cICoeffs, y0, Fx, Fy, xmesh)
     step = xmesh[1]-xmesh[0]

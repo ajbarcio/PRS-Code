@@ -98,9 +98,9 @@ stiffness, res, dragVector, dragVector0 = tune_stiffness(maxTorque/maxDBeta, max
 
 geometryDef, smesh = drag_vector_spring(dragVector)
 lAB0 = np.cbrt(12*cI_s(0, geometryDef[2])/outPlaneThickness)/2
-res = fixed_rk4(geo_ODE, lAB0, smesh, geometryDef)
-laForward = res[:,0]
-lbForward = res[:,1]
+# res = fixed_rk4(geo_ODE, lAB0, smesh, geometryDef)
+# laForward = res[:,0]
+# lbForward = res[:,1]
 
 print("overall relative change", dragVector/dragVector0)
 print("target stiffness:", maxTorque/maxDBeta)
@@ -183,6 +183,10 @@ ya = la*np.cos(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
 
 xrc = ecc*np.sin(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
 yrc = ecc*np.cos(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
+
+
+
+
 
 # print(xrc, yrc)
 
