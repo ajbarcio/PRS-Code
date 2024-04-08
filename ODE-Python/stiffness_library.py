@@ -167,31 +167,36 @@ def r_n(s, xCoeffs, yCoeffs):
             rn = float('inf')
         else:
             rn = ((1+dyds**2/dxds**2)/(d2yds2/dxds-d2xds2*dyds/dxds**2))
-        # if s == fullArcLength:
-        #     print("-----------------------------------------")
-        #     print(dyds, dxds, d2yds2, d2xds2)
-        #     print("-----------------------------------------")
     return rn
 
-def d_rn_d_s(s, xCoeffs, yCoeffs):
+def d_rn_d_s(s, xCoeffs, yCoeffs): # U ARE WRONG!!!!!!! TODO
     d3yds3 = d3_coord_d_s3(s, yCoeffs)
     d3xds3 = d3_coord_d_s3(s, xCoeffs)
     d2yds2 = d2_coord_d_s2(s, yCoeffs)
     d2xds2 = d2_coord_d_s2(s, xCoeffs)
     dyds   = d_coord_d_s  (s, yCoeffs)
     dxds   = d_coord_d_s  (s, xCoeffs)
-    n1=dxds**2
-    n2=d2xds2
-    n3=d2yds2
-    n4=dyds**2
-    n5=dxds**3
-    num1=2*dyds*n3/n1-2*n4*n2/n5
-    den1=n3-dyds*n2/n1
 
-    num2=(n4/n1+1)*(2*dyds*n2**2/n5-dyds*d3xds3/n1-n2*n3/n1+d3yds3)
-    den2=(n3-n2*dyds/n1)**2
+    denominator = (d2yds2*dxds-d2xds2*dyds)**2 
+    numerator   = ( dxds**3*d3yds3 - dyds**3*d3xds3 + 
+                    2*dyds*d2xds2**2*dxds - dxds**2*d3xds3*dyds -
+                    2*dxds**2*d2yds2*d2xds2 + 2*dyds**2*d2yds2*d2xds2 +
+                    dyds**2*d3yds3*dxds )
+    
+    drnds = -numerator/denominator
 
-    drnds = num1/den1-num2/den2
+    # n1=dxds**2
+    # n2=d2xds2
+    # n3=d2yds2
+    # n4=dyds**2
+    # n5=dxds**3
+    # num1=2*dyds*n3/n1-2*n4*n2/n5
+    # den1=n3-dyds*n2/n1
+
+    # num2=(n4/n1+1)*(2*dyds*n2**2/n5-dyds*d3xds3/n1-n2*n3/n1+d3yds3)
+    # den2=(n3-n2*dyds/n1)**2
+
+    # drnds = num1/den1-num2/den2
     return drnds       
 
 def cI_s(s, cICoeffs):
@@ -410,7 +415,6 @@ def form_spring(pts, cIs, ctrlLengths, ctrlcIs):
 
 # def deform_ODE_Barcio_to_Thomas(s, p, *args):
     
-    
     pass
 
 def deform_with_stress_ODE(s, p, *args):
@@ -512,38 +516,59 @@ def deform_ODE(s, p, *args): #Fx, Fy, geometryDef, dgds0
 
     return LHS
 
+def d_rn_d_s_numerical(s, xCoeffs, yCoeffs, eps=1e-5):
+    rnf = r_n(s+eps, xCoeffs, yCoeffs)
+    rnb = r_n(s-eps, xCoeffs, yCoeffs)
+    derivative = (rnf-rnb)/(2*eps)
+    return derivative
+
+def ndiff(s, f, eps=1e-5):
+    rnf = f(s+eps)
+    rnb = f(s-eps)
+    derivative = (rnf-rnb)/(2*eps)
+    return derivative
+
+# ndiff(s, lambda s: r_n(s, geometryDef[0], geometryDef[1]), eps=1e-6)
+
 def geo_ODE(s, p, geometryDef):
     geometryDef = geometryDef[0][0]
     # print(geometryDef)
     
     rn     = r_n(s, geometryDef[0], geometryDef[1])
     drnds  = d_rn_d_s(s, geometryDef[0], geometryDef[1])
+    # drnds  = d_rn_d_s_numerical(s, geometryDef[0], geometryDef[1])
     cI     = cI_s(s, geometryDef[2])
     dcIds  = d_cI_d_s(s, geometryDef[2])
     dads   = d_alpha_d_s(s, geometryDef[0], geometryDef[1])
     d2ads2 = d_2_alpha_d_s_2(s, geometryDef[0], geometryDef[1])
     # print(rn, s)
-    geoFunc1 = (dcIds*dads+cI*d2ads2)/outPlaneThickness
-    # geoFunc2 = drnds*(1/dads*(p[0]**2-p[1]**2)+(p[0]**2*p[1]+p[0]*p[1]**2))
-    # geoFunc2 = drnds*((p[0]+p[1])/(rn**2+rn*(p[1]-p[0])+p[1]*p[0])+(p[1]+p[0])/rn)
+    geoFunc1 = (dcIds*1/rn-cI*1/rn**2*drnds)/outPlaneThickness
     geoFunc2 = rn*(-drnds*((p[0]+p[1])/rn**2+(-p[0]-p[1])/((rn+p[1])*(rn-p[0]))))
     # print(geoFunc1, geoFunc2)
     geoFuncs = np.array([[geoFunc1], [geoFunc2]])
     states   = np.array([[-p[0], p[1]], [rn/(rn-p[0])-1, rn/(rn+p[1])-1]])# [p[0]*p[1]*rn-p[0]*rn**2, p[0]*p[1]*rn-p[1]*rn**2]])
     # print("states matrix:",states)
-    fuckYou = False
-    for i in [0,1]:
-        for j in [0,1]:
-            if np.isnan(states[i,j]):
-                fuckYou = True
-    if not fuckYou:
+    if np.all(np.isfinite(states)):
         if lin.matrix_rank(states) < 2:
             LHS = np.array([float("nan"), float("nan")])
             return LHS
         else:
-            LHS = lin.inv(states).dot(geoFuncs)    
+            LHS = lin.inv(states).dot(geoFuncs)
     else:
-        LHS = lin.inv(states).dot(geoFuncs)
+            LHS = lin.inv(states).dot(geoFuncs)
+    # fuckYou = False
+    # for i in [0,1]:
+    #     for j in [0,1]:
+    #         if np.isnan(states[i,j]):
+    #             fuckYou = True
+    # if not fuckYou:
+    #     if lin.matrix_rank(states) < 2:
+    #         LHS = np.array([float("nan"), float("nan")])
+    #         return LHS
+    #     else:
+    #         LHS = lin.inv(states).dot(geoFuncs)    
+    # else:
+    #     LHS = lin.inv(states).dot(geoFuncs)
     # print("state rate of change:", np.array([LHS[0][0], LHS[1][0]]))
     return np.array([LHS[0][0], LHS[1][0]])
 
