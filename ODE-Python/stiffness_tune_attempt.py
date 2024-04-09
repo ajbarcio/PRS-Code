@@ -89,37 +89,24 @@ print("initial initial guess", dragVector0)
 # assert(False)
 # ws.Beep(831,200)
 
-discludeVector = [False,False,False,False,False,False,False, \
-                  True,True,True, \
-                  False,False,False,False]
+discludeVector = [ 0, 0, 0, 0,       # Gains for Radii
+                   0, 0, 0,          # Gains for Angles 
+                   1, 1, 1,          # Gains for Control cIs
+                   0,                # Gain for cI minimum point
+                   0, 0,             # Gains for length control points
+                   0      ]      # Gain for overall length]
 
 print("FIRST ATTEMPT; DRAG ONLY IC")
 stiffness, res, dragVector, dragVector0 = tune_stiffness(maxTorque/maxDBeta, maxDBeta, dragVector0, discludeVector)
 
 geometryDef, smesh = drag_vector_spring(dragVector)
 lAB0 = np.cbrt(12*cI_s(0, geometryDef[2])/outPlaneThickness)/2
-# res = fixed_rk4(geo_ODE, lAB0, smesh, geometryDef)
-# laForward = res[:,0]
-# lbForward = res[:,1]
 
-print("overall relative change", dragVector/dragVector0)
+print("overall relative change", dragVector-dragVector0)
 print("target stiffness:", maxTorque/maxDBeta)
 print("acheived stiffness:", stiffness)
 print("original guess", dragVector0)
 print("final guess", dragVector)
-
-# discludeVector = [True,True,True,True, \
-#                   False,False,False,False,False,False,False,False,False,False]
-# dragVector0 = dc(dragVector)
-# print("SECOND ATTEMPT; DRAG ONLY Radii")
-# stiffness, res, dragVector, dragVector0 = tune_stiffness(maxTorque/maxDBeta, maxDBeta, dragVector0, discludeVector)
-# geometryDef, smesh = drag_vector_spring(dragVector)
-
-# print("overall relative change", dragVector/dragVector0)
-# print("target stiffness:", maxTorque/maxDBeta)
-# print("acheived stiffness:", stiffness)
-# print("original guess", dragVector0)
-# print("final guess", dragVector)
 
 ws.Beep(831,200)
 
@@ -163,8 +150,8 @@ h = np.empty(len(smesh))
 start = time.time()
 lABPrev = [0, 0]
 for i in range(len(smesh)):
-    print(i)
-    lAB = l_a_l_b_rootfinding(smesh[i], lABPrev, geometryDef[0], geometryDef[1], geometryDef[2], True)
+    # print(i)
+    lAB = l_a_l_b_rootfinding(smesh[i], lABPrev, geometryDef[0], geometryDef[1], geometryDef[2], False)
     # print(AB)
     la[i] = lAB[0]
     lb[i] = lAB[1]
@@ -173,8 +160,8 @@ for i in range(len(smesh)):
 end=time.time()
 ecc = Ic/(outPlaneThickness*h*rn)
 print("rootfinding time,", end-start)
-print(smesh)
-print(rn)
+# print(smesh)
+# print(rn)
 
 xb = -lb*np.sin(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
 xa = -la*np.sin(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
@@ -183,10 +170,6 @@ ya = la*np.cos(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
 
 xrc = ecc*np.sin(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
 yrc = ecc*np.cos(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
-
-
-
-
 
 # print(xrc, yrc)
 
@@ -205,6 +188,6 @@ plt.plot(smesh,la)
 plt.plot(smesh,lb)
 plt.plot(smesh,rn)
 
-res, SF = deform_spring_by_torque(maxTorque, geometryDef)
+# res, SF = deform_spring_by_torque(maxTorque, geometryDef)
 
 plt.show()

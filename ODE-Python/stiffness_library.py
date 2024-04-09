@@ -9,6 +9,7 @@ import os
 import random
 import math
 from copy import deepcopy as dc
+from StatProfiler import SSProfile
 
 def cI_poly(cIs, ctrlcIs):
     Mat = np.array([[0,0,0,0,0,1], \
@@ -179,7 +180,7 @@ def d_rn_d_s(s, xCoeffs, yCoeffs): # U ARE WRONG!!!!!!! TODO
 
     denominator = (d2yds2*dxds-d2xds2*dyds)**2 
     numerator   = ( dxds**3*d3yds3 - dyds**3*d3xds3 + 
-                    2*dyds*d2xds2**2*dxds - dxds**2*d3xds3*dyds -
+                    2*dyds*d2xds2**2*dxds - 2*dyds*d2yds2**2*dxds - dxds**2*d3xds3*dyds -
                     2*dxds**2*d2yds2*d2xds2 + 2*dyds**2*d2yds2*d2xds2 +
                     dyds**2*d3yds3*dxds )
     
@@ -615,20 +616,21 @@ def rk4_step(fun, x0, y0, dx, *args): # (fun, alphaCoeffs, cICoeffs, x0, y0, du,
 
     return y1
 
-def deform_spring_by_torque(torqueTarg, geometryDef):
+def deform_spring_by_torque(torqueTarg, geometryDef, totalSpringLength):
     xCoeffs = geometryDef[0]
     yCoeffs = geometryDef[1]
     cICoeffs = geometryDef[2]
 
-    xorg = coord(fullArcLength, xCoeffs)
-    yorg = coord(fullArcLength, yCoeffs)
+    xorg = coord(totalSpringLength, xCoeffs)
+    yorg = coord(totalSpringLength, yCoeffs)
 
     SF = np.array([0, 0, torqueTarg])
     # SF = Fx Fy T
     # print("before forward integration", SF[2])
     err = np.ones(2)
     i = 0
-    while lin.norm(err) > 10e-6 and i<500:
+    divergeFlag = 0
+    while lin.norm(err) > 10e-6 and i<100:
         # establish results of guess
         errPrev = err
         err, res = int_error_result(SF, xCoeffs, yCoeffs, cICoeffs, xorg, yorg)
@@ -640,9 +642,10 @@ def deform_spring_by_torque(torqueTarg, geometryDef):
         i+=1
         if lin.norm(err)>lin.norm(errPrev):
             print("torque deform diverging", i)
+            divergeFlag = 1
     # print("torque iterations: ",i)
     # print("after forward integration", SF[2])
-    return res, SF
+    return res, SF, divergeFlag
         
 
 def fd_J(SF, xCoeffs, yCoeffs, cICoeffs, xorg, yorg):
@@ -696,14 +699,6 @@ def tune_stiffness(stiffnessTarg, dBetaTarg, dragVector, discludeVector):
     # treat out of plane thickness, # of arms as constant
     # #PASS DRAG VECTOR
     dragVector0=dc(dragVector)
-    # dragVector0 = [R0, R1, R2, R3, \
-    #               betaB, betaC, beta0, \
-    #               cIs[0], cIs[1], cIs[2], \
-    #               ctrlcIs[1], \
-    #               ctrlLengths[1], ctrlLengths[2],
-    #               fullArcLength]
-    # # print(dragVector0)
-    # dragVector = dc(dragVector0)
     err = 1
     relErr = 1
     convErr = 1
@@ -711,7 +706,9 @@ def tune_stiffness(stiffnessTarg, dBetaTarg, dragVector, discludeVector):
     j = 0
     resetCounter = 0
     resetStatus  = 0
+    procReset = 0
     while relErr>10e-6 and convErr>10e-6:
+        SSProfile("Stiffness Tuning").tic()
         print("stiffness refinement iteration:",j)
         # create spring for guess
         
@@ -721,7 +718,9 @@ def tune_stiffness(stiffnessTarg, dBetaTarg, dragVector, discludeVector):
         yorg = coord(smesh, geometryDef[1])
         # establish error in stiffness as a result of guess
         relErrPrev = relErr
-        res, SFG = deform_spring_by_torque(torqueTarg, geometryDef)
+        totalSpringLength = smesh[-1]
+        res, SFG, f = deform_spring_by_torque(torqueTarg, geometryDef, totalSpringLength)
+
         dBeta = (np.arctan2(res[2,-1],res[1,-1])-np.arctan2(yorg[-1],xorg[-1]))
         stiffness = torqueTarg/dBeta
         err = abs(stiffness - stiffnessTarg)
@@ -732,9 +731,11 @@ def tune_stiffness(stiffnessTarg, dBetaTarg, dragVector, discludeVector):
         print("chenge in rel error", convErr)
         # estimate gradient (pain)
         # print(dragVector0)
-        if abs(relErr) > abs(relErrPrev):
+        if f:
+            procReset=1
+        elif abs(relErr) > abs(relErrPrev):
             dragVector = dc(dragVectorPrev)
-            convErr = 0
+            procReset = 1
         else:
             grad = estimate_grad(dragVector, torqueTarg, stiffness, err, yorg, xorg)
             Jinv = 1/grad
@@ -742,13 +743,11 @@ def tune_stiffness(stiffnessTarg, dBetaTarg, dragVector, discludeVector):
                 if discludeVector[i]==False:
                     grad[i]=0
                     Jinv[i]=0
+                else:
+                    grad[i]=grad[i]*discludeVector[i]
+                    Jinv[i]=Jinv[i]*discludeVector[i]
                 #### WTF IS GOING ON HERE
-            # print(dragVector0)
-            # print('grad', grad)
-            # print("next step:",lin.norm(stepSize*grad))
-            # Jinv = 1/grad
-            # print('jinv', Jinv)
-            # determine next set of parameters
+
             stepSize = stepSizeCoeff*lin.norm(grad)
             dragVectorPrev = dc(dragVector)
             # dragVector = dragVector + stepSize*grad
@@ -758,13 +757,11 @@ def tune_stiffness(stiffnessTarg, dBetaTarg, dragVector, discludeVector):
             for i in range(len(grad)):
                 if discludeVector[i]==False:
                     assert(dragVector0[i]==dragVector[i])
-        if violates_bounds(dragVector):
+        if procReset == 0:
+            procReset = violates_bounds(dragVector)
+        if procReset:
             print("reset---------------------------------------------------reset")
-            # print(dragVector)
-            # print(dragVector0)
             dragVector = dc(dragVectorPrev)
-            # print(dragVector0)
-            # print(dragVector)
             if resetStatus==0:
                 if j==0:
                     stepSizeCoeff = stepSizeCoeff*0.1
@@ -775,6 +772,7 @@ def tune_stiffness(stiffnessTarg, dBetaTarg, dragVector, discludeVector):
             relErr = 1
             resetCounter+=1
             resetStatus = 1
+            procReset = 0
             print("this is the ",resetCounter,"th reset")
         else:
             assert(not violates_bounds(dragVector))
@@ -783,6 +781,7 @@ def tune_stiffness(stiffnessTarg, dBetaTarg, dragVector, discludeVector):
             j+=1
             resetCounter = 0
             resetStatus  = 0
+        SSProfile("Stiffness Tuning").toc()
     assert(not violates_bounds(dragVector))
     for i in range(len(dragVector)):
                 if discludeVector[i]==False:
@@ -791,6 +790,11 @@ def tune_stiffness(stiffnessTarg, dBetaTarg, dragVector, discludeVector):
                     assert(dragVector0[i]==dragVector[i])
                     # print(i)
     print("stiffness refinement iterations:", j)
+    if convErr <10e-6:
+        print("this is as close as you can get with starting guess and gains")
+    if relErr <10e-6:
+        print("wow we actually found a workable solution")
+    
     return stiffness, res, dragVector, dragVector0
 
 def stiffness_stress_error(stiffnessTarg, torqueTarg, allowStress, dragVector):
@@ -799,7 +803,7 @@ def stiffness_stress_error(stiffnessTarg, torqueTarg, allowStress, dragVector):
     xorg = coord(smesh, geometryDef[0])
     yorg = coord(smesh, geometryDef[1])
     # establish error in stiffness and max stress as a result of guess
-    res, SF = deform_spring_by_torque(torqueTarg, geometryDef)
+    res, SF, f = deform_spring_by_torque(torqueTarg, geometryDef)
     la, lb   = outer_geometry(smesh, geometryDef, False)
 
     rn = r_n(smesh, geometryDef[0], geometryDef[1])
@@ -956,7 +960,8 @@ def estimate_grad(dragVector, torqueTarg, stiffness, err, yorg, xorg):
             dragVectorFD=dc(dragVectorBase)
             dragVectorFD[i]=dragVectorFD[i]+finiteDifferenceLength
             geometryDefNew, smesh = drag_vector_spring(dragVectorFD)
-            res, SFG = deform_spring_by_torque(torqueTarg, geometryDefNew)
+            totalSpringLength = dragVectorFD[-1]
+            res, SFG, f = deform_spring_by_torque(torqueTarg, geometryDefNew, totalSpringLength)
             dBeta = (np.arctan2(res[2,-1],res[1,-1])-np.arctan2(yorg[-1],xorg[-1]))
             stiffnessd = torqueTarg/dBeta
             errf = stiffness - stiffnessd
@@ -966,8 +971,10 @@ def estimate_grad(dragVector, torqueTarg, stiffness, err, yorg, xorg):
             # print("base", dragVectorBase)
             dragVectorFD=dc(dragVectorBase)
             dragVectorFD[i]=dragVectorFD[i]+finiteDifferenceAngle
+            totalSpringLength = dragVectorFD[-1]
             geometryDefNew, smesh = drag_vector_spring(dragVectorFD)
-            res, SFG = deform_spring_by_torque(torqueTarg, geometryDefNew)
+            totalSpringLength = dragVectorFD[-1]
+            res, SFG, f = deform_spring_by_torque(torqueTarg, geometryDefNew, totalSpringLength)
             dBeta = (np.arctan2(res[2,-1],res[1,-1])-np.arctan2(yorg[-1],xorg[-1]))
             stiffnessd = torqueTarg/dBeta
             errf = stiffness - stiffnessd
@@ -978,7 +985,8 @@ def estimate_grad(dragVector, torqueTarg, stiffness, err, yorg, xorg):
             dragVectorFD=dc(dragVectorBase)
             dragVectorFD[i]=dragVectorFD[i]+finiteDifferenceCI
             geometryDefNew, smesh = drag_vector_spring(dragVectorFD)
-            res, SFG = deform_spring_by_torque(torqueTarg, geometryDefNew)
+            totalSpringLength = dragVectorFD[-1]
+            res, SFG, f = deform_spring_by_torque(torqueTarg, geometryDefNew,totalSpringLength)
             dBeta = (np.arctan2(res[2,-1],res[1,-1])-np.arctan2(yorg[-1],xorg[-1]))
             stiffnessd = torqueTarg/dBeta
             errf = stiffness - stiffnessd
@@ -1001,7 +1009,7 @@ def drag_vector_spring(dragVectorArg):
     ctrlLengths_dv = np.array([0,dragVectorArg[11],dragVectorArg[12],dragVectorArg[13]])
 
     geometryDef = form_spring(pts_dv, cIs_dv, ctrlLengths_dv, ctrlcIs_dv)
-    smesh = np.linspace(0, fullArcLength, globalLen)
+    smesh = np.linspace(0, dragVectorArg[-1], globalLen)
 
     return geometryDef, smesh
 

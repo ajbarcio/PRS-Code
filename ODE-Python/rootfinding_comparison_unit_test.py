@@ -8,12 +8,17 @@ from StatProfiler import SSProfile
 
 # Give the spring some parameters that hopefully do not affect anything about the math
 
-fullArcLength = 4.1
+
 deg2rad = np.pi/180
-dragVector0 = [1, 2, 2.5, 4, \
-               5*deg2rad, 10*deg2rad, 15*deg2rad,  \
-               .001, .0005, .001, \
-               fullArcLength/2,  fullArcLength/3, 2*fullArcLength/3, fullArcLength]
+# dragVector0 = [1, 2, 2.5, 4, \
+#                5*deg2rad, 10*deg2rad, 15*deg2rad,  \
+#                .001, .0005, .001, \
+#                fullArcLength/2,  fullArcLength/3, 2*fullArcLength/3, fullArcLength]
+dragVector0 = [1.10000000e+00, 2.13750000e+00, 1.62750000e+00, 2.65500000e+00,
+ 4.36332313e-01, 1.74532925e+00, 2.79252680e+00, 4.74085857e-03,
+ 7.40837797e-04, 4.74084339e-03, 2.60000000e+00, 1.73160000e+00,
+ 3.46840000e+00, 5.20000000e+00]
+fullArcLength = dragVector0[-1]
 # dragVector0 = [1.0, 2.0, 6.0, 10.0, 1*deg2rad, 2*deg2rad, 3*deg2rad, 0.5, 0.5, 0.5, \
             #    6, 4, 8, 12]
 print("Spring Parameters:", dragVector0)
@@ -137,10 +142,10 @@ plt.plot((geoFunc2-((rn/(rn-la)-1)*numericalDerivatives[0,:] + (rn/(rn+lb)-1)*nu
 plt.legend()
 
 plt.figure("Do numerical derivatives satisfy diffEQ? (Direct Error)")
-plt.plot(numericalDerivatives[0,:]-altAlgebraicDerivatives[0,:], label="dlads error")
-plt.plot(numericalDerivatives[1,:]-altAlgebraicDerivatives[1,:], label="dlbds error")
-plt.plot(smesh, np.transpose(numericalDerivatives[0:1,:]), label="numerical rootfinding derivatives")
-plt.plot(smesh, np.transpose(altAlgebraicDerivatives[0:1,:]), label="ODE algebraic derivatives")
+plt.plot(smesh, numericalDerivatives[0,:]-altAlgebraicDerivatives[0,:], label="dlads error")
+plt.plot(smesh, numericalDerivatives[1,:]-altAlgebraicDerivatives[1,:], label="dlbds error")
+plt.plot(smesh, np.transpose(numericalDerivatives), label="numerical rootfinding derivatives")
+plt.plot(smesh, np.transpose(altAlgebraicDerivatives), label="ODE algebraic derivatives")
 plt.axhline(0)
 plt.ylim(-0.3, 0.5)
 plt.legend()
@@ -189,27 +194,26 @@ plt.plot(smesh, np.transpose(geoFuncs), label="derived functions")
 plt.ylim(-.1, .2)
 plt.legend()
 
-
 print("start forward integration process")
 start = time.time()
 lABprev = [0, 0]
-offset = 100
+offset = 10
 lAB0 = l_a_l_b_rootfinding(smesh[offset], lABPrev, geometryDef[0], geometryDef[1], geometryDef[2], False)
 print(lAB0)
 res    =  fixed_rk4(geo_ODE, lAB0, smesh[offset:-1], geometryDef)
 print([[[geometryDef]]])
-# print("about to variable mesh solve")
-# altRes = variable_mesh_solve(geo_ODE, [smesh[offset], smesh[-1]], lAB0, args=[[[geometryDef]]])
-# print("done variable mesh solving")
+print("about to variable mesh solve")
+altRes = variable_mesh_solve(geo_ODE, [smesh[offset], smesh[-1]], lAB0, args=[[[geometryDef]]], method="DOP853", t_eval=smesh[offset:-1])
+print("done variable mesh solving")
 
 laForward = res[0,:]
 lbForward = res[1,:]
 hLALBF = laForward+lbForward
 
-# laForwardV    = altRes.y[0,:]
-# lbForwardV    = altRes.y[1,:]
-# variableSmesh = altRes.t
-# hLALBFV = laForwardV+lbForwardV
+laForwardV    = altRes.y[0,:]
+lbForwardV    = altRes.y[1,:]
+variableSmesh = altRes.t
+hLALBFV = laForwardV+lbForwardV
 
 end = time.time()
 print("end forward integration method")
@@ -223,7 +227,7 @@ plt.plot(smesh, la, label='rootfinding la')
 plt.plot(smesh, lb, label='rootfinding lb')
 plt.plot(smesh[offset:-1], laForward, label='laF fixed mesh')
 plt.plot(smesh[offset:-1], lbForward, label='lbF fixed mesh')
-# plt.plot(variableSmesh, laForwardV, label='laF variable mesh')
-# plt.plot(variableSmesh, lbForwardV, label='lbF variable mesh')
+plt.plot(variableSmesh, laForwardV, label='laF variable mesh')
+plt.plot(variableSmesh, lbForwardV, label='lbF variable mesh')
 plt.legend()
 plt.show()
