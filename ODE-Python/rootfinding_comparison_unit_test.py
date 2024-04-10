@@ -121,34 +121,35 @@ geoFunc2 = rn*(-drnds*((la+lb)/rn**2+(-la-lb)/((rn+lb)*(rn-la))))
 # # print(geoFunc1, geoFunc2)
 geoFuncs = np.array([geoFunc1, geoFunc2])
 
-# Use the ODE derived from governing equations to calculate algebraic derivatives for la, lb
-altAlgebraicDerivatives = np.empty([2, len(smesh)])
-for i in range(len(smesh)):
-    altAlgebraicDerivatives[0,i], altAlgebraicDerivatives[1,i] = geo_ODE(smesh[i], [la[i], lb[i]], [[geometryDef]])
+if False:
+    # Use the ODE derived from governing equations to calculate algebraic derivatives for la, lb
+    altAlgebraicDerivatives = np.empty([2, len(smesh)])
+    for i in range(len(smesh)):
+        altAlgebraicDerivatives[0,i], altAlgebraicDerivatives[1,i] = geo_ODE(smesh[i], [la[i], lb[i]], [[geometryDef]])
 
-plt.figure("compare ODE to numerical derivative")
-plt.plot(smesh, dlads, label="numeric dlads")
-plt.plot(smesh, dlbds, label="numeric dlbds")
-plt.plot(smesh, altAlgebraicDerivatives[0,:], label="algebraic dlads")
-plt.plot(smesh, altAlgebraicDerivatives[1,:], label="algebraic dlbds")
-plt.plot(smesh, dlads-altAlgebraicDerivatives[0,:], label="dlads error")
-plt.plot(smesh, dlbds-altAlgebraicDerivatives[1,:], label="dlbds error")
-plt.legend()
+    plt.figure("compare ODE to numerical derivative")
+    plt.plot(smesh, dlads, label="numeric dlads")
+    plt.plot(smesh, dlbds, label="numeric dlbds")
+    plt.plot(smesh, altAlgebraicDerivatives[0,:], label="algebraic dlads")
+    plt.plot(smesh, altAlgebraicDerivatives[1,:], label="algebraic dlbds")
+    plt.plot(smesh, dlads-altAlgebraicDerivatives[0,:], label="dlads error")
+    plt.plot(smesh, dlbds-altAlgebraicDerivatives[1,:], label="dlbds error")
+    plt.legend()
 
-# Check whether the numerical derivatives of la, lb satisfy the diffEQ
-plt.figure("Do numerical derivatives satisfy diffEQ?")
-plt.plot((geoFunc1-(-la*numericalDerivatives[0,:]+lb*numericalDerivatives[1,:])), label="numeric function 1 (Ic)")
-plt.plot((geoFunc2-((rn/(rn-la)-1)*numericalDerivatives[0,:] + (rn/(rn+lb)-1)*numericalDerivatives[1,:])), label="numeric function 2 (Rn)")
-plt.legend()
+    # Check whether the numerical derivatives of la, lb satisfy the diffEQ
+    plt.figure("Do numerical derivatives satisfy diffEQ?")
+    plt.plot((geoFunc1-(-la*numericalDerivatives[0,:]+lb*numericalDerivatives[1,:])), label="numeric function 1 (Ic)")
+    plt.plot((geoFunc2-((rn/(rn-la)-1)*numericalDerivatives[0,:] + (rn/(rn+lb)-1)*numericalDerivatives[1,:])), label="numeric function 2 (Rn)")
+    plt.legend()
 
-plt.figure("Do numerical derivatives satisfy diffEQ? (Direct Error)")
-plt.plot(smesh, numericalDerivatives[0,:]-altAlgebraicDerivatives[0,:], label="dlads error")
-plt.plot(smesh, numericalDerivatives[1,:]-altAlgebraicDerivatives[1,:], label="dlbds error")
-plt.plot(smesh, np.transpose(numericalDerivatives), label="numerical rootfinding derivatives")
-plt.plot(smesh, np.transpose(altAlgebraicDerivatives), label="ODE algebraic derivatives")
-plt.axhline(0)
-plt.ylim(-0.3, 0.5)
-plt.legend()
+    plt.figure("Do numerical derivatives satisfy diffEQ? (Direct Error)")
+    plt.plot(smesh, numericalDerivatives[0,:]-altAlgebraicDerivatives[0,:], label="dlads error")
+    plt.plot(smesh, numericalDerivatives[1,:]-altAlgebraicDerivatives[1,:], label="dlbds error")
+    plt.plot(smesh, np.transpose(numericalDerivatives), label="numerical rootfinding derivatives")
+    plt.plot(smesh, np.transpose(altAlgebraicDerivatives), label="ODE algebraic derivatives")
+    plt.axhline(0)
+    plt.ylim(-0.3, 0.5)
+    plt.legend()
 
 # a bunch of bullshit to plot the shape of the spring
 ecc = Ic/(outPlaneThickness*hLALB*rn)
@@ -196,29 +197,44 @@ plt.legend()
 
 print("start forward integration process")
 start = time.time()
-lABprev = [0, 0]
-offset = 10
+offset = 1
+lABprev = [la[offset], lb[offset]]
 lAB0 = l_a_l_b_rootfinding(smesh[offset], lABPrev, geometryDef[0], geometryDef[1], geometryDef[2], False)
 print(lAB0)
 res    =  fixed_rk4(geo_ODE, lAB0, smesh[offset:-1], geometryDef)
 print([[[geometryDef]]])
-print("about to variable mesh solve")
-altRes = variable_mesh_solve(geo_ODE, [smesh[offset], smesh[-1]], lAB0, args=[[[geometryDef]]], method="DOP853", t_eval=smesh[offset:-1])
-print("done variable mesh solving")
+# print("about to variable mesh solve")
+# altRes = variable_mesh_solve(geo_ODE, [smesh[offset], smesh[-1]], lAB0, args=[[[geometryDef]]], method="DOP853", t_eval=smesh[offset:-1])
+# print("done variable mesh solving")
 
 laForward = res[0,:]
 lbForward = res[1,:]
 hLALBF = laForward+lbForward
 
-laForwardV    = altRes.y[0,:]
-lbForwardV    = altRes.y[1,:]
-variableSmesh = altRes.t
-hLALBFV = laForwardV+lbForwardV
+# laForwardV    = altRes.y[0,:]
+# lbForwardV    = altRes.y[1,:]
+# variableSmesh = altRes.t
+# hLALBFV = laForwardV+lbForwardV
 
 end = time.time()
 print("end forward integration method")
 forwardTime = end-start
 print("forward time", forwardTime)
+
+
+plt.figure("compare ODE to numerical derivative")
+plt.plot(smesh, dlads, label="numeric dlads")
+plt.plot(smesh, dlbds, label="numeric dlbds")
+plt.plot(np.array(geo_ODE.all_inputs_ever),np.array(geo_ODE.all_outputs_ever)[:,0], label="intro dlads")
+plt.plot(np.array(geo_ODE.all_inputs_ever),np.array(geo_ODE.all_outputs_ever)[:,1], label="intro dlbds")
+plt.legend()
+
+plt.figure("compare ODE's p inputs to correct inputs")
+plt.plot(smesh, la, label="true la")
+plt.plot(smesh, lb, label="true lb")
+plt.plot(np.array(geo_ODE.all_inputs_ever),np.array(geo_ODE.all_p_inputs_ever)[:,0], label="intro la")
+plt.plot(np.array(geo_ODE.all_inputs_ever),np.array(geo_ODE.all_p_inputs_ever)[:,1], label="intro lb")
+plt.legend()
 
 
 plt.figure("direct result compare")
@@ -227,7 +243,21 @@ plt.plot(smesh, la, label='rootfinding la')
 plt.plot(smesh, lb, label='rootfinding lb')
 plt.plot(smesh[offset:-1], laForward, label='laF fixed mesh')
 plt.plot(smesh[offset:-1], lbForward, label='lbF fixed mesh')
-plt.plot(variableSmesh, laForwardV, label='laF variable mesh')
-plt.plot(variableSmesh, lbForwardV, label='lbF variable mesh')
+# plt.plot(variableSmesh, laForwardV, label='laF variable mesh')
+# plt.plot(variableSmesh, lbForwardV, label='lbF variable mesh')
 plt.legend()
+
+
+kn = dads
+dknds = d2ads2
+
+states = np.array([la*kn*(1+lb*kn), -lb*kn*(1-la*kn)])
+RHS = dknds*(la+lb)*(lb-la-la*lb*kn)
+derivatives = np.array([dlads,dlbds])
+plt.figure("checking refactor attempt")
+plt.plot(states[0,:]*derivatives[0,:]+states[1,:]*derivatives[1,:])
+plt.plot( RHS)
+plt.plot(dknds)
+plt.plot(kn)
+
 plt.show()

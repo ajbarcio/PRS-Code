@@ -98,7 +98,7 @@ discludeVector = [ 0, 0, 0, 0,       # Gains for Radii
 
 print("FIRST ATTEMPT; DRAG ONLY IC")
 stiffness, res, dragVector, dragVector0 = tune_stiffness(maxTorque/maxDBeta, maxDBeta, dragVector0, discludeVector)
-
+stiffness, maxStress, res, dragVector, dragVector0 = stress_stiffness_tuning(maxTorque/maxDBeta, maxDBeta, 247760, dragVector0, discludeVector)
 geometryDef, smesh = drag_vector_spring(dragVector)
 lAB0 = np.cbrt(12*cI_s(0, geometryDef[2])/outPlaneThickness)/2
 

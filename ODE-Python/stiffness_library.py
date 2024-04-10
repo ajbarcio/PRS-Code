@@ -453,26 +453,7 @@ def deform_with_stress_ODE(s, p, *args):
         lAB = l_a_l_b_rootfinding(s, lABPrev, geometryDef[0], geometryDef[1], cI, False)
         lABPrev = lAB
         stressMax = np.max([E*(1-rn/(rn-lAB[0]))*rn*LHS[0], E*(1-rn/(rn+lAB[1]))*rn*LHS[0]])
-        err = stressMax-stressTarg
-
-        ## CALCULATING FINITE DIFFERENCE:
-        stressFD = np.empty(2)
-        i = 0
-        for x in [-1, 1]:
-            cI = 0.00001*x
-            lAB = l_a_l_b_rootfinding(s, lABPrev, geometryDef[0], geometryDef[1], geometryDef[2], False)
-            stressMax = np.max([E*(1-rn/(rn-lAB[0]))*rn*LHS[0], E*(1-rn/(rn+lAB[1]))*rn*LHS[0]])
-            stressFD[i]=stressMax
-            i+=1
-        dStressMax = (stressFD[1]-stressFD[0])/(0.00001*2)
-
-        # [calcualte max stress jacobian] with logic for which side is limiting]
-        cI = cIPrev-stressMax/dStressMax
-        cIPrev = cI
-    globalCIList[i] = cI
-
-    return LHS
-
+    return LHS, stressMax
 
 def deform_ODE(s, p, *args): #Fx, Fy, geometryDef, dgds0
 
@@ -530,48 +511,64 @@ def ndiff(s, f, eps=1e-5):
     return derivative
 
 # ndiff(s, lambda s: r_n(s, geometryDef[0], geometryDef[1]), eps=1e-6)
+class geo_ODE_wrapper:
+    def __init__(self):
+        self.all_inputs_ever = []
+        self.all_p_inputs_ever = []
+        self.all_outputs_ever = []
 
-def geo_ODE(s, p, geometryDef):
-    geometryDef = geometryDef[0][0]
-    # print(geometryDef)
-    
-    rn     = r_n(s, geometryDef[0], geometryDef[1])
-    drnds  = d_rn_d_s(s, geometryDef[0], geometryDef[1])
-    # drnds  = d_rn_d_s_numerical(s, geometryDef[0], geometryDef[1])
-    cI     = cI_s(s, geometryDef[2])
-    dcIds  = d_cI_d_s(s, geometryDef[2])
-    dads   = d_alpha_d_s(s, geometryDef[0], geometryDef[1])
-    d2ads2 = d_2_alpha_d_s_2(s, geometryDef[0], geometryDef[1])
-    # print(rn, s)
-    geoFunc1 = (dcIds*1/rn-cI*1/rn**2*drnds)/outPlaneThickness
-    geoFunc2 = rn*(-drnds*((p[0]+p[1])/rn**2+(-p[0]-p[1])/((rn+p[1])*(rn-p[0]))))
-    # print(geoFunc1, geoFunc2)
-    geoFuncs = np.array([[geoFunc1], [geoFunc2]])
-    states   = np.array([[-p[0], p[1]], [rn/(rn-p[0])-1, rn/(rn+p[1])-1]])# [p[0]*p[1]*rn-p[0]*rn**2, p[0]*p[1]*rn-p[1]*rn**2]])
-    # print("states matrix:",states)
-    if np.all(np.isfinite(states)):
-        if lin.matrix_rank(states) < 2:
-            LHS = np.array([float("nan"), float("nan")])
-            return LHS
+        pass
+    def __call__(self, s, p , geometryDef):
+        self.all_inputs_ever.append(s)
+        self.all_p_inputs_ever.append(np.array(p))
+        ret = self.geo_ODE(s,p,geometryDef)
+        self.all_outputs_ever.append(ret)
+        return ret
+
+    def geo_ODE(self, s, p, geometryDef):
+        geometryDef = geometryDef[0][0]
+        # print(geometryDef)
+        
+        rn     = r_n(s, geometryDef[0], geometryDef[1])
+        drnds  = d_rn_d_s(s, geometryDef[0], geometryDef[1])
+        # drnds  = d_rn_d_s_numerical(s, geometryDef[0], geometryDef[1])
+        cI     = cI_s(s, geometryDef[2])
+        dcIds  = d_cI_d_s(s, geometryDef[2])
+        dads   = d_alpha_d_s(s, geometryDef[0], geometryDef[1])
+        d2ads2 = d_2_alpha_d_s_2(s, geometryDef[0], geometryDef[1])
+        # print(rn, s)
+        geoFunc1 = (dcIds*dads+cI*d2ads2)/outPlaneThickness
+        # geoFunc2 = rn*(-drnds*((p[0]+p[1])/rn**2+(-p[0]-p[1])/((rn+p[1])*(rn-p[0]))))
+        geoFunc2 = d2ads2*(p[0]+p[1])*(p[1]-p[0]-p[0]*p[1]*dads)
+        # print(geoFunc1, geoFunc2)
+        geoFuncs = np.array([[geoFunc1], [geoFunc2]])
+        states   = np.array([[-p[0], p[1]], [p[0]*dads*(1+p[1]*dads), -p[1]*dads*(1-p[0]*dads)]])# [p[0]*p[1]*rn-p[0]*rn**2, p[0]*p[1]*rn-p[1]*rn**2]])
+        # print("states matrix:",states)
+        if np.all(np.isfinite(states)):
+            if lin.matrix_rank(states) < 2:
+                LHS = np.array([float("nan"), float("nan")])
+                return LHS
+            else:
+                LHS = lin.inv(states).dot(geoFuncs)
         else:
-            LHS = lin.inv(states).dot(geoFuncs)
-    else:
-            LHS = lin.inv(states).dot(geoFuncs)
-    # fuckYou = False
-    # for i in [0,1]:
-    #     for j in [0,1]:
-    #         if np.isnan(states[i,j]):
-    #             fuckYou = True
-    # if not fuckYou:
-    #     if lin.matrix_rank(states) < 2:
-    #         LHS = np.array([float("nan"), float("nan")])
-    #         return LHS
-    #     else:
-    #         LHS = lin.inv(states).dot(geoFuncs)    
-    # else:
-    #     LHS = lin.inv(states).dot(geoFuncs)
-    # print("state rate of change:", np.array([LHS[0][0], LHS[1][0]]))
-    return np.array([LHS[0][0], LHS[1][0]])
+                LHS = lin.inv(states).dot(geoFuncs)
+        # fuckYou = False
+        # for i in [0,1]:
+        #     for j in [0,1]:
+        #         if np.isnan(states[i,j]):
+        #             fuckYou = True
+        # if not fuckYou:
+        #     if lin.matrix_rank(states) < 2:
+        #         LHS = np.array([float("nan"), float("nan")])
+        #         return LHS
+        #     else:
+        #         LHS = lin.inv(states).dot(geoFuncs)    
+        # else:
+        #     LHS = lin.inv(states).dot(geoFuncs)
+        # print("state rate of change:", np.array([LHS[0][0], LHS[1][0]]))
+        return np.array([LHS[0][0], LHS[1][0]])
+
+geo_ODE = geo_ODE_wrapper()
 
 def fixed_rk4(fun, y0, xmesh, *args): # (fun, alphaCoeffs, cICoeffs, y0, Fx, Fy, xmesh)
     step = xmesh[1]-xmesh[0]
@@ -580,10 +577,13 @@ def fixed_rk4(fun, y0, xmesh, *args): # (fun, alphaCoeffs, cICoeffs, y0, Fx, Fy,
         for i in range(len(xmesh)):
             # print(i)
             if i == 0:
+                # stepRes = rk4_step(fun, xmesh[i], y0, step, args)
                 for j in range(len(y0)):
+                #     res[j,i] = stepRes[j]
+                # y0 = stepRes    
                     res[j,i] = y0[j]
             else:
-                stepRes = rk4_step(fun, xmesh[i], y0, step, args)
+                stepRes = rk4_step(fun, xmesh[i-1], y0, step, args)
                 # print(stepRes)
                 for j in range(len(y0)):
                     res[j,i] = stepRes[j]
@@ -803,7 +803,8 @@ def stiffness_stress_error(stiffnessTarg, torqueTarg, allowStress, dragVector):
     xorg = coord(smesh, geometryDef[0])
     yorg = coord(smesh, geometryDef[1])
     # establish error in stiffness and max stress as a result of guess
-    res, SF, f = deform_spring_by_torque(torqueTarg, geometryDef)
+    totalSpringLength = (dragVector[-1])
+    res, SF, f = deform_spring_by_torque(torqueTarg, geometryDef, totalSpringLength)
     la, lb   = outer_geometry(smesh, geometryDef, False)
 
     rn = r_n(smesh, geometryDef[0], geometryDef[1])
@@ -813,16 +814,63 @@ def stiffness_stress_error(stiffnessTarg, torqueTarg, allowStress, dragVector):
     Mdim = E*cI_s(smesh, geometryDef[2])
     dgds = dgds0 + Fy/Mdim*res[1,:] - Fx/Mdim*res[2,:]
 
-    maxInnerStress = np.max(E*(1-rn/(rn-la))*rn*dgds)
-    maxOuterStress = np.max(E*(1-rn/(rn-lb))*rn*dgds)
-    maxStress     = np.max([maxInnerStress, maxOuterStress])
-
+    
+    innerStress = (E*(1-rn/(rn-la))*rn*dgds)
+    outerStress = (E*(1-rn/(rn-lb))*rn*dgds)
+    for i in range(len(smesh)):
+        if not (np.isfinite(innerStress[i]) or np.isfinite(outerStress[i])):
+            innerStress[i] = E*dgds[i]*la[i]
+            outerStress[i] = innerStress[i]
+    maxInnerStress = np.max(innerStress)
+    maxOuterStress = np.max(outerStress)
+    maxStress      = np.max([maxInnerStress, maxOuterStress])
+    
     dBeta = (np.arctan2(res[2,-1],res[1,-1])-np.arctan2(yorg[-1],xorg[-1]))
     stiffness = torqueTarg/dBeta
     
     errStiffness = abs(stiffness - stiffnessTarg)
     errStress    = abs(maxStress - allowStress)
-    return errStiffness, errStress, stiffness, maxStress, res
+    return errStiffness, errStress, stiffness, maxStress, res, f
+
+def estimate_grad_stress(dragVector, torqueTarg, stiffnessTarg, stiffness, allowStress, relErr, yorg, xorg):
+    grad = np.empty(len(dragVector))
+    dragVectorBase = dc(dragVector)
+    for i in range(len(dragVector)):
+        if i < 4 or i>9:
+            # print("length")
+            # print("base", dragVectorBase)
+            dragVectorFD=dc(dragVectorBase)
+            dragVectorFD[i]=dragVectorFD[i]+finiteDifferenceLength
+            geometryDefNew, smesh = drag_vector_spring(dragVectorFD)
+            totalSpringLength = dragVectorFD[-1]
+            errStiffness, errStress, stiffness, maxStress, res, f = stiffness_stress_error(stiffnessTarg, torqueTarg, allowStress, dragVector)
+            relErrf = lin.norm(np.array([(errStiffness/stiffnessTarg), (errStress/allowStress)]))
+            grad[i]=(relErrf-relErr)/(finiteDifferenceLength)
+        if i>3 and i<7:
+            # print("angle")
+            # print("base", dragVectorBase)
+            dragVectorFD=dc(dragVectorBase)
+            dragVectorFD[i]=dragVectorFD[i]+finiteDifferenceAngle
+            totalSpringLength = dragVectorFD[-1]
+            geometryDefNew, smesh = drag_vector_spring(dragVectorFD)
+            totalSpringLength = dragVectorFD[-1]
+            errStiffness, errStress, stiffness, maxStress, res, f = stiffness_stress_error(stiffnessTarg, torqueTarg, allowStress, dragVector)
+            relErrf = lin.norm(np.array([(errStiffness/stiffnessTarg), (errStress/allowStress)]))
+            grad[i]=(relErrf-relErr)/(finiteDifferenceAngle)
+        if i>6 and i<10:
+            # print("Ic")
+            # print("base", dragVectorBase)
+            dragVectorFD=dc(dragVectorBase)
+            dragVectorFD[i]=dragVectorFD[i]+finiteDifferenceCI
+            geometryDefNew, smesh = drag_vector_spring(dragVectorFD)
+            totalSpringLength = dragVectorFD[-1]
+            errStiffness, errStress, stiffness, maxStress, res, f = stiffness_stress_error(stiffnessTarg, torqueTarg, allowStress, dragVector)
+            relErrf = lin.norm(np.array([(errStiffness/stiffnessTarg), (errStress/allowStress)]))
+            grad[i]=(relErrf-relErr)/(finiteDifferenceCI)
+
+    grad = grad/lin.norm(grad)
+
+    return grad
 
 def stress_stiffness_tuning(stiffnessTarg, dBetaTarg, allowStress, dragVector, discludeVector):
     torqueTarg = dBetaTarg*stiffnessTarg
@@ -839,30 +887,37 @@ def stress_stiffness_tuning(stiffnessTarg, dBetaTarg, allowStress, dragVector, d
     j = 0
     resetCounter = 0
     resetStatus  = 0
-    
+    procReset = 0
     while relErr>10e-6 and convErr>10e-6: # quit when you either reach the target or can't go any further
+        SSProfile("Stress/Stiffness Tuning").tic()
         print("stiffness refinement iteration:",j)
         geometryDef, smesh = drag_vector_spring(dragVector)
         xorg = coord(smesh, geometryDef[0])
         yorg = coord(smesh, geometryDef[1])
         relErrPrev = relErr
-        errStiffness, errStress, stiffness, maxStress, res = stiffness_stress_error(stiffnessTarg, torqueTarg, allowStress, dragVector)
+        errStiffness, errStress, stiffness, maxStress, res, f = stiffness_stress_error(stiffnessTarg, torqueTarg, allowStress, dragVector)
         relErr = lin.norm(np.array([(errStiffness/stiffnessTarg), (errStress/allowStress)]))
         convErr = abs(relErr-relErrPrev)
-        print("stiffness error:",err)
+        print("stiffness error:",errStiffness)
+        print("stress error:", errStress)
         print("stiffness relative error:",relErr)
         print("chenge in rel error", convErr)
         # estimate gradient (pain)
+        if f:
+            procReset=1
         if abs(relErr) > abs(relErrPrev):
             dragVector = dc(dragVectorPrev)
-            convErr = 0
+            procReset = 1
         else:
-            grad = estimate_grad(dragVector, torqueTarg, stiffness, err, yorg, xorg)
+            grad = estimate_grad_stress(dragVector, torqueTarg, stiffnessTarg, stiffness, allowStress, relErr, yorg, xorg)
             Jinv = 1/grad
             for i in range(len(grad)):
                 if discludeVector[i]==False:
                     grad[i]=0
                     Jinv[i]=0
+                else:
+                    grad[i]=grad[i]*discludeVector[i]
+                    Jinv[i]=Jinv[i]*discludeVector[i]
             # determine next set of parameters
             stepSize = stepSizeCoeff*lin.norm(grad)
             dragVectorPrev = dc(dragVector)
@@ -870,13 +925,11 @@ def stress_stiffness_tuning(stiffnessTarg, dBetaTarg, allowStress, dragVector, d
             for i in range(len(grad)):
                 if discludeVector[i]==False:
                     assert(dragVector0[i]==dragVector[i])
-        if violates_bounds(dragVector):
+        if procReset == 0:
+            procReset = violates_bounds(dragVector)
+        if procReset:
             print("reset---------------------------------------------------reset")
-            # print(dragVector)
-            # print(dragVector0)
             dragVector = dc(dragVectorPrev)
-            # print(dragVector0)
-            # print(dragVector)
             if resetStatus==0:
                 if j==0:
                     stepSizeCoeff = stepSizeCoeff*0.1
@@ -887,6 +940,7 @@ def stress_stiffness_tuning(stiffnessTarg, dBetaTarg, allowStress, dragVector, d
             relErr = 1
             resetCounter+=1
             resetStatus = 1
+            procReset=0
             print("this is the ",resetCounter,"th reset")
         else:
             assert(not violates_bounds(dragVector))
@@ -895,6 +949,7 @@ def stress_stiffness_tuning(stiffnessTarg, dBetaTarg, allowStress, dragVector, d
             j+=1
             resetCounter = 0
             resetStatus  = 0
+        SSProfile("Stress/Stiffness Tuning").toc()
     assert(not violates_bounds(dragVector))
     for i in range(len(dragVector)):
                 if discludeVector[i]==False:
@@ -903,6 +958,11 @@ def stress_stiffness_tuning(stiffnessTarg, dBetaTarg, allowStress, dragVector, d
                     assert(dragVector0[i]==dragVector[i])
                     # print(i)
     print("stiffness refinement iterations:", j)
+    if convErr <10e-6:
+        print("this is as close as you can get with starting guess and gains")
+    if relErr <10e-6:
+        print("wow we actually found a workable solution")
+
     return stiffness, maxStress, res, dragVector, dragVector0
 
 def outer_geometry(smesh, geometryDef, printBool):
