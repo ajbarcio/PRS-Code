@@ -529,8 +529,8 @@ class geo_ODE_wrapper:
         geometryDef = geometryDef[0][0]
         # print(geometryDef)
         
-        rn     = r_n(s, geometryDef[0], geometryDef[1])
-        drnds  = d_rn_d_s(s, geometryDef[0], geometryDef[1])
+        # rn     = r_n(s, geometryDef[0], geometryDef[1])
+        # drnds  = d_rn_d_s(s, geometryDef[0], geometryDef[1])
         # drnds  = d_rn_d_s_numerical(s, geometryDef[0], geometryDef[1])
         cI     = cI_s(s, geometryDef[2])
         dcIds  = d_cI_d_s(s, geometryDef[2])
@@ -546,26 +546,15 @@ class geo_ODE_wrapper:
         # print("states matrix:",states)
         if np.all(np.isfinite(states)):
             if lin.matrix_rank(states) < 2:
-                LHS = np.array([float("nan"), float("nan")])
+                LHS = np.array([dcIds*4/(outPlaneThickness*p[1]**2), -dcIds*4/(outPlaneThickness*p[1]**2)])
+                print("straight beam case due to singular")
                 return LHS
             else:
                 LHS = lin.inv(states).dot(geoFuncs)
         else:
-                LHS = lin.inv(states).dot(geoFuncs)
-        # fuckYou = False
-        # for i in [0,1]:
-        #     for j in [0,1]:
-        #         if np.isnan(states[i,j]):
-        #             fuckYou = True
-        # if not fuckYou:
-        #     if lin.matrix_rank(states) < 2:
-        #         LHS = np.array([float("nan"), float("nan")])
-        #         return LHS
-        #     else:
-        #         LHS = lin.inv(states).dot(geoFuncs)    
-        # else:
-        #     LHS = lin.inv(states).dot(geoFuncs)
-        # print("state rate of change:", np.array([LHS[0][0], LHS[1][0]]))
+                LHS = np.array([dcIds*4/(outPlaneThickness*p[0]**2), -dcIds*4/(outPlaneThickness*p[0]**2)])
+                print("straight beam case due to infinite states")
+                return LHS
         return np.array([LHS[0][0], LHS[1][0]])
 
 geo_ODE = geo_ODE_wrapper()

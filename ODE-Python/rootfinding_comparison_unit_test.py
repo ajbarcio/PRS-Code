@@ -197,24 +197,24 @@ plt.legend()
 
 print("start forward integration process")
 start = time.time()
-offset = 1
+offset = 0
 lABprev = [la[offset], lb[offset]]
 lAB0 = l_a_l_b_rootfinding(smesh[offset], lABPrev, geometryDef[0], geometryDef[1], geometryDef[2], False)
 print(lAB0)
 res    =  fixed_rk4(geo_ODE, lAB0, smesh[offset:-1], geometryDef)
-print([[[geometryDef]]])
-# print("about to variable mesh solve")
-# altRes = variable_mesh_solve(geo_ODE, [smesh[offset], smesh[-1]], lAB0, args=[[[geometryDef]]], method="DOP853", t_eval=smesh[offset:-1])
-# print("done variable mesh solving")
+# print([[[geometryDef]]])
+print("about to variable mesh solve")
+altRes = variable_mesh_solve(geo_ODE, [smesh[offset], smesh[-1]], lAB0, args=[[[geometryDef]]], method="DOP853", t_eval=smesh[offset:-1])
+print("done variable mesh solving")
 
 laForward = res[0,:]
 lbForward = res[1,:]
 hLALBF = laForward+lbForward
 
-# laForwardV    = altRes.y[0,:]
-# lbForwardV    = altRes.y[1,:]
-# variableSmesh = altRes.t
-# hLALBFV = laForwardV+lbForwardV
+laForwardV    = altRes.y[0,:]
+lbForwardV    = altRes.y[1,:]
+variableSmesh = altRes.t
+hLALBFV = laForwardV+lbForwardV
 
 end = time.time()
 print("end forward integration method")
@@ -243,8 +243,8 @@ plt.plot(smesh, la, label='rootfinding la')
 plt.plot(smesh, lb, label='rootfinding lb')
 plt.plot(smesh[offset:-1], laForward, label='laF fixed mesh')
 plt.plot(smesh[offset:-1], lbForward, label='lbF fixed mesh')
-# plt.plot(variableSmesh, laForwardV, label='laF variable mesh')
-# plt.plot(variableSmesh, lbForwardV, label='lbF variable mesh')
+plt.plot(variableSmesh, laForwardV, label='laF variable mesh')
+plt.plot(variableSmesh, lbForwardV, label='lbF variable mesh')
 plt.legend()
 
 
@@ -256,7 +256,7 @@ RHS = dknds*(la+lb)*(lb-la-la*lb*kn)
 derivatives = np.array([dlads,dlbds])
 plt.figure("checking refactor attempt")
 plt.plot(states[0,:]*derivatives[0,:]+states[1,:]*derivatives[1,:])
-plt.plot( RHS)
+plt.plot(RHS)
 plt.plot(dknds)
 plt.plot(kn)
 
