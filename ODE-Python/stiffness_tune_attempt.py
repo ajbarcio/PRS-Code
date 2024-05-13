@@ -14,7 +14,7 @@ deg2rad = np.pi/180
 n = 2
 finiteDifferenceLength = 0.01
 finiteDifferenceAngle  = 5*deg2rad
-finiteDifferenceForce  = 0.5
+ffForce  = 0.5
 finiteDifferenceTorque = 1
 finiteDifferenceCI     = 0.000001
 
@@ -47,21 +47,24 @@ globalInnerRadiusLimit = 0.75
 globalOuterRadiusLimit = 6/2
 
 R0 = 2.2/2
-R3 = 5.9/2*.9
+R3 = 5.9/2
 
-R1 = (R0+R3)/2+.26
-R2 = (R0+R3)/2-.25
+R1 = (R0+R3)/2*1.3
+R2 = (R0+R3)/2*1.1
 
-betaB = 150/3*deg2rad*.5
-betaC = 2*150/3*deg2rad
-betaD = 160*deg2rad
+funnyAngle = 160
+
+betaB = funnyAngle/3*deg2rad*.7
+betaC = 2*funnyAngle/3*deg2rad*1.2
+betaD = funnyAngle*deg2rad
 beta0 = betaD
+
 
 x0 = R0
 y0 = 0
 
 pts = np.array([[x0, y0],[R1*np.cos(betaB),R1*np.sin(betaB)],[R2*np.cos(betaC),R2*np.sin(betaC)],[R3*np.cos(betaD),R3*np.sin(betaD)]])
-cIs  = np.array([.008, .004, .008])
+cIs  = np.array([.01, .002, .01])
 
 ctrlcIs      = np.array([0,fullArcLength*.5,fullArcLength])
 ctrlLengths = np.array([0,fullArcLength*0.333,fullArcLength*0.667,fullArcLength])
@@ -97,8 +100,10 @@ discludeVector = [ 0, 0, 0, 0,       # Gains for Radii
                    0      ]      # Gain for overall length]
 
 print("FIRST ATTEMPT; DRAG ONLY IC")
+print("target stiffness:", maxTorque/maxDBeta)
 stiffness, res, dragVector, dragVector0 = tune_stiffness(maxTorque/maxDBeta, maxDBeta, dragVector0, discludeVector)
-stiffness, maxStress, res, dragVector, dragVector0 = stress_stiffness_tuning(maxTorque/maxDBeta, maxDBeta, 247760, dragVector0, discludeVector)
+
+# stiffness, maxStress, res, dragVector, dragVector0 = stress_stiffness_tuning(maxTorque/maxDBeta, maxDBeta, 247760, dragVector0, discludeVector)
 geometryDef, smesh = drag_vector_spring(dragVector)
 lAB0 = np.cbrt(12*cI_s(0, geometryDef[2])/outPlaneThickness)/2
 

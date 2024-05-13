@@ -14,7 +14,7 @@ deg2rad = np.pi/180
 n = 2
 finiteDifferenceLength = 0.01
 finiteDifferenceAngle  = 5*deg2rad
-finiteDifferenceForce  = 0.5
+ffForce  = 0.5
 finiteDifferenceTorque = 1
 finiteDifferenceCI     = 0.000001
 
