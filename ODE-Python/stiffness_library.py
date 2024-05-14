@@ -2,7 +2,6 @@ from mpl_toolkits import mplot3d
 import numpy as np
 import numpy.linalg as lin
 import matplotlib.pyplot as plt
-from materials import *
 from scipy.integrate import solve_ivp as ODE45
 from scipy import optimize as op
 import os
@@ -13,25 +12,99 @@ from StatProfiler import SSProfile
 import matplotlib.collections as mcoll
 import matplotlib.path as mpath
 
-def cI_poly(cIs, ctrlcIs):
-    Mat = np.array([[0,0,0,0,0,0,0,1], \
-                    [ctrlcIs[1]**7,ctrlcIs[1]**6,ctrlcIs[1]**5,ctrlcIs[1]**4,ctrlcIs[1]**3,ctrlcIs[1]**2,ctrlcIs[1],1], \
-                    [ctrlcIs[2]**7,ctrlcIs[2]**6,ctrlcIs[2]**5,ctrlcIs[2]**4,ctrlcIs[2]**3,ctrlcIs[2]**2,ctrlcIs[2],1], \
-                    [0,0,0,0,0,0,1,0], \
-                    [7*ctrlcIs[2]**6,6*ctrlcIs[2]**5,5*ctrlcIs[2]**4,4*ctrlcIs[2]**3,3*ctrlcIs[2]**2,2*ctrlcIs[2]**1,1,0], \
-                    [7*ctrlcIs[1]**6,6*ctrlcIs[1]**5,5*ctrlcIs[1]**4,4*ctrlcIs[1]**3,3*ctrlcIs[1]**2,2*ctrlcIs[1]**1,1,0],
-                    [42*ctrlcIs[2]**5,30*ctrlcIs[2]**4,20*ctrlcIs[2]**3,12*ctrlcIs[2]**2,6*ctrlcIs[2]**1,2*ctrlcIs[2]**0,0,0],
-                    [0,0,0,0,0,2,0,0]
-                    ])
-    Targ = np.array([[cIs[0]], \
-                     [cIs[1]], \
-                     [cIs[2]], \
-                     [0], \
-                     [0], \
-                     [0], \
-                     [0], \
-                     [0], \
-                     ])
+deg2rad = np.pi/180
+
+class spring:
+    def __init__(self,
+                 # whole bunch of default values:
+                 E                 = 27.5*10**6,
+                 designStress      = 270000,
+                 n                 = 2, 
+                 fullArcLength     = 4.8,
+                 outPlaneThickness = .375,
+                 radii             = np.array([1.1,2.025,2.025,2.95]),
+                 betaAngles        = np.array([0,50,100,150])*deg2rad, # FIRST VALUE IS ALWAYS 0 !!!!, same length as radii
+                 IcPts             = np.array([.008, .001, .008]),
+                 IcArcLens         = np.array([0.5]),                              # IcPts - 2
+                 XYArcLens         = np.array([.333,.667])             # radii - 2
+                 ):
+
+        # stick all the arguments in the object
+        self.E = E 
+        self.designStress = designStress
+        self.n = n
+        self.t = outPlaneThickness
+        self.fullArcLength = fullArcLength       
+        self.radii = radii
+        self.betaAngles = betaAngles
+
+        # create control points for polynomials
+        self.pts = np.empty(len(radii))
+        for i in range(len(radii)):
+            self.pts[i] = self.radii[i]*np.cos(self.betaAngles[i]),self.radii[i]*np.sin(self.betaAngles[i])
+        
+        self.IcPts = IcPts
+
+        self.IcArcLens = np.empty(len(radii))
+        for i in range(len(IcArcLens)):
+            if i==0:
+                self.IcArcLens[i] = 0
+            elif i==len(IcArcLens)-1:
+                self.IcArcLens[i] = self.fullArcLength
+            else:
+                self.IcArcLens[i] = self.fullArcLength*IcArcLens[i-1]
+
+        self.XYArcLens = np.empty(len(radii))
+        for i in range(len(XYArcLens)):
+            if i==0:
+                self.XYArcLens[i] = 0
+            elif i==len(XYArcLens)-1:
+                self.XYArcLens[i] = self.fullArcLength
+            else:
+                self.XYArcLens[i] = self.fullArcLength*XYArcLens[i-1]
+
+        self.parameterVector = np.concatenate(self.radii, self.betaAngles[1:], 
+                                              self.IcPts, self.IcArcLens[1:-1], 
+                                              self.XYArcLens[1:-1], self.fullArcLength)
+
+        # assign some constants for approximating derivatives
+        self.finiteDifferenceLength = 0.001
+        self.finiteDifferenceAngle  = .1*deg2rad
+        self.ffForce  = .5
+        self.finiteDifferenceTorque = 0.1
+        self.finiteDifferenceCI     = 20
+
+        # assign some constants for meshing the spring
+        self.res = 200 
+        self.len = self.res+1
+        self.step = fullArcLength/self.res
+        self.endIndex = self.len-1
+
+def Ic_poly(IcPts, IcArcLens):
+
+    # for the Ic curve, we want:
+    # flat at either end, and at the minimum
+    # So: for n points we need:
+    #     n at y(s)
+    #     n at y'(s)
+    #     n at y''(s)
+
+    # so for n points we need 3n constraints
+    nDerivs = 2
+    nConstraints = nDerivs*len(IcPts)
+    Mat = np.empty((nConstraints,nConstraints))
+    Targ = np.empty((nConstraints,1))
+    for i in range(len(IcArcLens)):
+        Targ[nDerivs*i]=IcPts[i]
+        Targ[nDerivs*i+1]=0
+        # Targ[nDerivs*i+2]=0# (-.001)**(i+1)
+        # Targ[nDerivs*i+3]=0# (-.001)
+        for j in range(nConstraints):
+            Mat[nDerivs*i,j]   = IcArcLens[i]**(nConstraints-1-j)
+            Mat[nDerivs*i+1,j] = (nConstraints-1-j)*IcArcLens[i]**max(nConstraints-2-j,0)
+            # Mat[nDerivs*i+2,j] = (nConstraints-1-j)*max(nConstraints-2-j,0)*IcArcLens[i]**max(nConstraints-3-j,0)
+            # Mat[nDerivs*i+3,j] = (nConstraints-1-j)*max(nConstraints-2-j,0)*max(nConstraints-3-j,0)*IcArcLens[i]**max(nConstraints-4-j,0)
+    print(Targ)
     cICoeffs = lin.solve(Mat, Targ)
     return cICoeffs
 
@@ -188,7 +261,7 @@ def r_n(s, xCoeffs, yCoeffs):
             rn = ((1+dyds**2/dxds**2)/(d2yds2/dxds-d2xds2*dyds/dxds**2))
     return rn
 
-def d_rn_d_s(s, xCoeffs, yCoeffs): # U ARE WRONG!!!!!!! TODO
+def d_rn_d_s(s, xCoeffs, yCoeffs):
     d3yds3 = d3_coord_d_s3(s, yCoeffs)
     d3xds3 = d3_coord_d_s3(s, xCoeffs)
     d2yds2 = d2_coord_d_s2(s, yCoeffs)
@@ -218,19 +291,30 @@ def d_rn_d_s(s, xCoeffs, yCoeffs): # U ARE WRONG!!!!!!! TODO
     # drnds = num1/den1-num2/den2
     return drnds       
 
-def cI_s(s, cICoeffs):
+def Ic_s(s, IcCoeffs, deriv=0):
+    print(list(range(deriv)))
     if hasattr(s, "__len__"):
-        cI = np.empty(len(s))
+        Ic = np.empty(len(s))
         i = 0
         for value in s:
-            U = np.array([value**7, value**6, value**5, value**4, value**3, value**2, value, 1])
-            cI[i] = U.dot(cICoeffs)[0]
+            U = np.empty(len(IcCoeffs))
+            for j in range(len(IcCoeffs)):
+                preCoeff = 1
+                for k in range(deriv):
+                    preCoeff = preCoeff*max(len(IcCoeffs)-j-(k+1),0)
+                U[j] = preCoeff*value**max((len(IcCoeffs)-j-1-deriv),0)
+            Ic[i] = U.dot(IcCoeffs)[0]
             i+=1
-        return (cI)
+        return (Ic)
     else:
-        U = np.array([s**7, s**6, s**5, s**4, s**3, s**2, s, 1])
-        cI = U.dot(cICoeffs)
-        return (cI[0])
+        U = np.empty(len(IcCoeffs))
+        for j in range(len(IcCoeffs)):
+            preCoeff = 1
+            for k in range(deriv):
+                preCoeff = preCoeff*max(len(IcCoeffs)-j-(k+1),0)
+            U[j] = preCoeff*s**max((len(IcCoeffs)-j-1-deriv),0)
+        Ic = U.dot(IcCoeffs)
+        return (Ic[0])
 
 # def d_cI_d_s(s, xCoeffs, yCoeffs, hCoeffs):
 #     dcIds = (cI_s(s+finiteDifferenceLength, xCoeffs, yCoeffs, hCoeffs)-cI_s(s-finiteDifferenceLength, xCoeffs, yCoeffs, hCoeffs))/(2*finiteDifferenceLength)
@@ -253,7 +337,7 @@ def d_cI_d_s(s, cICoeffs):
 
 def rc_rootfinding(s, xCoeffs, yCoeffs, cICoeffs, printBool):
     rn =  r_n(s, xCoeffs, yCoeffs)
-    cI = cI_s(s, cICoeffs)
+    cI = Ic_s(s, cICoeffs)
     # h = (cI/(outPlaneThickness*(x-rn)*rn))
 
     def func(x, rn, h):
@@ -294,7 +378,7 @@ def rc_rootfinding(s, xCoeffs, yCoeffs, cICoeffs, printBool):
 
 def a_b_rootfinding(s, xCoeffs, yCoeffs, cICoeffs, printBool):
     rn =  r_n(s, xCoeffs, yCoeffs)
-    cI = cI_s(s, cICoeffs)
+    cI = Ic_s(s, cICoeffs)
     def func(x, rn, cI):
         # x0 = a, x1 = b
         f1 = (x[1]-x[0])/(np.log(x[1]/x[0]))-rn
@@ -332,7 +416,7 @@ def a_b_rootfinding(s, xCoeffs, yCoeffs, cICoeffs, printBool):
 
 def h_e_rootfinding(s, xCoeffs, yCoeffs, cICoeffs, printbool):
     rn = r_n(s, xCoeffs, yCoeffs)
-    cI = cI_s(s, cICoeffs)
+    cI = Ic_s(s, cICoeffs)
     # x = [e h]
     def func(x, rn, cI):
         f1 = (x[1])/(np.log((rn+x[0]+x[1]/2)/(rn+x[0]-x[1]/2)))-rn
@@ -346,7 +430,7 @@ def h_e_rootfinding(s, xCoeffs, yCoeffs, cICoeffs, printbool):
 
 def l_a_l_b_rootfinding(s, lABPrev, xCoeffs, yCoeffs, cICoeffs, printBool):
     rn = r_n(s, xCoeffs, yCoeffs)
-    cI = cI_s(s, cICoeffs)
+    cI = Ic_s(s, cICoeffs)
     def func(x, rn, cI):
         f1 = (x[0]+x[1])/(np.log((rn+x[1])/(rn-x[0])))-rn
         # f2 = (x[0]+x[1])*(outPlaneThickness*(x[1]-(x[1]+x[0])/2)*rn)-cI
@@ -398,9 +482,9 @@ def l_a_l_b_rootfinding(s, lABPrev, xCoeffs, yCoeffs, cICoeffs, printBool):
 
 # def cI_s(s, xCoeffs, yCoeffs, hCoeffs):
     if r_n(s, xCoeffs, yCoeffs) == float('inf'):
-        cI = cI_s(s, hCoeffs)**3*outPlaneThickness/12
+        cI = Ic_s(s, hCoeffs)**3*outPlaneThickness/12
     else:
-        cI = cI_s(s, hCoeffs)*outPlaneThickness* \
+        cI = Ic_s(s, hCoeffs)*outPlaneThickness* \
             (rc_rootfinding(s, xCoeffs, yCoeffs, hCoeffs, False)-r_n(s, xCoeffs, yCoeffs)) \
             *r_n(s, xCoeffs, yCoeffs)
     return cI
@@ -408,7 +492,7 @@ def l_a_l_b_rootfinding(s, lABPrev, xCoeffs, yCoeffs, cICoeffs, printBool):
 def form_spring(pts, cIs, ctrlLengths, ctrlcIs):
     xCoeffs = xy_poly(pts, ctrlLengths)[0]
     yCoeffs = xy_poly(pts, ctrlLengths)[1]
-    cICoeffs = cI_poly(cIs, ctrlcIs)
+    cICoeffs = Ic_poly(cIs, ctrlcIs)
     return xCoeffs, yCoeffs, cICoeffs
 
 # def deform_ODE_Barcio(s, p, *args): #Fx, Fy, geometryDef, dgds0
@@ -422,7 +506,7 @@ def form_spring(pts, cIs, ctrlLengths, ctrlcIs):
     yCoeffs = geometryDef[1]
     cICoeffs = geometryDef[2]
 
-    Tdim = E*cI_s(s, xCoeffs, yCoeffs, cICoeffs)
+    Tdim = E*Ic_s(s, xCoeffs, yCoeffs, cICoeffs)
     yorg = coord(s, yCoeffs)
     xorg = coord(s, xCoeffs)
     dxds = d_coord_d_s(s, xCoeffs)
@@ -432,7 +516,7 @@ def form_spring(pts, cIs, ctrlLengths, ctrlcIs):
 
     LHS = np.empty(2)
     LHS[0] = p[1]
-    LHS[1] = (Fx*np.sin(alpha+p[0])-Fy*np.cos(alpha+p[0])-E*d_cI_d_s(s, xCoeffs, yCoeffs, cICoeffs)*p[1])/(cI_s(s, xCoeffs, yCoeffs, cICoeffs)*E)
+    LHS[1] = (Fx*np.sin(alpha+p[0])-Fy*np.cos(alpha+p[0])-E*d_cI_d_s(s, xCoeffs, yCoeffs, cICoeffs)*p[1])/(Ic_s(s, xCoeffs, yCoeffs, cICoeffs)*E)
     return LHS
 
 # def deform_ODE_Barcio_to_Thomas(s, p, *args):
@@ -450,9 +534,9 @@ def deform_with_stress_ODE(s, p, *args):
     yCoeffs = geometryDef[1]
     cICoeffs = geometryDef[2]
     rn     = r_n(s, geometryDef[0], geometryDef[1])
-    cI     = cI_s(s, geometryDef[2])
+    cI     = Ic_s(s, geometryDef[2])
     cIPrev = cI
-    Mdim = E*cI_s(s, cICoeffs)
+    Mdim = E*Ic_s(s, cICoeffs)
 
     dxds = d_coord_d_s(s, xCoeffs)
     dyds = d_coord_d_s(s, yCoeffs)
@@ -494,7 +578,7 @@ def deform_ODE(s, p, *args): #Fx, Fy, geometryDef, dgds0
     # Mdim = EI (dimensionalize bending moment)
     # dxds, dyds are ANALYTICAL derivatives based on x/y polynomials
 
-    Mdim = E*cI_s(s, cICoeffs)
+    Mdim = E*Ic_s(s, cICoeffs)
 
     dxds = d_coord_d_s(s, xCoeffs)
     dyds = d_coord_d_s(s, yCoeffs)
@@ -567,7 +651,7 @@ class geo_ODE_wrapper:
         rn     = r_n(s, geometryDef[0], geometryDef[1])
         drnds  = d_rn_d_s(s, geometryDef[0], geometryDef[1])
         # drnds  = d_rn_d_s_numerical(s, geometryDef[0], geometryDef[1])
-        cI     = cI_s(s, geometryDef[2])
+        cI     = Ic_s(s, geometryDef[2])
         dcIds  = d_cI_d_s(s, geometryDef[2])
         dads   = d_alpha_d_s(s, geometryDef[0], geometryDef[1])
         d2ads2 = d_2_alpha_d_s_2(s, geometryDef[0], geometryDef[1])
@@ -838,7 +922,7 @@ def int_error_result(deformFunc, SF, xCoeffs, yCoeffs, cICoeffs, totalSpringLeng
     xorg = coord(0,xCoeffs)
     yorg = coord(0,yCoeffs)
 
-    dgds0 = (SF[2]/(n) + (outerYCoord-yorg)*SF[0] - (outerXCoord-xorg)*SF[1])/(E*cI_s(0, cICoeffs))
+    dgds0 = (SF[2]/(n) + (outerYCoord-yorg)*SF[0] - (outerXCoord-xorg)*SF[1])/(E*Ic_s(0, cICoeffs))
     # print("dgds0",dgds0)
     res = fixed_rk4(deformFunc, np.array([0,x0,y0]), smesh, (SF[0], SF[1], geometryDef, dgds0))
     # print("called fixed rk4", end="\r")
@@ -982,10 +1066,10 @@ def stiffness_stress_error(stiffnessTarg, torqueTarg, allowStress, dragVector):
     la, lb   = outer_geometry(smesh, geometryDef, False)
 
     rn = r_n(smesh, geometryDef[0], geometryDef[1])
-    dgds0 = (SF[2]/(n) + yorg*SF[0] - xorg*SF[1])/(E*cI_s(0, geometryDef[2]))
+    dgds0 = (SF[2]/(n) + yorg*SF[0] - xorg*SF[1])/(E*Ic_s(0, geometryDef[2]))
     Fx  = SF[0]
     Fy  = SF[1]
-    Mdim = E*cI_s(smesh, geometryDef[2])
+    Mdim = E*Ic_s(smesh, geometryDef[2])
     dgds = dgds0 + Fy/Mdim*res[1,:] - Fx/Mdim*res[2,:]
 
     

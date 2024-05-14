@@ -2,7 +2,6 @@ from mpl_toolkits import mplot3d
 import numpy as np
 import numpy.linalg as lin
 import matplotlib.pyplot as plt
-from materials import *
 from scipy.integrate import solve_ivp as ODE45
 from scipy import optimize as op
 import os
