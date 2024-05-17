@@ -6,9 +6,9 @@ import matplotlib.pyplot as plt
 testSpring = Spring()
 
 XCoeffs, YCoeffs = xy_poly(testSpring.pts, testSpring.XYArcLens)
-smesh = np.linspace(0,testSpring.fullArcLength,101)
-X = PPoly_Eval(smesh,XCoeffs)
-Y = PPoly_Eval(smesh,YCoeffs)
+smesh = np.linspace(0, testSpring.fullArcLength,101)
+X = PPoly_Eval(smesh, XCoeffs)
+Y = PPoly_Eval(smesh, YCoeffs)
 
 dxds = PPoly_Eval(smesh, XCoeffs, deriv=1)
 dyds = PPoly_Eval(smesh, YCoeffs, deriv=1)
@@ -25,3 +25,5 @@ plt.show()
 
 x = PPoly_Eval(0,XCoeffs)
 print(x)
+
+list = [testSpring,0.223,"myString",[0,1,2]]

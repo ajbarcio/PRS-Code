@@ -280,12 +280,12 @@ class Spring:
                  designStress      = 270000,
                  n                 = 2,
                  fullArcLength     = 4.8,
-                 outPlaneThickness = .375,
+                 outPlaneThickness = 0.375,
                  radii             = np.array([1.1,2.025,2.025,2.95]),
                  betaAngles        = np.array([0,50,100,150])*deg2rad, # FIRST VALUE IS ALWAYS 0 !!!!, same length as radii
-                 IcPts             = np.array([.008, .001, .008]),
+                 IcPts             = np.array([0.008, 0.001, 0.008]),
                  IcArcLens         = np.array([0.5]),                              # IcPts - 2
-                 XYArcLens         = np.array([.333,.667]),             # radii - 2
+                 XYArcLens         = np.array([0.333,0.667]),             # radii - 2
                  resolution        = 200
                  ):
 
@@ -360,8 +360,10 @@ class Spring:
         self.momentArmY = self.yL - self.y0
 
     def geometry_coeffs(self):
+        # sticks the coefficients in the object
         self.IcCoeffs, self.domains = Ic_multiPoly(self.IcPts, self.IcArcLens)
         self.XCoeffs, self.YCoeffs  = xy_poly(self.pts, self.XYArcLens)
+        # compiles all the coeffs into one variable
         self.geometryDef = [self.XCoeffs, self.YCoeffs, self.IcCoeffs]
         return self.geometryDef
 
@@ -414,19 +416,11 @@ class Spring:
         for i in range(len(SF)):
             finiteDifference = np.zeros(3)
             if i < 2:
-                # print("got here")
-                # print(self.finiteDifferenceForce)
-                # print("before assing:", finiteDifference)
                 finiteDifference[i] = self.finiteDifferenceForce
-                # print("after assign:", finiteDifference)
             else:
-                # print("got there")
                 finiteDifference[i] = self.finiteDifferenceTorque
-            # print(finiteDifference)
             errBack, resG = self.forward_integration(ODE, SF-finiteDifference, torqueTarg)
             errForw, resG = self.forward_integration(ODE, SF+finiteDifference, torqueTarg)
-            # print(lin.norm(finiteDifference))
-            # print(finiteDifference)
             Jac[0,i]     = (errForw[0]-errBack[0])/(2*lin.norm(finiteDifference))
             Jac[1,i]     = (errForw[1]-errBack[1])/(2*lin.norm(finiteDifference))
             Jac[2,i]     = (errForw[2]-errBack[2])/(2*lin.norm(finiteDifference))
@@ -452,13 +446,9 @@ class Spring:
         LHS[1] = np.cos(np.arctan2(dyds,dxds)+p[0])
         LHS[2] = np.sin(np.arctan2(dyds,dxds)+p[0])
         if np.sin(np.arctan2(dyds,dxds))==0:
-            LHS[0] = LHS[0]*dxds/np.cos(np.arctan2(dyds,dxds))
-            LHS[1] = LHS[1]*dxds/np.cos(np.arctan2(dyds,dxds))
-            LHS[2] = LHS[2]*dxds/np.cos(np.arctan2(dyds,dxds))
+            LHS = LHS*dxds/np.cos(np.arctan2(dyds,dxds))
         else:
-            LHS[0] = LHS[0]*dyds/np.sin(np.arctan2(dyds,dxds))
-            LHS[1] = LHS[1]*dyds/np.sin(np.arctan2(dyds,dxds))
-            LHS[2] = LHS[2]*dyds/np.sin(np.arctan2(dyds,dxds))
+            LHS = LHS*dyds/np.sin(np.arctan2(dyds,dxds))
         return LHS
 
 
@@ -571,51 +561,51 @@ def ndiff(s, f, eps=1e-5):
 
 #     return xCoeffs, yCoeffs
 
-def coord(s, coeffs):
+# def coord(s, coeffs):
 
-    if hasattr(s, "__len__"):
-        coord = np.empty(len(s))
-        i = 0
-        for value in s:
-            U = np.array([value**7, value**6, value**5, value**4, value**3, value**2, value, 1])
-            coord[i] = U.dot(coeffs)[0]
-            i+=1
-        return coord
-    else:
-        U = np.array([s**7, s**6, s**5, s**4, s**3, s**2, s, 1])
-        coord = U.dot(coeffs)
-        return coord[0]
+#     if hasattr(s, "__len__"):
+#         coord = np.empty(len(s))
+#         i = 0
+#         for value in s:
+#             U = np.array([value**7, value**6, value**5, value**4, value**3, value**2, value, 1])
+#             coord[i] = U.dot(coeffs)[0]
+#             i+=1
+#         return coord
+#     else:
+#         U = np.array([s**7, s**6, s**5, s**4, s**3, s**2, s, 1])
+#         coord = U.dot(coeffs)
+#         return coord[0]
 
-def d_coord_d_s(s, coeffs):
-    if hasattr(s, "__len__"):
-        dCds = np.empty(len(s))
-        i=0
-        for value in s:
-            U = np.array([7*value**6, 6*value**5, 5*value**4, 4*value**3, 3*value**2, 2*value, 1, 0])
-            dCds[i] = U.dot(coeffs)[0]
-            i+=1
-        return dCds
-    else:
-        U = np.array([7*s**6, 6*s**5, 5*s**4, 4*s**3, 3*s**2, 2*s, 1, 0])
-        dCds = U.dot(coeffs)
-        return dCds[0]
+# def d_coord_d_s(s, coeffs):
+#     if hasattr(s, "__len__"):
+#         dCds = np.empty(len(s))
+#         i=0
+#         for value in s:
+#             U = np.array([7*value**6, 6*value**5, 5*value**4, 4*value**3, 3*value**2, 2*value, 1, 0])
+#             dCds[i] = U.dot(coeffs)[0]
+#             i+=1
+#         return dCds
+#     else:
+#         U = np.array([7*s**6, 6*s**5, 5*s**4, 4*s**3, 3*s**2, 2*s, 1, 0])
+#         dCds = U.dot(coeffs)
+#         return dCds[0]
 
-def d2_coord_d_s2(s, coeffs):
-    if hasattr(s, "__len__"):
-        dCds = np.empty(len(s))
-        i=0
-        for value in s:
-            U = np.array([42*value**5, 30*value**4, 20*value**3, 12*value**2, 6*value**1, 2, 0, 0])
-            dCds[i] = U.dot(coeffs)[0]
-            i+=1
-        return dCds
-    else:
-        U = np.array([42*s**5, 30*s**4, 20*s**3, 12*s**2, 6*s**1, 2, 0, 0])
-        # print(U)
-        dCds = U.dot(coeffs)
-        return dCds[0]
+# def d2_coord_d_s2(s, coeffs):
+#     if hasattr(s, "__len__"):
+#         dCds = np.empty(len(s))
+#         i=0
+#         for value in s:
+#             U = np.array([42*value**5, 30*value**4, 20*value**3, 12*value**2, 6*value**1, 2, 0, 0])
+#             dCds[i] = U.dot(coeffs)[0]
+#             i+=1
+#         return dCds
+#     else:
+#         U = np.array([42*s**5, 30*s**4, 20*s**3, 12*s**2, 6*s**1, 2, 0, 0])
+#         # print(U)
+#         dCds = U.dot(coeffs)
+#         return dCds[0]
 
-def d3_coord_d_s3(s, coeffs):
+# def d3_coord_d_s3(s, coeffs):
     if hasattr(s, "__len__"):
         dCds = np.empty(len(s))
         i=0
@@ -1090,6 +1080,7 @@ geo_ODE = geo_ODE_wrapper()
 
 def fixed_rk4(fun, y0, xmesh, *args): # (fun, alphaCoeffs, cICoeffs, y0, Fx, Fy, xmesh)
     step = xmesh[1]-xmesh[0]
+    y0 = np.atleast_1d(y0)
     if hasattr(y0, '__len__'):
         res = np.empty((len(y0), len(xmesh)))
         # print(range(len(xmesh))[-1])
@@ -1103,7 +1094,6 @@ def fixed_rk4(fun, y0, xmesh, *args): # (fun, alphaCoeffs, cICoeffs, y0, Fx, Fy,
                     res[j,i] = y0[j]
             else:
                 stepRes = rk4_step(fun, xmesh[i-1], y0, step, args)
-                # print(stepRes)
                 for j in range(len(y0)):
                     res[j,i] = stepRes[j]
                 y0 = stepRes
