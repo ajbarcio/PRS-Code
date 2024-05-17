@@ -210,7 +210,7 @@ Ic = np.empty(len(smesh))
 start = time.time()
 for i in range(len(smesh)):
     rn[i] = r_n(smesh[i], geometryDef[0], geometryDef[1])
-    Ic[i] = Ic_s(smesh[i], geometryDef[2])
+    Ic[i] = PPoly_Eval(smesh[i], geometryDef[2])
 la = np.empty(len(smesh))
 lb = np.empty(len(smesh))
 h = np.empty(len(smesh))

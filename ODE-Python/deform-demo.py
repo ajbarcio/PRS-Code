@@ -260,7 +260,7 @@ plt.plot(innerCircleX,innerCircleY,'k')
 plt.axis('equal')
 
 rn = r_n(smesh,geometryDef[0],geometryDef[1])
-Ic = Ic_s(smesh,geometryDef[2])
+Ic = PPoly_Eval(smesh,geometryDef[2])
 
 plt.figure("funny")
 plt.plot(smesh, Ic)

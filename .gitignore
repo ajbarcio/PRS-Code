@@ -6,3 +6,5 @@ __pycache__
 learning.py
 testingShit2.py
 testing*
+# ignore vscode files
+.vscode

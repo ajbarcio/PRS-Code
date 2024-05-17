@@ -32,7 +32,7 @@ rn = np.empty(len(smesh))
 Ic = np.empty(len(smesh))
 for i in range(len(smesh)):
     rn[i] = r_n(smesh[i], geometryDef[0], geometryDef[1])
-    Ic[i] = Ic_s(smesh[i], geometryDef[2])
+    Ic[i] = PPoly_Eval(smesh[i], geometryDef[2])
 
 # Rootfinding method for getting outer surface geometry
 print("start lAB method")
@@ -63,7 +63,7 @@ checkcI = outPlaneThickness*rn*(lb+la)*(lb/2-la/2)
 checkrn = (la+lb)/(np.log((rn+lb)/(rn-la)))
 # Check that the input and resultant rn, cI agree
 plt.figure("Checking rootfinding accuracy")
-plt.plot(smesh, checkcI-Ic_s(smesh, geometryDef[2]), label="cI error")
+plt.plot(smesh, checkcI-PPoly_Eval(smesh, geometryDef[2]), label="cI error")
 plt.plot(smesh, checkrn-r_n(smesh, geometryDef[0], geometryDef[1]), label="rn error")
 plt.legend()
 
@@ -94,7 +94,7 @@ dcIds  = d_cI_d_s(smesh, geometryDef[2])
 dads   = d_alpha_d_s(smesh, geometryDef[0], geometryDef[1])
 d2ads2 = d_2_alpha_d_s_2(smesh, geometryDef[0], geometryDef[1])
 drndsAnalytical  = d_rn_d_s(smesh, geometryDef[0], geometryDef[1])
-cI     = Ic_s(smesh, geometryDef[2])
+cI     = PPoly_Eval(smesh, geometryDef[2])
 
 # This proves drnds is wrong
 plt.figure("analytical vs numerical rn differentiation")

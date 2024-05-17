@@ -104,7 +104,7 @@ stiffness, res, dragVector, dragVector0 = tune_stiffness(maxTorque/maxDBeta, max
 
 # stiffness, maxStress, res, dragVector, dragVector0 = stress_stiffness_tuning(maxTorque/maxDBeta, maxDBeta, 247760, dragVector0, discludeVector)
 geometryDef, smesh = drag_vector_spring(dragVector)
-lAB0 = np.cbrt(12*Ic_s(0, geometryDef[2])/outPlaneThickness)/2
+lAB0 = np.cbrt(12*PPoly_Eval(0, geometryDef[2])/outPlaneThickness)/2
 
 print("overall relative change", dragVector-dragVector0)
 print("target stiffness:", maxTorque/maxDBeta)
@@ -142,7 +142,7 @@ Ic = np.empty(len(smesh))
 start = time.time()
 for i in range(len(smesh)):
     rn[i] = r_n(smesh[i], geometryDef[0], geometryDef[1])
-    Ic[i] = Ic_s(smesh[i], geometryDef[2])
+    Ic[i] = PPoly_Eval(smesh[i], geometryDef[2])
 plt.figure(0)
 plt.plot(np.transpose(res), label='results')
 plt.plot(xorg)
@@ -186,7 +186,7 @@ plt.plot(xorg+xrc, yorg+yrc, label="AB rootfinding centroidal axis")
 plt.legend()
 
 plt.figure(99)
-plt.plot(smesh, Ic_s(smesh, geometryDef[2])*1000)
+plt.plot(smesh, PPoly_Eval(smesh, geometryDef[2])*1000)
 plt.plot(smesh, h)
 plt.plot(smesh,la)
 plt.plot(smesh,lb)
