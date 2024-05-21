@@ -273,6 +273,20 @@ def PPoly_Eval(x, coeffs, deriv=0, ranges=0):
             y = U.dot(coeffs)
             return (y[0])
 
+class Deform_Wrapper:
+    def __init__(self, function):
+        self.all_output = []
+        self.all_initial_guess = []
+        self.function = function
+
+    def __call__(self, torqueTarg, ODE, torqueResolution=10, SF = np.array([0,0,0])):
+        self.all_initial_guess.append(np.array([0,0,torqueTarg]))
+        SSProfile("BVP").tic()
+        res, SF, divergeFlag  = self.function(torqueTarg, ODE, torqueResolution, SF)
+        SSProfile("BVP").toc()
+        self.all_output.append(SF)
+        return res, SF, divergeFlag
+
 class Spring:
     def __init__(self,
                  # whole bunch of default values:
@@ -359,6 +373,9 @@ class Spring:
         self.momentArmX = self.xL - self.x0
         self.momentArmY = self.yL - self.y0
 
+        # inherit deform wrapper
+        self.wrapped_torque_deform = Deform_Wrapper(self.deform_by_torque)
+
     def geometry_coeffs(self):
         # sticks the coefficients in the object
         self.IcCoeffs, self.domains = Ic_multiPoly(self.IcPts, self.IcArcLens)
@@ -367,9 +384,76 @@ class Spring:
         self.geometryDef = [self.XCoeffs, self.YCoeffs, self.IcCoeffs]
         return self.geometryDef
 
-    def deform_by_torque(self,torqueTarg,ODE):
-        # this method slowly ramps up to full loading condition, starts at 0
+    def smart_initial_load_guess(self, torqueTarg, ODE):
+        # this method makes an informed guess about the forcing at full
+        # loading condition based off the magnitude of the torque
+        print("getting initial guess")
+        guessWrapper = Deform_Wrapper(self.deform_by_torque)
+
+        SF = np.array([0,0,torqueTarg*0.05])
+        guessWrapper(SF[2],ODE,SF=SF)
+        SF = np.array([0,0,torqueTarg*0.15])
+        guessWrapper(SF[2],ODE,SF=SF)
+
+        torques = np.array([torqueTarg*0.1,torqueTarg*0.2])
+        angles = np.empty(len(guessWrapper.all_output))
+        magnitudes = np.empty(len(guessWrapper.all_output))
+        for i in range(len(guessWrapper.all_output)):
+            angles[i] = np.arctan2(guessWrapper.all_output[i][1],guessWrapper.all_output[i][0])
+            magnitudes[i] = lin.norm(guessWrapper.all_output[i][0:2])
+        anglePoly = np.polyfit(torques,angles,1)
+        magPoly = np.polyfit(torques,magnitudes,1)
+        angleGuess  = np.polyval(anglePoly, torqueTarg)
+        magGuess  = np.polyval(magPoly, torqueTarg)
+        SFGuess = np.array([magGuess*np.cos(angleGuess), magGuess*np.sin(angleGuess), torqueTarg])
+        print("done getting initial guess")
+        return(SFGuess)
+
+    def deform_by_torque_slowRamp(self, torqueTarg, ODE, torqueResolution=10):
+        pass
+        # this method goes straight to full loading condition lmao
+        # TODO: MAKE THIS AUTOMATIC
         SF = np.array([0,0,0])
+        # the err is a two vector, so make it arbitrarily high to enter loop
+        err = np.ones(2)*float('inf')
+        # 0th iteration
+        j = 0
+        k = 0
+        divergeFlag = 0
+        # limit to 100 iterations to converge
+        n = len(err)
+        while j < torqueResolution:
+            SF += np.array([0,0,torqueTarg*torqueResolution])
+            errPrev = err
+            i = 0
+            while i < 100:
+                # determine boundary condition compliance, estimate jacobian
+                err, res = self.forward_integration(ODE,SF,torqueTarg)
+                err = err[0:2]
+                J = self.estimate_jacobian_fd(ODE,SF,torqueTarg,2)
+                # freak the fuck out if it didnt work
+                # print(err)
+                if lin.norm(err)>lin.norm(errPrev):
+                    print("torque deform diverging", i)
+                    # print(err, errPrev)
+                    # print(SF)
+                    print(J)
+                    divergeFlag = 1
+                    # break
+                # make a new guess if it did
+                elif lin.norm(err,2) > 10e-6:
+                    SF[0:2] = SF[0:2]-lin.inv(J).dot(err)
+                    # print(lin.inv(J))
+                else:
+                    break
+                i+=1
+            k += i
+        print(torqueTarg, k)
+        return res, SF, divergeFlag
+
+    def deform_by_torque(self,torqueTarg,ODE,torqueResolution=10,SF=np.array([0,0,0])):
+        # this method goes straight to full loading condition lmao
+
         # the err is a two vector, so make it arbitrarily high to enter loop
         err = np.ones(2)*float('inf')
         # 0th iteration
@@ -392,11 +476,12 @@ class Spring:
                 # break
             # make a new guess if it did
             elif lin.norm(err,2) > 10e-6:
-                SF = SF-lin.pinv(J).dot(err)
+                SF = SF-lin.inv(J).dot(err)
+                # print(lin.inv(J))
             else:
                 break
             i+=1
-        print(i)
+        print(torqueTarg, i)
         return res, SF, divergeFlag
 
     def forward_integration(self, ODE, SF, torqueTarg):
@@ -414,10 +499,10 @@ class Spring:
         err = np.array([Rinitial-Rfinal, res[0,-1]-dBeta, SF[2]-torqueTarg])
         return err, res
 
-    def estimate_jacobian_fd(self, ODE, SF, torqueTarg):
+    def estimate_jacobian_fd(self, ODE, SF, torqueTarg, n=3):
         Jac = np.empty((3,3))
-        for i in range(len(SF)):
-            finiteDifference = np.zeros(3)
+        for i in range(n):
+            finiteDifference = np.zeros(len(SF))
             if i < 2:
                 finiteDifference[i] = self.finiteDifferenceForce
                 # step = 1
@@ -429,6 +514,7 @@ class Spring:
             Jac[0,i]     = (errForw[0]-errBack[0])/(2*lin.norm(finiteDifference))
             Jac[1,i]     = (errForw[1]-errBack[1])/(2*lin.norm(finiteDifference))
             Jac[2,i]     = (errForw[2]-errBack[2])/(2*lin.norm(finiteDifference))
+        Jac = Jac[0:n,0:n]
         # print(Jac)
         return Jac
 
@@ -458,6 +544,8 @@ class Spring:
             # print(LHS)
         return LHS
 
+    def show_spring(self):
+        pass
 
 def deform_ODE(s, p, *args): #Fx, Fy, geometryDef, dgds0 THIS IS THE NON_OBJECT ORIENTED VERSION
 
