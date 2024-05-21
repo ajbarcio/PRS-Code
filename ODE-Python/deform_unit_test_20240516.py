@@ -14,5 +14,5 @@ betaD = funnyAngle*deg2rad
 beta0 = betaD
 
 funnySpring = Spring(radii=np.array([R0,R1,R2,R3]),betaAngles=np.array([0,betaB,betaC,beta0]))
-res, SF, divergeFlag = funnySpring.deform_by_torque(5,funnySpring.deform_ODE)
+res, SF, divergeFlag = funnySpring.deform_by_torque(5000,funnySpring.deform_ODE)
 print(SF)

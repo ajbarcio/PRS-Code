@@ -332,8 +332,8 @@ class Spring:
         # assign some constants for approximating derivatives
         self.finiteDifferenceLength = 0.001
         self.finiteDifferenceAngle  = .1*deg2rad
-        self.finiteDifferenceForce  = 100
-        self.finiteDifferenceTorque = 100
+        self.finiteDifferenceForce  = 0.1
+        self.finiteDifferenceTorque = 0.5
         self.finiteDifferenceCI     = 20
 
         # assign some constants for meshing the spring
@@ -376,7 +376,7 @@ class Spring:
         i = 0
         divergeFlag = 0
         # limit to 100 iterations to converge
-        while lin.norm(err,2) > 10e-6 and i <100:
+        while i <100:
             errPrev = err
             # determine boundary condition compliance, estimate jacobian
             err, res = self.forward_integration(ODE,SF,torqueTarg)
@@ -385,13 +385,16 @@ class Spring:
             # print(err)
             if lin.norm(err)>lin.norm(errPrev):
                 print("torque deform diverging", i)
-                print(err, errPrev)
-                print(SF)
+                # print(err, errPrev)
+                # print(SF)
+                print(J)
                 divergeFlag = 1
                 # break
             # make a new guess if it did
-            else:
+            elif lin.norm(err,2) > 10e-6:
                 SF = SF-lin.pinv(J).dot(err)
+            else:
+                break
             i+=1
         print(i)
         return res, SF, divergeFlag
@@ -417,8 +420,10 @@ class Spring:
             finiteDifference = np.zeros(3)
             if i < 2:
                 finiteDifference[i] = self.finiteDifferenceForce
+                # step = 1
             else:
                 finiteDifference[i] = self.finiteDifferenceTorque
+                # step = 0.1
             errBack, resG = self.forward_integration(ODE, SF-finiteDifference, torqueTarg)
             errForw, resG = self.forward_integration(ODE, SF+finiteDifference, torqueTarg)
             Jac[0,i]     = (errForw[0]-errBack[0])/(2*lin.norm(finiteDifference))
@@ -447,8 +452,10 @@ class Spring:
         LHS[2] = np.sin(np.arctan2(dyds,dxds)+p[0])
         if np.sin(np.arctan2(dyds,dxds))==0:
             LHS = LHS*dxds/np.cos(np.arctan2(dyds,dxds))
+            # print(LHS)
         else:
             LHS = LHS*dyds/np.sin(np.arctan2(dyds,dxds))
+            # print(LHS)
         return LHS
 
 
