@@ -26,7 +26,7 @@ globalStep = fullArcLength/globalRes
 globalMaxIndex = globalLen-1
 
 E = 27.5*10**6
-outPlaneThickness = .375
+self.t = .375
 
 # profile design variables:
 #   R0: inner radius

@@ -16,7 +16,7 @@ n = 2
 fullArcLength = 5
 
 E = 27.5*10**6
-outPlaneThickness = .375
+self.t = .375
 
 globalInnerRadiusLimit = 0.75
 globalOuterRadiusLimit = 6/2
@@ -92,7 +92,7 @@ n = 2
 fullArcLength = 5
 
 E = 27.5*10**6
-outPlaneThickness = .375
+self.t = .375
 
 globalInnerRadiusLimit = 0.75
 globalOuterRadiusLimit = 6/2

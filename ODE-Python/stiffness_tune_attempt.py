@@ -26,7 +26,7 @@ globalStep = fullArcLength/globalRes
 globalMaxIndex = globalLen-1
 
 E = 27.5*10**6
-outPlaneThickness = .375
+self.t = .375
 
 # profile design variables:
 #   R0: inner radius
@@ -104,7 +104,7 @@ stiffness, res, dragVector, dragVector0 = tune_stiffness(maxTorque/maxDBeta, max
 
 # stiffness, maxStress, res, dragVector, dragVector0 = stress_stiffness_tuning(maxTorque/maxDBeta, maxDBeta, 247760, dragVector0, discludeVector)
 geometryDef, smesh = drag_vector_spring(dragVector)
-lAB0 = np.cbrt(12*PPoly_Eval(0, geometryDef[2])/outPlaneThickness)/2
+lAB0 = np.cbrt(12*PPoly_Eval(0, geometryDef[2])/self.t)/2
 
 print("overall relative change", dragVector-dragVector0)
 print("target stiffness:", maxTorque/maxDBeta)
@@ -162,7 +162,7 @@ for i in range(len(smesh)):
     h[i] = lb[i]+la[i]
     lABPrev = lAB
 end=time.time()
-ecc = Ic/(outPlaneThickness*h*rn)
+ecc = Ic/(self.t*h*rn)
 print("rootfinding time,", end-start)
 # print(smesh)
 # print(rn)

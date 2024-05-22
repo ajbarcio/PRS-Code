@@ -463,7 +463,7 @@ class Spring:
         while i <100:
             errPrev = err
             # determine boundary condition compliance, estimate jacobian
-            err, res = self.forward_integration(ODE,SF,torqueTarg)
+            err, self.res = self.forward_integration(ODE,SF,torqueTarg)
             J = self.estimate_jacobian_fd(ODE,SF,torqueTarg)
             # freak the fuck out if it didnt work
             # print(err)
@@ -482,7 +482,8 @@ class Spring:
                 break
             i+=1
         print(torqueTarg, i)
-        return res, SF, divergeFlag
+        self.solnSF = SF
+        return self.res, self.solnSF, divergeFlag
 
     def forward_integration(self, ODE, SF, torqueTarg):
         # set up initial condition
@@ -544,8 +545,165 @@ class Spring:
             # print(LHS)
         return LHS
 
-    def show_spring(self):
-        pass
+    def l_a_l_b_rootfinding(self, s, lABPrev, printBool=0):
+        # get the relevant values at a given point
+        rn = r_n(s, self.XCoeffs, self.YCoeffs)
+        Ic = PPoly_Eval(s, self.IcCoeffs)
+        # define the system to be solved
+        def func(x, rn, cI):
+            f1 = (x[0]+x[1])/(np.log((rn+x[1])/(rn-x[0])))-rn
+            # f2 = (x[0]+x[1])*(outPlaneThickness*(x[1]-(x[1]+x[0])/2)*rn)-cI
+            f2 = self.t*rn*(x[0]+x[1])*(x[1]/2-x[0]/2)-cI
+            return np.array([f1, f2])
+        def jac(x, rn, cI):
+            return np.array([[1/(np.log((rn+x[1])/(rn-x[0])))-(x[0]+x[1])/(((np.log((rn+x[1])/(rn-x[0])))**2)*(rn-x[0])), \
+                            1/(np.log((rn+x[1])/(rn-x[0])))-(x[0]+x[1])/(((np.log((rn+x[1])/(rn-x[0])))**2)*(rn+x[1]))], \
+                            [-rn*self.t*x[0], rn*self.t*x[1]]])
+        # some error checking an escapes for possible non-convergent cases
+        if not np.isinf(rn):
+            if lABPrev[0]==lABPrev[1]:
+                x0 = [lABPrev[0], lABPrev[1]+0.001]
+            else:
+                x0 = lABPrev
+            err = 1
+        # excape for locally straight beam
+        else:
+            err = 0
+            l = np.cbrt(12*Ic/self.t)/2
+            x0 = [l, l]
+            # print("entered")
+        x = x0
+
+        iii = 0
+        # solve the problem
+        while err > 10**-6 and iii <500:
+            # print("entered while")
+            xprev = x
+            x = x - np.transpose(lin.inv(jac(x, rn, Ic)).dot(func(x, rn, Ic)))
+            # print(x)
+            err = lin.norm(x-xprev)
+            # err = lin.norm(func(x, rn, cI))
+            iii+=1
+        # escape for beam so uncurved that its _basically_ straight:
+        if(lin.norm(x)>lin.norm(lABPrev)*100):
+            l = np.cbrt(12*Ic/self.t)/2
+            x = [l,l]
+        if(printBool):
+            print(x0)
+            print(x)
+            print(iii)
+            print(rn)
+            print(err)
+            if iii > 2999:
+                print("--------------------DID NOT CONVERGE-------------------------")
+
+        return x    # here x is [la, lb]
+
+    def spring_geometry(self, plotBool=1, deformBool=1):
+        # Generate neutral radius path and give it nicely formatted class variables
+        self.undeformedNeutralSurface = np.hstack((np.atleast_2d(PPoly_Eval(self.smesh, self.XCoeffs)).T, np.atleast_2d(PPoly_Eval(self.smesh, self.YCoeffs)).T))
+        # Generate outer and inner surfaces
+        lABPrev = [0,0]
+
+        self.la = np.empty(len(self.smesh))
+        self.lb = np.empty(len(self.smesh))
+        self.h = np.empty(len(self.smesh))
+        self.Ic = PPoly_Eval(self.smesh, self.IcCoeffs, ranges=self.domains)
+        self.rn = r_n(self.smesh, self.XCoeffs, self.YCoeffs)
+        print(self.rn)
+        for i in range(len(self.smesh)):
+            SSProfile("lAB rootfinding").tic()
+            lAB = self.l_a_l_b_rootfinding(self.smesh[i], lABPrev)
+            SSProfile("lAB rootfinding").toc()
+            self.la[i] = lAB[0]
+            self.lb[i] = lAB[1]
+            self.h[i] = self.lb[i]+self.la[i]
+        self.ecc = self.Ic/(self.t*self.h*self.rn)
+        self.a = self.rn-self.la
+        self.b = self.rn+self.la
+
+        alpha = alpha_xy(self.smesh, self.XCoeffs, self.YCoeffs)
+
+        # generate xy paths for surfaces
+        self.undeformedBSurface = np.hstack((np.atleast_2d(-self.lb*np.sin(alpha)).T, np.atleast_2d(self.lb*np.cos(alpha)).T))
+        self.undeformedASurface = np.hstack((np.atleast_2d(-self.la*np.sin(alpha)).T, np.atleast_2d(self.la*np.cos(alpha)).T))
+        # generate centroidal surface
+        self.undeformedCentroidalSurface = self.undeformedNeutralSurface+np.hstack((np.atleast_2d(self.ecc*np.sin(alpha)).T, np.atleast_2d(self.ecc*np.cos(alpha)).T))
+
+
+        if plotBool:
+            # plot shit
+            plt.figure(1)
+            plt.plot(self.undeformedNeutralSurface[:,0],self.undeformedNeutralSurface[:,1])
+            plt.plot(self.undeformedCentroidalSurface[:,0],self.undeformedCentroidalSurface[:,1])
+            plt.plot(self.undeformedASurface[:,0],self.undeformedASurface[:,1])
+            plt.plot(self.undeformedBSurface[:,0],self.undeformedBSurface[:,1])
+
+        # if the spring has already been deformed
+        if deformBool:
+            # generate neutral surface after deformation (and give nice format)
+            self.deformedNeutralSurface = np.hstack((np.atleast_2d(self.res[1,:]).T, np.atleast_2d(self.res[2,:]).T))
+            if plotBool:
+                plt.plot(self.deformedNeutralSurface[:,0],self.deformedNeutralSurface[:,1])
+
+        plt.axis("equal")
+        plt.show()
+
+def alpha_xy(s, xCoeffs, yCoeffs):
+    if hasattr(s, "__len__"):
+        alphaList = np.arctan2(PPoly_Eval(s, yCoeffs, deriv=1),PPoly_Eval(s, xCoeffs, deriv=1))
+        for i in range(len(alphaList)):
+            if alphaList[i]<0:
+                alphaList[i]=alphaList[i]+2*math.pi
+        return alphaList
+    else:
+        alpha = np.arctan2(PPoly_Eval(s, yCoeffs, deriv=1),PPoly_Eval(s, xCoeffs, deriv=1))
+        if alpha<0:
+            alpha=alpha+2*math.pi
+        return alpha
+
+def r_n(s, xCoeffs, yCoeffs):
+    d2yds2 = PPoly_Eval(s, yCoeffs, deriv=2)
+    d2xds2 = PPoly_Eval(s, xCoeffs, deriv=2)
+    dyds   = PPoly_Eval(s, yCoeffs, deriv=1)
+    dxds   = PPoly_Eval(s, xCoeffs, deriv=1)
+    # DEBUG
+    # dAlphadS = (d2yds2/dxds-d2xds2*dyds/dxds)/(1+dyds**2/dxds)
+    if hasattr(s, "__len__"):
+        # DEBUG
+        plt.figure(0)
+        plt.plot(s, dyds)
+        plt.plot(s, dxds)
+        rn = ((1+dyds**2/dxds**2)/(d2yds2/dxds-d2xds2*dyds/dxds**2))
+        for i in range(len(rn)):
+            if rn[i] == float('nan'):
+                rn[i] = float('inf')
+            if abs((d2yds2[i]/dxds[i]-d2xds2[i]*dyds[i]/dxds[i]**2)) <= 10**-13:
+                rn[i] = float('inf')*np.sign(rn[i-1])
+    else:
+        if abs(d2yds2/dxds-d2xds2*dyds/dxds**2)<=10**-13:
+            rn = float('inf')
+        else:
+            rn = ((1+dyds**2/dxds**2)/(d2yds2/dxds-d2xds2*dyds/dxds**2))
+    return rn
+
+def d_rn_d_s(s, xCoeffs, yCoeffs):
+    d3yds3 = PPoly_Eval(s, yCoeffs, deriv=3)
+    d3xds3 = PPoly_Eval(s, xCoeffs, deriv=3)
+    d2yds2 = PPoly_Eval(s, yCoeffs, deriv=2)
+    d2xds2 = PPoly_Eval(s, xCoeffs, deriv=2)
+    dyds   = PPoly_Eval(s, yCoeffs, deriv=1)
+    dxds   = PPoly_Eval(s, yCoeffs, deriv=1)
+
+    denominator = (d2yds2*dxds-d2xds2*dyds)**2
+    numerator   = ( dxds**3*d3yds3 - dyds**3*d3xds3 +
+                    2*dyds*d2xds2**2*dxds - 2*dyds*d2yds2**2*dxds - dxds**2*d3xds3*dyds -
+                    2*dxds**2*d2yds2*d2xds2 + 2*dyds**2*d2yds2*d2xds2 +
+                    dyds**2*d3yds3*dxds )
+
+    drnds = -numerator/denominator
+
+    return drnds
 
 def deform_ODE(s, p, *args): #Fx, Fy, geometryDef, dgds0 THIS IS THE NON_OBJECT ORIENTED VERSION
 
@@ -725,18 +883,18 @@ def ndiff(s, f, eps=1e-5):
 #     return alphaPoly
 
 
-def alpha_xy(s, xCoeffs, yCoeffs):
-    if hasattr(s, "__len__"):
-        alphaList = np.arctan2(d_coord_d_s(s, yCoeffs),d_coord_d_s(s, xCoeffs))
-        for i in range(len(alphaList)):
-            if alphaList[i]<0:
-                alphaList[i]=alphaList[i]+2*math.pi
-        return alphaList
-    else:
-        alpha = np.arctan2(d_coord_d_s(s, yCoeffs),d_coord_d_s(s, xCoeffs))
-        if alpha<0:
-            alpha=alpha+2*math.pi
-        return alpha
+# def alpha_xy(s, xCoeffs, yCoeffs): DEPRECATED
+#     if hasattr(s, "__len__"):
+#         alphaList = np.arctan2(d_coord_d_s(s, yCoeffs),d_coord_d_s(s, xCoeffs))
+#         for i in range(len(alphaList)):
+#             if alphaList[i]<0:
+#                 alphaList[i]=alphaList[i]+2*math.pi
+#         return alphaList
+#     else:
+#         alpha = np.arctan2(d_coord_d_s(s, yCoeffs),d_coord_d_s(s, xCoeffs))
+#         if alpha<0:
+#             alpha=alpha+2*math.pi
+#         return alpha
 
 def d_alpha_d_s(s, xCoeffs, yCoeffs):
     d2yds2 = d2_coord_d_s2(s, yCoeffs)
@@ -750,23 +908,23 @@ def d_2_alpha_d_s_2(s, xCoeffs, yCoeffs):
     d2ads2 = -d_alpha_d_s(s, xCoeffs, yCoeffs)**2*d_rn_d_s(s, xCoeffs, yCoeffs)
     return d2ads2
 
-def r_n(s, xCoeffs, yCoeffs):
-    d2yds2 = d2_coord_d_s2(s, yCoeffs)
-    d2xds2 = d2_coord_d_s2(s, xCoeffs)
-    dyds   = d_coord_d_s  (s, yCoeffs)
-    dxds   = d_coord_d_s  (s, xCoeffs)
-    # dAlphadS = (d2yds2/dxds-d2xds2*dyds/dxds)/(1+dyds**2/dxds)
-    if hasattr(s, "__len__"):
-        rn = ((1+dyds**2/dxds**2)/(d2yds2/dxds-d2xds2*dyds/dxds**2))
-        for i in range(len(rn)):
-            if abs((d2yds2[i]/dxds[i]-d2xds2[i]*dyds[i]/dxds[i]**2)) <= 10**-13:
-                rn[i] = float('inf')*np.sign(rn[i-1])
-    else:
-        if abs(d2yds2/dxds-d2xds2*dyds/dxds**2)<=10**-13:
-            rn = float('inf')
-        else:
-            rn = ((1+dyds**2/dxds**2)/(d2yds2/dxds-d2xds2*dyds/dxds**2))
-    return rn
+# def r_n(s, xCoeffs, yCoeffs): DEPRECATED
+#     d2yds2 = d2_coord_d_s2(s, yCoeffs)
+#     d2xds2 = d2_coord_d_s2(s, xCoeffs)
+#     dyds   = d_coord_d_s  (s, yCoeffs)
+#     dxds   = d_coord_d_s  (s, xCoeffs)
+#     # dAlphadS = (d2yds2/dxds-d2xds2*dyds/dxds)/(1+dyds**2/dxds)
+#     if hasattr(s, "__len__"):
+#         rn = ((1+dyds**2/dxds**2)/(d2yds2/dxds-d2xds2*dyds/dxds**2))
+#         for i in range(len(rn)):
+#             if abs((d2yds2[i]/dxds[i]-d2xds2[i]*dyds[i]/dxds[i]**2)) <= 10**-13:
+#                 rn[i] = float('inf')*np.sign(rn[i-1])
+#     else:
+#         if abs(d2yds2/dxds-d2xds2*dyds/dxds**2)<=10**-13:
+#             rn = float('inf')
+#         else:
+#             rn = ((1+dyds**2/dxds**2)/(d2yds2/dxds-d2xds2*dyds/dxds**2))
+#     return rn
 
 def d_rn_d_s(s, xCoeffs, yCoeffs):
     d3yds3 = d3_coord_d_s3(s, yCoeffs)
@@ -784,18 +942,6 @@ def d_rn_d_s(s, xCoeffs, yCoeffs):
 
     drnds = -numerator/denominator
 
-    # n1=dxds**2
-    # n2=d2xds2
-    # n3=d2yds2
-    # n4=dyds**2
-    # n5=dxds**3
-    # num1=2*dyds*n3/n1-2*n4*n2/n5
-    # den1=n3-dyds*n2/n1
-
-    # num2=(n4/n1+1)*(2*dyds*n2**2/n5-dyds*d3xds3/n1-n2*n3/n1+d3yds3)
-    # den2=(n3-n2*dyds/n1)**2
-
-    # drnds = num1/den1-num2/den2
     return drnds
 
 
@@ -841,7 +987,7 @@ def rc_rootfinding(s, xCoeffs, yCoeffs, cICoeffs, printBool):
     else:
         while err > 10**-6 and ii < 3000:
             xprev = x
-            h = (cI/(outPlaneThickness*(x-rn)*rn))
+            h = (cI/(self.t*(x-rn)*rn))
             print('h,',h)
             # if ii==0:
             #     print(x,h)
@@ -866,19 +1012,19 @@ def a_b_rootfinding(s, xCoeffs, yCoeffs, cICoeffs, printBool):
     def func(x, rn, cI):
         # x0 = a, x1 = b
         f1 = (x[1]-x[0])/(np.log(x[1]/x[0]))-rn
-        f2 = outPlaneThickness*(x[1]-x[0])*((x[1]+x[0])/2-rn)*rn-cI
+        f2 = self.t*(x[1]-x[0])*((x[1]+x[0])/2-rn)*rn-cI
         return np.array([f1, f2])
     def jac(x, rn, cI):
         return np.array([[(x[1]-x[0])/(x[0]*np.log(x[1]/x[0])**2)-1/(np.log(x[1]/x[0])), \
                           (x[1]*np.log(x[1]/x[0])-x[1]+x[0])/(x[1]*np.log(x[1]/x[0])**2)], \
-                         [-rn*outPlaneThickness*(x[0]-rn), rn*outPlaneThickness*(x[1]-rn)]])
+                         [-rn*self.t*(x[0]-rn), rn*self.t*(x[1]-rn)]])
     err = 1
     # establish expected closesness range for a/b compared to rn to establish initial guess based on linearization about 1
     factor = 1.2
     # approimation: ln(x)=c(x-1), c such that c(x-1) = ln(factor)
     c = (np.log(factor)-np.log(1))/(factor-1)
     a0 = c*rn
-    b0 = rn + np.sqrt(rn**2+4*0.5*((c-c**2/2)*rn-cI/(outPlaneThickness*rn)))
+    b0 = rn + np.sqrt(rn**2+4*0.5*((c-c**2/2)*rn-cI/(self.t*rn)))
     x0 = [a0, b0]
     x = x0
     ii = 0
@@ -904,12 +1050,12 @@ def h_e_rootfinding(s, xCoeffs, yCoeffs, cICoeffs, printbool):
     # x = [e h]
     def func(x, rn, cI):
         f1 = (x[1])/(np.log((rn+x[0]+x[1]/2)/(rn+x[0]-x[1]/2)))-rn
-        f2 = cI/(outPlaneThickness*x[0]*rn)-x[1]
+        f2 = cI/(self.t*x[0]*rn)-x[1]
         return np.array([f1, f2])
     def jac(x, rn, cI):
         return np.array([[1/(np.log((rn+x[1])/(rn-x[0])))-(x[0]+x[1])/(((np.log((rn+x[1])/(rn-x[0])))**2)*(rn-x[0])), \
                           1/(np.log((rn+x[1])/(rn-x[0])))-(x[0]+x[1])/(((np.log((rn+x[1])/(rn-x[0])))**2)*(rn+x[1]))], \
-                         [cI/(2*rn*outPlaneThickness*(x[1]-(x[1]+x[0])/2)**2)-1, -cI/(2*rn*outPlaneThickness*(x[1]-(x[1]+x[0])/2)**2)-1]])
+                         [cI/(2*rn*self.t*(x[1]-(x[1]+x[0])/2)**2)-1, -cI/(2*rn*self.t*(x[1]-(x[1]+x[0])/2)**2)-1]])
 
 
 def l_a_l_b_rootfinding(s, lABPrev, xCoeffs, yCoeffs, cICoeffs, printBool):
@@ -918,12 +1064,12 @@ def l_a_l_b_rootfinding(s, lABPrev, xCoeffs, yCoeffs, cICoeffs, printBool):
     def func(x, rn, cI):
         f1 = (x[0]+x[1])/(np.log((rn+x[1])/(rn-x[0])))-rn
         # f2 = (x[0]+x[1])*(outPlaneThickness*(x[1]-(x[1]+x[0])/2)*rn)-cI
-        f2 = outPlaneThickness*rn*(x[0]+x[1])*(x[1]/2-x[0]/2)-cI
+        f2 = self.t*rn*(x[0]+x[1])*(x[1]/2-x[0]/2)-cI
         return np.array([f1, f2])
     def jac(x, rn, cI):
         return np.array([[1/(np.log((rn+x[1])/(rn-x[0])))-(x[0]+x[1])/(((np.log((rn+x[1])/(rn-x[0])))**2)*(rn-x[0])), \
                           1/(np.log((rn+x[1])/(rn-x[0])))-(x[0]+x[1])/(((np.log((rn+x[1])/(rn-x[0])))**2)*(rn+x[1]))], \
-                         [-rn*outPlaneThickness*x[0], rn*outPlaneThickness*x[1]]])
+                         [-rn*self.t*x[0], rn*self.t*x[1]]])
     # print(rn)
     if not np.isinf(rn):
         if lABPrev[0]==lABPrev[1]:
@@ -933,7 +1079,7 @@ def l_a_l_b_rootfinding(s, lABPrev, xCoeffs, yCoeffs, cICoeffs, printBool):
         err = 1
     else:
         err = 0
-        l = np.cbrt(12*cI/outPlaneThickness)/2
+        l = np.cbrt(12*cI/self.t)/2
         x0 = [l, l]
         # print("entered")
     x = x0
@@ -948,7 +1094,7 @@ def l_a_l_b_rootfinding(s, lABPrev, xCoeffs, yCoeffs, cICoeffs, printBool):
         # err = lin.norm(func(x, rn, cI))
         iii+=1
     if(lin.norm(x)>lin.norm(lABPrev)*100):
-        l = np.cbrt(12*cI/outPlaneThickness)/2
+        l = np.cbrt(12*cI/self.t)/2
         x = [l,l]
     if(printBool):
         print(x0)
@@ -966,9 +1112,9 @@ def l_a_l_b_rootfinding(s, lABPrev, xCoeffs, yCoeffs, cICoeffs, printBool):
 
 # def cI_s(s, xCoeffs, yCoeffs, hCoeffs):
     if r_n(s, xCoeffs, yCoeffs) == float('inf'):
-        cI = PPoly_Eval(s, hCoeffs)**3*outPlaneThickness/12
+        cI = PPoly_Eval(s, hCoeffs)**3*self.t/12
     else:
-        cI = PPoly_Eval(s, hCoeffs)*outPlaneThickness* \
+        cI = PPoly_Eval(s, hCoeffs)*self.t* \
             (rc_rootfinding(s, xCoeffs, yCoeffs, hCoeffs, False)-r_n(s, xCoeffs, yCoeffs)) \
             *r_n(s, xCoeffs, yCoeffs)
     return cI
@@ -1140,7 +1286,7 @@ class geo_ODE_wrapper:
         dads   = d_alpha_d_s(s, geometryDef[0], geometryDef[1])
         d2ads2 = d_2_alpha_d_s_2(s, geometryDef[0], geometryDef[1])
         # print(rn, s)
-        geoFunc1 = (dcIds*dads+cI*d2ads2)/outPlaneThickness
+        geoFunc1 = (dcIds*dads+cI*d2ads2)/self.t
         # geoFunc2 = rn*(-drnds*((p[0]+p[1])/rn**2+(-p[0]-p[1])/((rn+p[1])*(rn-p[0]))))
         geoFunc2 = d2ads2*(p[0]+p[1])*(p[1]-p[0]-p[0]*p[1]*dads)
         # print(geoFunc1, geoFunc2)

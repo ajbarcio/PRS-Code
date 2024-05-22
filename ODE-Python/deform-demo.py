@@ -13,7 +13,7 @@ n = 2
 fullArcLength = 5.2
 
 E = 27.5*10**6
-outPlaneThickness = .375
+self.t = .375
 
 # These won't change ^^^
 
@@ -278,7 +278,7 @@ for i in range(len(smesh)):
     h[i] = lb[i]+la[i]
     lABPrev = lAB
 end=time.time()
-ecc = Ic/(outPlaneThickness*h*rn)
+ecc = Ic/(self.t*h*rn)
 print("rootfinding time,", end-start)
 
 a = rn-la

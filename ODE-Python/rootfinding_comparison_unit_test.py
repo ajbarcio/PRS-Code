@@ -59,7 +59,7 @@ print("lAB time:",end-start)
 # Solve the governing equations to get the implied input function values
 # This method is a bit incomplete, as it assumes rn agrees where used as an input to the method
 # However, since it provides low error, it is probably fine
-checkcI = outPlaneThickness*rn*(lb+la)*(lb/2-la/2)
+checkcI = self.t*rn*(lb+la)*(lb/2-la/2)
 checkrn = (la+lb)/(np.log((rn+lb)/(rn-la)))
 # Check that the input and resultant rn, cI agree
 plt.figure("Checking rootfinding accuracy")
@@ -108,7 +108,7 @@ checkdrnds = ((dlads+dlbds)/np.log((rn+lb)/(rn-la))
               -(la+lb)*(1/(np.log((rn+lb)/(rn-la))**2))
               *((rn-la)/(rn+lb))
               *((drnds+dlbds)/(rn-la)-(rn+lb)*(drnds-dlads)/(rn-la)**2))
-checkdcIds = (outPlaneThickness*(drnds*(lb**2/2-la**2/2)+(lb*dlbds-la*dlads)*rn))
+checkdcIds = (self.t*(drnds*(lb**2/2-la**2/2)+(lb*dlbds-la*dlads)*rn))
 
 plt.figure("rn, cI derivative check")
 plt.plot(drnds-checkdrnds, label="drnds error")
@@ -116,7 +116,7 @@ plt.plot(dcIds-checkdcIds, label="dcIds error")
 plt.legend()
 
 # define geometric functions used in differential equation
-geoFunc1 = (dcIds*1/rn-cI*drnds/rn**2)/outPlaneThickness
+geoFunc1 = (dcIds*1/rn-cI*drnds/rn**2)/self.t
 geoFunc2 = rn*(-drnds*((la+lb)/rn**2+(-la-lb)/((rn+lb)*(rn-la))))
 # # print(geoFunc1, geoFunc2)
 geoFuncs = np.array([geoFunc1, geoFunc2])
@@ -152,7 +152,7 @@ if False:
     plt.legend()
 
 # a bunch of bullshit to plot the shape of the spring
-ecc = Ic/(outPlaneThickness*hLALB*rn)
+ecc = Ic/(self.t*hLALB*rn)
 xb = -lb*np.sin(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
 xa = -la*np.sin(alpha_xy(smesh, geometryDef[0], geometryDef[1]))
 yb = lb*np.cos(alpha_xy(smesh, geometryDef[0], geometryDef[1]))

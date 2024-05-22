@@ -92,7 +92,7 @@ n = 2
 fullArcLength = 3
 
 E = 27.5*10**6
-outPlaneThickness = .375
+self.t = .375
 
 globalInnerRadiusLimit = 0.75
 globalOuterRadiusLimit = 6/2
@@ -225,7 +225,7 @@ for i in range(len(smesh)):
     h[i] = lb[i]+la[i]
     lABPrev = lAB
 end=time.time()
-ecc = Ic/(outPlaneThickness*h*rn)
+ecc = Ic/(self.t*h*rn)
 print("rootfinding time,", end-start)
 
 cICoeffs = geometryDef[2]

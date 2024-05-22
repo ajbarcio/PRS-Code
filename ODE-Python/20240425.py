@@ -37,12 +37,12 @@ def l_a_l_b_rootfinding_with_direct_params(lABPrev, rn, cI, printBool):
     def func(x, rn, cI):
         f1 = (x[0]+x[1])/(np.log((rn+x[1])/(rn-x[0])))-rn
         # f2 = (x[0]+x[1])*(outPlaneThickness*(x[1]-(x[1]+x[0])/2)*rn)-cI
-        f2 = outPlaneThickness*rn*(x[0]+x[1])*(x[1]/2-x[0]/2)-cI
+        f2 = self.t*rn*(x[0]+x[1])*(x[1]/2-x[0]/2)-cI
         return np.array([f1, f2])
     def jac(x, rn, cI):
         return np.array([[1/(np.log((rn+x[1])/(rn-x[0])))-(x[0]+x[1])/(((np.log((rn+x[1])/(rn-x[0])))**2)*(rn-x[0])), \
                           1/(np.log((rn+x[1])/(rn-x[0])))-(x[0]+x[1])/(((np.log((rn+x[1])/(rn-x[0])))**2)*(rn+x[1]))], \
-                         [-rn*outPlaneThickness*x[0], rn*outPlaneThickness*x[1]]])
+                         [-rn*self.t*x[0], rn*self.t*x[1]]])
     # print(rn)
     if not np.isinf(rn):
         if lABPrev[0]==lABPrev[1]:
@@ -52,7 +52,7 @@ def l_a_l_b_rootfinding_with_direct_params(lABPrev, rn, cI, printBool):
         err = 1
     else:
         err = 0
-        l = np.cbrt(12*cI/outPlaneThickness)/2
+        l = np.cbrt(12*cI/self.t)/2
         x0 = [l, l]
         # print("entered")
     # if (x0[0]>=abs(rn)):
@@ -79,7 +79,7 @@ def l_a_l_b_rootfinding_with_direct_params(lABPrev, rn, cI, printBool):
         iii+=1
     print("done rootfinding                                                                           ", end="\r")
     if(lin.norm(x)>lin.norm(lABPrev)*100):
-        l = np.cbrt(12*cI/outPlaneThickness)/2
+        l = np.cbrt(12*cI/self.t)/2
         x = [l,l]
     if(printBool):
         print(x0)
@@ -195,7 +195,7 @@ n = 2
 fullArcLength = 5
 
 E = 27.5*10**6
-outPlaneThickness = .375
+self.t = .375
 
 globalInnerRadiusLimit = 0.75
 globalOuterRadiusLimit = 6/2
@@ -270,7 +270,7 @@ for i in range(len(smesh)):
     h[i] = lb[i]+la[i]
     lABPrev = lAB
 end=time.time()
-ecc = cI_dumper/(outPlaneThickness*h*rn)
+ecc = cI_dumper/(self.t*h*rn)
 print("rootfinding time,", end-start)
 # print(smesh)
 # print(rn)'
