@@ -2,7 +2,7 @@ from stiffness_library import *
 import numpy as np
 import sympy as sp
 
-IcPts = np.array([.008,.001,.006])
+IcPts = np.array([.008,.008,.008])
 IcArcLens = np.array([0,2.5,5])
 
 method = "multiPoly"
@@ -36,6 +36,11 @@ elif method=="multiPoly":
     IcCoeffs, domains = Ic_multiPoly(IcPts, IcArcLens)
     # print(IcCoeffs, domains)
     plt.plot()
+
+    Ic_test = PPoly_Eval(0,IcCoeffs,ranges=domains)
+    print(IcCoeffs)
+    print(Ic_test)
+
     smesh = np.linspace(IcArcLens[0],IcArcLens[-1],101)
     Ic = PPoly_Eval(smesh,IcCoeffs,ranges=domains)
     plt.plot(smesh,Ic)

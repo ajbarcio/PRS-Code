@@ -13,7 +13,16 @@ import matplotlib.collections as mcoll
 import matplotlib.path as mpath
 import sympy as sp
 
+import subprocess as sb
+import win32com.client
+import pythoncom
+
 deg2rad = np.pi/180
+
+def make_SW_part(Spring):
+    startSW()
+    sw = connectToSW()
+    newFile(sw, "newPart.SLDPRT")
 
 def Ic_multiPoly(IcPts, IcArcLens):
 
@@ -273,14 +282,20 @@ def PPoly_Eval(x, coeffs, deriv=0, ranges=0):
             y = U.dot(coeffs)
             return (y[0])
 
+def d_xi_d_s(ximesh, XCoeffs, YCoeffs):
+    dxdxi = PPoly_Eval(ximesh, XCoeffs, deriv=1)
+    dydxi = PPoly_Eval(ximesh, YCoeffs, deriv=1)
+    dxids = 1/np.sqrt(dxdxi**2+dydxi**2)
+    return dxids
+
 class Deform_Wrapper:
     def __init__(self, function):
         self.all_output = []
-        self.all_initial_guess = []
+        self.all_moments = []
         self.function = function
 
     def __call__(self, torqueTarg, ODE, torqueResolution=10, SF = np.array([0,0,0]), breakBool=False):
-        self.all_initial_guess.append(np.array([0,0,torqueTarg]))
+        self.all_moments.append(torqueTarg)
         SSProfile("BVP").tic()
         res, SF, divergeFlag, i  = self.function(torqueTarg, ODE, torqueResolution, SF, breakBool)
         SSProfile("BVP").toc()
@@ -357,10 +372,10 @@ class Spring:
         self.endIndex = self.len-1
 
         # create uniform mesh for spring
-        self.smesh = np.linspace(0,self.fullArcLength,self.len)
+        self.ximesh = np.linspace(0,self.fullArcLength,self.len)
 
         self.geometry_coeffs()
-
+        self.dxids = d_xi_d_s(self.ximesh, self.XCoeffs, self.YCoeffs)
         # this takes way too many lines but fuck it IDC, better to see the math
         # Find coordinates of frames:
         # at base of spring
@@ -476,18 +491,24 @@ class Spring:
 
     def forward_integration(self, ODE, SF, torqueTarg):
         # set up initial condition
-        dgds0 = (SF[2]/self.n + self.momentArmY*SF[0] - self.momentArmX*SF[1])/(self.E*PPoly_Eval(0, self.IcCoeffs))
+        dgds0 = (SF[2]/self.n + self.momentArmY*SF[0] - self.momentArmX*SF[1])/(self.E*PPoly_Eval(0, self.IcCoeffs, ranges=self.domains))
+        # print(dgds0)
+        # print(self.IcCoeffs)
+        # print("Ic(0):", PPoly_Eval(0, self.IcCoeffs, ranges=self.domains))
         # perform forward integration
-        res  = fixed_rk4(ODE, np.array([0,self.x0,self.y0]), self.smesh, (SF[0], SF[1], dgds0))
+        self.res  = fixed_rk4(ODE, np.array([0,self.x0,self.y0]), self.ximesh, (SF[0], SF[1], dgds0))
         # calcualte error values
         Rinitial = lin.norm([self.xL,self.yL])
         # print(self.xL, self.yL)
-        Rfinal   = lin.norm([res[1,-1],res[2,-1]])
+        Rfinal   = lin.norm([self.res[1,-1],self.res[2,-1]])
+        # print("radius before integration:",Rinitial)
+        # print("radius assumed by integration:",Rfinal)
         # print(res[1,-2], res[2,-1])
-        dBeta    = np.arctan2(res[2,-1],res[1,-1])-self.betaAngles[-1]
+        dBeta    = np.arctan2(self.res[2,-1],self.res[1,-1])-self.betaAngles[-1]
+        # print("deflection:",dBeta)
         # Err = diff. in radius, diff between gamma(L) and beta(L)
-        err = np.array([Rinitial-Rfinal, res[0,-1]-dBeta, SF[2]-torqueTarg])
-        return err, res
+        err = np.array([Rinitial-Rfinal, self.res[0,-1]-dBeta, SF[2]-torqueTarg])
+        return err, self.res
 
     def estimate_jacobian_fd(self, ODE, SF, torqueTarg, n=3):
         Jac = np.empty((3,3))
@@ -508,29 +529,35 @@ class Spring:
         # print(Jac)
         return Jac
 
-    def deform_ODE(self, s, p, *args):
+    def deform_ODE(self, xi, p, *args):
         # print(args)
         Fx    = args[0][0][0][0]
         Fy    = args[0][0][0][1]
         dgds0 = args[0][0][0][2]
 
-        Mdim = self.E*PPoly_Eval(s, self.IcCoeffs)
+        Mdim = self.E*PPoly_Eval(xi, self.IcCoeffs, ranges=self.domains)
+        dxdxi = PPoly_Eval(xi, self.XCoeffs, deriv=1)
+        dydxi = PPoly_Eval(xi, self.YCoeffs, deriv=1)
 
-        dxds = PPoly_Eval(s, self.XCoeffs, deriv=1)
-        dyds = PPoly_Eval(s, self.YCoeffs, deriv=1)
+        dxids = d_xi_d_s(xi, self.XCoeffs, self.YCoeffs)
+        # print(dxids)
+        dxds = dxids*dxdxi
+        dyds = dxids*dydxi
 
         LHS = np.empty(3)
         # print(dgds0)
-        LHS[0] = dgds0 + Fy/Mdim*(p[1]-self.x0) - Fx/Mdim*(p[2]-self.y0)
-        if s==0:
+        LHS[0] = (dgds0 + Fy/Mdim*(p[1]-self.x0) - Fx/Mdim*(p[2]-self.y0))/dxids
+        if xi==0:
+            # print(LHS[0],dgds0)
             assert(np.isclose(LHS[0],dgds0,rtol=1e-5))
-        LHS[1] = np.cos(np.arctan2(dyds,dxds)+p[0])
-        LHS[2] = np.sin(np.arctan2(dyds,dxds)+p[0])
-        if np.sin(np.arctan2(dyds,dxds))==0:
-            LHS = LHS*dxds/np.cos(np.arctan2(dyds,dxds))
-            # print(LHS)
-        else:
-            LHS = LHS*dyds/np.sin(np.arctan2(dyds,dxds))
+        LHS[1] = np.cos(np.arctan2(dyds,dxds)+p[0])/dxids
+        LHS[2] = np.sin(np.arctan2(dyds,dxds)+p[0])/dxids
+
+        # if np.sin(np.arctan2(dydxi,dxdxi))==0:
+        #     LHS = LHS*dxdxi/np.cos(np.arctan2(dydxi,dxdxi))
+        #     # print(LHS)
+        # else:
+        #     LHS = LHS*dydxi/np.sin(np.arctan2(dydxi,dxdxi))
             # print(LHS)
         return LHS
 
@@ -587,20 +614,17 @@ class Spring:
 
         return x    # here x is [la, lb]
 
-    def spring_geometry(self, plotBool=1, deformBool=1):
-        # Generate neutral radius path and give it nicely formatted class variables
-        self.undeformedNeutralSurface = np.hstack((np.atleast_2d(PPoly_Eval(self.smesh, self.XCoeffs)).T, np.atleast_2d(PPoly_Eval(self.smesh, self.YCoeffs)).T))
-        # Generate outer and inner surfaces
+    def generate_surfaces(self):
         lABPrev = [0,0]
 
-        self.la = np.empty(len(self.smesh))
-        self.lb = np.empty(len(self.smesh))
-        self.h = np.empty(len(self.smesh))
-        self.Ic = PPoly_Eval(self.smesh, self.IcCoeffs, ranges=self.domains)
-        self.rn = r_n(self.smesh, self.XCoeffs, self.YCoeffs)
-        for i in range(len(self.smesh)):
+        self.la = np.empty(len(self.ximesh))
+        self.lb = np.empty(len(self.ximesh))
+        self.h = np.empty(len(self.ximesh))
+        self.Ic = PPoly_Eval(self.ximesh, self.IcCoeffs, ranges=self.domains)
+        self.rn = r_n(self.ximesh, self.XCoeffs, self.YCoeffs)
+        for i in range(len(self.ximesh)):
             SSProfile("lAB rootfinding").tic()
-            lAB = self.l_a_l_b_rootfinding(self.smesh[i], lABPrev)
+            lAB = self.l_a_l_b_rootfinding(self.ximesh[i], lABPrev)
             SSProfile("lAB rootfinding").toc()
             self.la[i] = lAB[0]
             self.lb[i] = lAB[1]
@@ -610,14 +634,23 @@ class Spring:
         self.a = self.rn-self.la
         self.b = self.rn+self.la
 
-        alpha = alpha_xy(self.smesh, self.XCoeffs, self.YCoeffs)
+        self.alpha = alpha_xy(self.ximesh, self.XCoeffs, self.YCoeffs)
         # generate xy paths for surfaces
-        self.undeformedBSurface = self.undeformedNeutralSurface+np.hstack((np.atleast_2d(-self.lb*np.sin(alpha)).T, np.atleast_2d(self.lb*np.cos(alpha)).T))
-        self.undeformedASurface = self.undeformedNeutralSurface-np.hstack((np.atleast_2d(-self.la*np.sin(alpha)).T, np.atleast_2d(self.la*np.cos(alpha)).T))
+        self.undeformedBSurface = self.undeformedNeutralSurface+np.hstack((np.atleast_2d(-self.lb*np.sin(self.alpha)).T, np.atleast_2d(self.lb*np.cos(self.alpha)).T))
+        self.undeformedASurface = self.undeformedNeutralSurface-np.hstack((np.atleast_2d(-self.la*np.sin(self.alpha)).T, np.atleast_2d(self.la*np.cos(self.alpha)).T))
+
+        return self.undeformedASurface, self.undeformedBSurface
+
+    def spring_geometry(self, plotBool=1, deformBool=1):
+
+        ## Things to make for the undeformed state:
+
+        # Generate neutral radius path and give it nicely formatted class variables
+        self.undeformedNeutralSurface = np.hstack((np.atleast_2d(PPoly_Eval(self.ximesh, self.XCoeffs)).T, np.atleast_2d(PPoly_Eval(self.ximesh, self.YCoeffs)).T))
+        # Generate outer and inner surfaces
+        self.generate_surfaces()
         # generate centroidal surface
-        self.undeformedCentroidalSurface = self.undeformedNeutralSurface+np.hstack((np.atleast_2d(self.ecc*np.sin(alpha)).T, np.atleast_2d(self.ecc*np.cos(alpha)).T))
-
-
+        self.undeformedCentroidalSurface = self.undeformedNeutralSurface+np.hstack((np.atleast_2d(self.ecc*np.sin(self.alpha)).T, np.atleast_2d(self.ecc*np.cos(self.alpha)).T))
         if plotBool:
             # plot shit
             plt.figure(1)
@@ -626,15 +659,16 @@ class Spring:
             plt.plot(self.undeformedASurface[:,0],self.undeformedASurface[:,1])
             plt.plot(self.undeformedBSurface[:,0],self.undeformedBSurface[:,1])
 
-        # if the spring has already been deformed
+        ## Things to make for the deformed state:
+
         if deformBool:
             # generate neutral surface after deformation (and give nice format)
             self.deformedNeutralSurface = np.hstack((np.atleast_2d(self.res[1,:]).T, np.atleast_2d(self.res[2,:]).T))
             if plotBool:
                 plt.plot(self.deformedNeutralSurface[:,0],self.deformedNeutralSurface[:,1])
-
-        plt.axis("equal")
-        plt.show()
+        if plotBool:
+            plt.axis("equal")
+            plt.show()
 
 def alpha_xy(s, xCoeffs, yCoeffs):
     if hasattr(s, "__len__"):
@@ -1996,6 +2030,36 @@ def make_segments(x, y):
     points = np.array([x, y]).T.reshape(-1, 1, 2)
     segments = np.concatenate([points[:-1], points[1:]], axis=1)
     return segments
+
+def startSW():
+    ## Starts Solidworks
+    SW_PROCESS_NAME = r'C:/Program Files/SOLIDWORKS Corp/SOLIDWORKS/SLDWORKS.exe'
+    sb.Popen(SW_PROCESS_NAME)
+
+def shutSW():
+    ## Kills Solidworks
+    sb.call('Taskkill /IM SLDWORKS.exe /F')
+
+def connectToSW():
+    ## With Solidworks window open, connects to application
+    sw = win32com.client.Dispatch("SLDWORKS.Application")
+    return sw
+
+def openFile(sw, Path):
+    ## With connection established (sw), opens part, assembly, or drawing file
+    f = sw.getopendocspec(Path)
+    model = sw.opendoc7(f)
+    return model
+
+def newFile(sw, Path):
+    template = "C:\ProgramData\SolidWorks\SOLIDWORKS 2014\templates\Part.prtdot"
+    model = sw.NewDocument(template, 0,0,0)
+    model.SaveAs(Path, 0, 2)
+    return model
+
+def updatePrt(model):
+    ## Rebuilds the active part, assembly, or drawing (model)
+    model.EditRebuild3
 
 
 deg2rad = np.pi/180

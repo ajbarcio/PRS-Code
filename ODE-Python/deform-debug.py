@@ -57,9 +57,9 @@ geometryDef, smesh = drag_vector_spring(dragVector0)
 
 dxdxi = d_coord_d_s(smesh, geometryDef[0])
 dydxi = d_coord_d_s(smesh, geometryDef[1])
-dxids = 1/np.sqrt(dxdxi**2+dydxi**2)
-dxds  = dxdxi*dxids
-dyds  = dydxi*dxids
+d_xi_d_s = 1/np.sqrt(dxdxi**2+dydxi**2)
+dxds  = dxdxi*d_xi_d_s
+dyds  = dydxi*d_xi_d_s
 
 # plt.figure("derivatives")
 # plt.plot(smesh, dxdxi, label = "dxdxi")
@@ -164,13 +164,13 @@ step = smesh[1]-smesh[0]
 for i in range(len(smesh)):
     if i==0:
         dgdxi[i] = (res[0,i+1]-res[0,i])/step
-        dgds[i] = dgdxi[i]*dxids[i]
+        dgds[i] = dgdxi[i]*d_xi_d_s[i]
     if i==len(dgdxi)-1:
         dgdxi[i] = (res[0,i]-res[0,i-1])/step
-        dgds[i] = dgdxi[i]*dxids[i]
+        dgds[i] = dgdxi[i]*d_xi_d_s[i]
     else:
         dgdxi[i] = (res[0,i+1]-res[0,i-1])/(2*step)
-        dgds[i] = dgdxi[i]*dxids[i]
+        dgds[i] = dgdxi[i]*d_xi_d_s[i]
 # plt.figure("gamma derivatives")
 # plt.plot(smesh, dgdxi, label="dgdxi")
 # plt.plot(smesh, dgds, label="dgds")

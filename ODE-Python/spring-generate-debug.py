@@ -159,7 +159,7 @@ errVec = np.ones(len(lengthMesh))
 step = lengthMesh[1]-lengthMesh[0]
 fig = plt.figure("dxids")
 def draw_the_damn_thing():
-    plt.plot(smesh,dxids,color=c)
+    plt.plot(smesh,d_xi_d_s,color=c)
 
 for i in lengthMesh:
     dragVectorCycle = reform_drag_vector(i)
@@ -167,14 +167,14 @@ for i in lengthMesh:
 
     dxdxi = d_coord_d_s(smesh, geometryDef[0])
     dydxi = d_coord_d_s(smesh, geometryDef[1])
-    dxids = 1/np.sqrt(dxdxi**2+dydxi**2)
+    d_xi_d_s = 1/np.sqrt(dxdxi**2+dydxi**2)
     cmap=plt.get_cmap('rainbow')
     c=cmap(i/(end-start))
     # plt.plot(smesh,dxids,color=c)
     drawnow(draw_the_damn_thing)
 
-    ref = np.ones(len(dxids))
-    err = lin.norm(dxids-ref)
+    ref = np.ones(len(d_xi_d_s))
+    err = lin.norm(d_xi_d_s-ref)
     print(err)
     errVec[int((i-1)/step)] = err
 plt.figure("arc length parameter tuning")
@@ -185,12 +185,12 @@ plt.plot(lengthMesh, errVec)
 
 dxdxi = d_coord_d_s(smesh, geometryDef[0])
 dydxi = d_coord_d_s(smesh, geometryDef[1])
-dxids = 1/np.sqrt(dxdxi**2+dydxi**2)
-dxds  = dxdxi*dxids
-dyds  = dydxi*dxids
+d_xi_d_s = 1/np.sqrt(dxdxi**2+dydxi**2)
+dxds  = dxdxi*d_xi_d_s
+dyds  = dydxi*d_xi_d_s
 
-ref = np.ones(len(dxids))
-err = lin.norm(dxids-ref)
+ref = np.ones(len(d_xi_d_s))
+err = lin.norm(d_xi_d_s-ref)
 print("xi/s err",err)
 
 plt.figure("derivatives")
@@ -198,7 +198,7 @@ plt.plot(smesh, dxdxi, label = "dxdxi")
 plt.plot(smesh, dydxi, label = "dydxi")
 plt.plot(smesh, dxds, label = "dxds")
 plt.plot(smesh, dyds, label = "dyds")
-plt.plot(smesh,dxids, label="dxids")
+plt.plot(smesh,d_xi_d_s, label="dxids")
 plt.legend()
 plt.figure("angles")
 plt.plot(smesh, np.arctan2(dydxi, dxdxi), label="angle of xi")
