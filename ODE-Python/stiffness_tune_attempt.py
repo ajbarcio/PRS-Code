@@ -2,7 +2,6 @@ from mpl_toolkits import mplot3d
 import numpy as np
 import numpy.linalg as lin
 import matplotlib.pyplot as plt
-from materials import *
 from scipy.integrate import solve_ivp as ODE45
 from scipy import optimize as op
 import time
@@ -27,7 +26,7 @@ globalStep = fullArcLength/globalRes
 globalMaxIndex = globalLen-1
 
 E = 27.5*10**6
-outPlaneThickness = .375
+self.t = .375
 
 # profile design variables:
 #   R0: inner radius
@@ -105,7 +104,7 @@ stiffness, res, dragVector, dragVector0 = tune_stiffness(maxTorque/maxDBeta, max
 
 # stiffness, maxStress, res, dragVector, dragVector0 = stress_stiffness_tuning(maxTorque/maxDBeta, maxDBeta, 247760, dragVector0, discludeVector)
 geometryDef, smesh = drag_vector_spring(dragVector)
-lAB0 = np.cbrt(12*cI_s(0, geometryDef[2])/outPlaneThickness)/2
+lAB0 = np.cbrt(12*PPoly_Eval(0, geometryDef[2])/self.t)/2
 
 print("overall relative change", dragVector-dragVector0)
 print("target stiffness:", maxTorque/maxDBeta)
@@ -143,7 +142,7 @@ Ic = np.empty(len(smesh))
 start = time.time()
 for i in range(len(smesh)):
     rn[i] = r_n(smesh[i], geometryDef[0], geometryDef[1])
-    Ic[i] = cI_s(smesh[i], geometryDef[2])
+    Ic[i] = PPoly_Eval(smesh[i], geometryDef[2])
 plt.figure(0)
 plt.plot(np.transpose(res), label='results')
 plt.plot(xorg)
@@ -163,7 +162,7 @@ for i in range(len(smesh)):
     h[i] = lb[i]+la[i]
     lABPrev = lAB
 end=time.time()
-ecc = Ic/(outPlaneThickness*h*rn)
+ecc = Ic/(self.t*h*rn)
 print("rootfinding time,", end-start)
 # print(smesh)
 # print(rn)
@@ -187,7 +186,7 @@ plt.plot(xorg+xrc, yorg+yrc, label="AB rootfinding centroidal axis")
 plt.legend()
 
 plt.figure(99)
-plt.plot(smesh, cI_s(smesh, geometryDef[2])*1000)
+plt.plot(smesh, PPoly_Eval(smesh, geometryDef[2])*1000)
 plt.plot(smesh, h)
 plt.plot(smesh,la)
 plt.plot(smesh,lb)

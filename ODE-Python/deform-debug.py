@@ -15,7 +15,7 @@ n = 2
 fullArcLength = 5
 
 E = 27.5*10**6
-outPlaneThickness = .375
+self.t = .375
 
 globalInnerRadiusLimit = 0.75
 globalOuterRadiusLimit = 6/2
@@ -57,9 +57,9 @@ geometryDef, smesh = drag_vector_spring(dragVector0)
 
 dxdxi = d_coord_d_s(smesh, geometryDef[0])
 dydxi = d_coord_d_s(smesh, geometryDef[1])
-dxids = 1/np.sqrt(dxdxi**2+dydxi**2)
-dxds  = dxdxi*dxids
-dyds  = dydxi*dxids
+d_xi_d_s = 1/np.sqrt(dxdxi**2+dydxi**2)
+dxds  = dxdxi*d_xi_d_s
+dyds  = dydxi*d_xi_d_s
 
 # plt.figure("derivatives")
 # plt.plot(smesh, dxdxi, label = "dxdxi")
@@ -120,7 +120,7 @@ plt.axis('equal')
 #     rn[i] = r_n(smesh[i], geometryDef[0], geometryDef[1])
 #     Ic[i] = cI_s(smesh[i], geometryDef[2])
 rn = r_n(smesh,geometryDef[0],geometryDef[1])
-Ic = cI_s(smesh,geometryDef[2])
+Ic = PPoly_Eval(smesh,geometryDef[2])
 plt.figure("funny")
 plt.plot(smesh, Ic)
 # print("rn:",rn)
@@ -145,7 +145,7 @@ for i in range(len(smesh)):
     h[i] = lb[i]+la[i]
     lABPrev = lAB
 end=time.time()
-ecc = Ic/(outPlaneThickness*h*rn)
+ecc = Ic/(self.t*h*rn)
 print("rootfinding time,", end-start)
 # print(smesh)
 # print(rn)'
@@ -164,13 +164,13 @@ step = smesh[1]-smesh[0]
 for i in range(len(smesh)):
     if i==0:
         dgdxi[i] = (res[0,i+1]-res[0,i])/step
-        dgds[i] = dgdxi[i]*dxids[i]
+        dgds[i] = dgdxi[i]*d_xi_d_s[i]
     if i==len(dgdxi)-1:
         dgdxi[i] = (res[0,i]-res[0,i-1])/step
-        dgds[i] = dgdxi[i]*dxids[i]
+        dgds[i] = dgdxi[i]*d_xi_d_s[i]
     else:
         dgdxi[i] = (res[0,i+1]-res[0,i-1])/(2*step)
-        dgds[i] = dgdxi[i]*dxids[i]
+        dgds[i] = dgdxi[i]*d_xi_d_s[i]
 # plt.figure("gamma derivatives")
 # plt.plot(smesh, dgdxi, label="dgdxi")
 # plt.plot(smesh, dgds, label="dgds")

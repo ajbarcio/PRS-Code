@@ -92,7 +92,7 @@ n = 2
 fullArcLength = 3
 
 E = 27.5*10**6
-outPlaneThickness = .375
+self.t = .375
 
 globalInnerRadiusLimit = 0.75
 globalOuterRadiusLimit = 6/2
@@ -159,7 +159,7 @@ errVec = np.ones(len(lengthMesh))
 step = lengthMesh[1]-lengthMesh[0]
 fig = plt.figure("dxids")
 def draw_the_damn_thing():
-    plt.plot(smesh,dxids,color=c)
+    plt.plot(smesh,d_xi_d_s,color=c)
 
 for i in lengthMesh:
     dragVectorCycle = reform_drag_vector(i)
@@ -167,14 +167,14 @@ for i in lengthMesh:
 
     dxdxi = d_coord_d_s(smesh, geometryDef[0])
     dydxi = d_coord_d_s(smesh, geometryDef[1])
-    dxids = 1/np.sqrt(dxdxi**2+dydxi**2)
+    d_xi_d_s = 1/np.sqrt(dxdxi**2+dydxi**2)
     cmap=plt.get_cmap('rainbow')
     c=cmap(i/(end-start))
     # plt.plot(smesh,dxids,color=c)
     drawnow(draw_the_damn_thing)
 
-    ref = np.ones(len(dxids))
-    err = lin.norm(dxids-ref)
+    ref = np.ones(len(d_xi_d_s))
+    err = lin.norm(d_xi_d_s-ref)
     print(err)
     errVec[int((i-1)/step)] = err
 plt.figure("arc length parameter tuning")
@@ -185,12 +185,12 @@ plt.plot(lengthMesh, errVec)
 
 dxdxi = d_coord_d_s(smesh, geometryDef[0])
 dydxi = d_coord_d_s(smesh, geometryDef[1])
-dxids = 1/np.sqrt(dxdxi**2+dydxi**2)
-dxds  = dxdxi*dxids
-dyds  = dydxi*dxids
+d_xi_d_s = 1/np.sqrt(dxdxi**2+dydxi**2)
+dxds  = dxdxi*d_xi_d_s
+dyds  = dydxi*d_xi_d_s
 
-ref = np.ones(len(dxids))
-err = lin.norm(dxids-ref)
+ref = np.ones(len(d_xi_d_s))
+err = lin.norm(d_xi_d_s-ref)
 print("xi/s err",err)
 
 plt.figure("derivatives")
@@ -198,7 +198,7 @@ plt.plot(smesh, dxdxi, label = "dxdxi")
 plt.plot(smesh, dydxi, label = "dydxi")
 plt.plot(smesh, dxds, label = "dxds")
 plt.plot(smesh, dyds, label = "dyds")
-plt.plot(smesh,dxids, label="dxids")
+plt.plot(smesh,d_xi_d_s, label="dxids")
 plt.legend()
 plt.figure("angles")
 plt.plot(smesh, np.arctan2(dydxi, dxdxi), label="angle of xi")
@@ -210,7 +210,7 @@ Ic = np.empty(len(smesh))
 start = time.time()
 for i in range(len(smesh)):
     rn[i] = r_n(smesh[i], geometryDef[0], geometryDef[1])
-    Ic[i] = cI_s(smesh[i], geometryDef[2])
+    Ic[i] = PPoly_Eval(smesh[i], geometryDef[2])
 la = np.empty(len(smesh))
 lb = np.empty(len(smesh))
 h = np.empty(len(smesh))
@@ -225,7 +225,7 @@ for i in range(len(smesh)):
     h[i] = lb[i]+la[i]
     lABPrev = lAB
 end=time.time()
-ecc = Ic/(outPlaneThickness*h*rn)
+ecc = Ic/(self.t*h*rn)
 print("rootfinding time,", end-start)
 
 cICoeffs = geometryDef[2]

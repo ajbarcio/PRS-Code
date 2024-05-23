@@ -2,3 +2,9 @@
 *.pyc
 # ignore the pycache folder
 __pycache__
+# ignore my stupid "idk how to python" shit
+learning.py
+testingShit2.py
+testing*
+# ignore vscode files
+.vscode

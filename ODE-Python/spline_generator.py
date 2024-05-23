@@ -7,7 +7,7 @@ from stiffness_library import *
 from StatProfiler import SSProfile
 
 ctrlLengths = [0,1,2,3]
-pts = np.array([[0,0],[1,1],[2,2],[3,3]])
+pts = np.array([[0,0],[1,0],[2,0],[3,0]])
 xCoeffs = xy_poly(pts, ctrlLengths)[0]
 yCoeffs = xy_poly(pts, ctrlLengths)[1]
 print(xCoeffs)

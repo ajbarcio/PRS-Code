@@ -2,7 +2,6 @@ from mpl_toolkits import mplot3d
 import numpy as np
 import numpy.linalg as lin
 import matplotlib.pyplot as plt
-from materials import *
 from scipy.integrate import solve_ivp as ODE45
 from scipy import optimize as op
 import os
@@ -38,12 +37,12 @@ def l_a_l_b_rootfinding_with_direct_params(lABPrev, rn, cI, printBool):
     def func(x, rn, cI):
         f1 = (x[0]+x[1])/(np.log((rn+x[1])/(rn-x[0])))-rn
         # f2 = (x[0]+x[1])*(outPlaneThickness*(x[1]-(x[1]+x[0])/2)*rn)-cI
-        f2 = outPlaneThickness*rn*(x[0]+x[1])*(x[1]/2-x[0]/2)-cI
+        f2 = self.t*rn*(x[0]+x[1])*(x[1]/2-x[0]/2)-cI
         return np.array([f1, f2])
     def jac(x, rn, cI):
         return np.array([[1/(np.log((rn+x[1])/(rn-x[0])))-(x[0]+x[1])/(((np.log((rn+x[1])/(rn-x[0])))**2)*(rn-x[0])), \
                           1/(np.log((rn+x[1])/(rn-x[0])))-(x[0]+x[1])/(((np.log((rn+x[1])/(rn-x[0])))**2)*(rn+x[1]))], \
-                         [-rn*outPlaneThickness*x[0], rn*outPlaneThickness*x[1]]])
+                         [-rn*self.t*x[0], rn*self.t*x[1]]])
     # print(rn)
     if not np.isinf(rn):
         if lABPrev[0]==lABPrev[1]:
@@ -53,7 +52,7 @@ def l_a_l_b_rootfinding_with_direct_params(lABPrev, rn, cI, printBool):
         err = 1
     else:
         err = 0
-        l = np.cbrt(12*cI/outPlaneThickness)/2
+        l = np.cbrt(12*cI/self.t)/2
         x0 = [l, l]
         # print("entered")
     # if (x0[0]>=abs(rn)):
@@ -80,7 +79,7 @@ def l_a_l_b_rootfinding_with_direct_params(lABPrev, rn, cI, printBool):
         iii+=1
     print("done rootfinding                                                                           ", end="\r")
     if(lin.norm(x)>lin.norm(lABPrev)*100):
-        l = np.cbrt(12*cI/outPlaneThickness)/2
+        l = np.cbrt(12*cI/self.t)/2
         x = [l,l]
     if(printBool):
         print(x0)
@@ -196,7 +195,7 @@ n = 2
 fullArcLength = 5
 
 E = 27.5*10**6
-outPlaneThickness = .375
+self.t = .375
 
 globalInnerRadiusLimit = 0.75
 globalOuterRadiusLimit = 6/2
@@ -237,9 +236,9 @@ rn = r_n(smesh,geometryDef[0],geometryDef[1])
 
 dxdxi = d_coord_d_s(smesh, geometryDef[0])
 dydxi = d_coord_d_s(smesh, geometryDef[1])
-dxids = 1/np.sqrt(dxdxi**2+dydxi**2)
-dxds  = dxdxi*dxids
-dyds  = dydxi*dxids
+d_xi_d_s = 1/np.sqrt(dxdxi**2+dydxi**2)
+dxds  = dxdxi*d_xi_d_s
+dyds  = dydxi*d_xi_d_s
 
 res, sF, divergeFlag = deform_spring_by_torque(5000,geometryDef,fullArcLength,ODE_with_rootfinding_for_stress)
 
@@ -249,13 +248,13 @@ step = smesh[1]-smesh[0]
 for i in range(len(smesh)):
     if i==0:
         dgdxi[i] = (res[0,i+1]-res[0,i])/step
-        dgds[i] = dgdxi[i]*dxids[i]
+        dgds[i] = dgdxi[i]*d_xi_d_s[i]
     if i==len(dgdxi)-1:
         dgdxi[i] = (res[0,i]-res[0,i-1])/step
-        dgds[i] = dgdxi[i]*dxids[i]
+        dgds[i] = dgdxi[i]*d_xi_d_s[i]
     else:
         dgdxi[i] = (res[0,i+1]-res[0,i-1])/(2*step)
-        dgds[i] = dgdxi[i]*dxids[i]
+        dgds[i] = dgdxi[i]*d_xi_d_s[i]
 
 la = np.empty(len(smesh))
 lb = np.empty(len(smesh))
@@ -271,7 +270,7 @@ for i in range(len(smesh)):
     h[i] = lb[i]+la[i]
     lABPrev = lAB
 end=time.time()
-ecc = cI_dumper/(outPlaneThickness*h*rn)
+ecc = cI_dumper/(self.t*h*rn)
 print("rootfinding time,", end-start)
 # print(smesh)
 # print(rn)'
