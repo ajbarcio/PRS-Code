@@ -288,6 +288,18 @@ def d_xi_d_s(ximesh, XCoeffs, YCoeffs):
     dxids = 1/np.sqrt(dxdxi**2+dydxi**2)
     return dxids
 
+def numerical_fixed_mesh_diff(ymesh, xmesh):
+    dydx = np.zeros(len(xmesh))
+    step = xmesh[1]-xmesh[0]
+    for i in range(len(xmesh)):
+        if i==0:
+            dydx[i] = (ymesh[i+1]-ymesh[i])/step
+        elif i==len(xmesh)-1:
+            dydx[i] = (ymesh[i]-ymesh[i-1])/step
+        else:
+            dydx[i] = (ymesh[i+1]-ymesh[i-1])/(2*step)
+    return dydx
+
 class Deform_Wrapper:
     def __init__(self, function):
         self.all_output = []
@@ -641,6 +653,15 @@ class Spring:
 
         return self.undeformedASurface, self.undeformedBSurface
 
+    def calculate_stresses(self):
+        dgdxi = numerical_fixed_mesh_diff(self.res[1,:], self.res[0,:])
+        self.dgds = dgdxi*self.dxids
+        self.innerSurfaceStress = abs(self.E*(1-self.rn/self.a)*self.rn*self.dgds)
+        self.outerSurfaceStress = abs(self.E*(1-self.rn/self.b)*self.rn*self.dgds)
+
+        self.maxStress = np.nanmax(innerSurfaceStress, outerSurfaceStress)
+        return self.maxStress
+
     def spring_geometry(self, plotBool=1, deformBool=1):
 
         ## Things to make for the undeformed state:
@@ -648,9 +669,10 @@ class Spring:
         # Generate neutral radius path and give it nicely formatted class variables
         self.undeformedNeutralSurface = np.hstack((np.atleast_2d(PPoly_Eval(self.ximesh, self.XCoeffs)).T, np.atleast_2d(PPoly_Eval(self.ximesh, self.YCoeffs)).T))
         # Generate outer and inner surfaces
-        self.generate_surfaces()
+        self.generate_surfaces() # A and B surface come from here
         # generate centroidal surface
         self.undeformedCentroidalSurface = self.undeformedNeutralSurface+np.hstack((np.atleast_2d(self.ecc*np.sin(self.alpha)).T, np.atleast_2d(self.ecc*np.cos(self.alpha)).T))
+
         if plotBool:
             # plot shit
             plt.figure(1)
