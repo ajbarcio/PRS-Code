@@ -685,7 +685,7 @@ class Spring:
         # generate centroidal surface
         self.undeformedCentroidalSurface = self.undeformedNeutralSurface+np.hstack((np.atleast_2d(self.ecc*np.sin(self.alpha)).T, np.atleast_2d(self.ecc*np.cos(self.alpha)).T))
 
-        if plotBool:
+        if plotBool and not deformBool:
             # plot shit
             plt.figure(1)
             plt.plot(self.undeformedNeutralSurface[:,0],self.undeformedNeutralSurface[:,1])
@@ -698,12 +698,16 @@ class Spring:
         if deformBool:
             # generate neutral surface after deformation (and give nice format)
             self.deformedNeutralSurface = np.hstack((np.atleast_2d(self.res[1,:]).T, np.atleast_2d(self.res[2,:]).T))
+            self.deformedOuterSurface   = self.deformedNeutralSurface+np.hstack((np.atleast_2d(-self.lb*np.sin(self.alpha+self.res[0,:])).T,np.atleast_2d(self.lb*np.cos(self.alpha+self.res[0,:])).T))
+            self.deformedInnerSurface   = self.deformedNeutralSurface-np.hstack((np.atleast_2d(-self.la*np.sin(self.alpha+self.res[0,:])).T,np.atleast_2d(self.la*np.cos(self.alpha+self.res[0,:])).T))
             self.calculate_stresses()
             if self.maxStress > self.designStress:
                 print("oops you broke lmao")
             if plotBool:
                 colorline(self.deformedNeutralSurface[:,0],self.deformedNeutralSurface[:,1],self.maxStresses,cmap=plt.get_cmap('rainbow'))
                 # plt.plot(self.deformedNeutralSurface[:,0],self.deformedNeutralSurface[:,1])
+                plt.plot(self.deformedInnerSurface[:,0],self.deformedInnerSurface[:,1])
+                plt.plot(self.deformedOuterSurface[:,0],self.deformedOuterSurface[:,1])
                 colorline(np.ones(101)*4,np.linspace(-1,1,101),np.linspace(0,1,101),cmap=plt.get_cmap('rainbow'),linewidth=10)
         if plotBool:
             plt.axis("equal")
