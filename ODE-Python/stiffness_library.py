@@ -516,10 +516,10 @@ class Spring:
         # print("radius before integration:",Rinitial)
         # print("radius assumed by integration:",Rfinal)
         # print(res[1,-2], res[2,-1])
-        dBeta    = np.arctan2(self.res[2,-1],self.res[1,-1])-self.betaAngles[-1]
+        self.dBeta    = np.arctan2(self.res[2,-1],self.res[1,-1])-self.betaAngles[-1]
         # print("deflection:",dBeta)
         # Err = diff. in radius, diff between gamma(L) and beta(L)
-        err = np.array([Rinitial-Rfinal, self.res[0,-1]-dBeta, SF[2]-torqueTarg])
+        err = np.array([Rinitial-Rfinal, self.res[0,-1]-self.dBeta, SF[2]-torqueTarg])
         return err, self.res
 
     def estimate_jacobian_fd(self, ODE, SF, torqueTarg, n=3):
@@ -654,13 +654,25 @@ class Spring:
         return self.undeformedASurface, self.undeformedBSurface
 
     def calculate_stresses(self):
-        dgdxi = numerical_fixed_mesh_diff(self.res[1,:], self.res[0,:])
+        dgdxi = numerical_fixed_mesh_diff(self.res[0,:], self.ximesh)
         self.dgds = dgdxi*self.dxids
         self.innerSurfaceStress = abs(self.E*(1-self.rn/self.a)*self.rn*self.dgds)
         self.outerSurfaceStress = abs(self.E*(1-self.rn/self.b)*self.rn*self.dgds)
 
-        self.maxStress = np.nanmax(innerSurfaceStress, outerSurfaceStress)
-        return self.maxStress
+        self.normalizedInnerStress =self.innerSurfaceStress/self.designStress
+        self.normalizedOuterStress =self.outerSurfaceStress/self.designStress
+
+        self.maxStresses = np.empty(len(self.normalizedInnerStress))
+        for i in range(len(self.normalizedInnerStress)):
+            if self.normalizedInnerStress[i] > self.normalizedOuterStress[i]:
+                self.maxStresses[i] = self.normalizedInnerStress[i]
+            else:
+                self.maxStresses[i] = self.normalizedOuterStress[i]
+        # print(self.maxStresses)
+        self.maxStress = np.nanmax([self.innerSurfaceStress, self.outerSurfaceStress])
+        print(self.maxStress)
+        print(self.designStress)
+        return self.maxStress, self.maxStresses
 
     def spring_geometry(self, plotBool=1, deformBool=1):
 
@@ -686,8 +698,13 @@ class Spring:
         if deformBool:
             # generate neutral surface after deformation (and give nice format)
             self.deformedNeutralSurface = np.hstack((np.atleast_2d(self.res[1,:]).T, np.atleast_2d(self.res[2,:]).T))
+            self.calculate_stresses()
+            if self.maxStress > self.designStress:
+                print("oops you broke lmao")
             if plotBool:
-                plt.plot(self.deformedNeutralSurface[:,0],self.deformedNeutralSurface[:,1])
+                colorline(self.deformedNeutralSurface[:,0],self.deformedNeutralSurface[:,1],self.maxStresses,cmap=plt.get_cmap('rainbow'))
+                # plt.plot(self.deformedNeutralSurface[:,0],self.deformedNeutralSurface[:,1])
+                colorline(np.ones(101)*4,np.linspace(-1,1,101),np.linspace(0,1,101),cmap=plt.get_cmap('rainbow'),linewidth=10)
         if plotBool:
             plt.axis("equal")
             plt.show()
