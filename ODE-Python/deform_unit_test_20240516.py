@@ -13,15 +13,26 @@ betaC = 2*funnyAngle/3*deg2rad
 betaD = funnyAngle*deg2rad
 beta0 = betaD
 
-funnySpring = Spring(radii=np.array([R0,R1,R2,R3]),betaAngles=np.array([0,betaB,betaC,beta0]))
-SFGuess = funnySpring.smart_initial_load_guess(50000,funnySpring.deform_ODE)
-print(SFGuess)
+Ics = np.array([0.0004, 0.000025, 0.0021])
 
-res, SF, divergeFlag = funnySpring.wrapped_torque_deform(50000,funnySpring.deform_ODE,SF=SFGuess)
-print(SF)
+funnySpring = Spring(radii=np.array([R0,R1,R2,R3]),betaAngles=np.array([0,betaB,betaC,beta0]),IcPts=Ics,IcArcLens=np.array([0.4]))
 
-funnySpring.spring_geometry()
+method = "slowRamp"
+if method=="smartGuess":
+    SFGuess = funnySpring.smart_initial_load_guess(5000,funnySpring.deform_ODE)
+    print(SFGuess)
 
+    res, SF, divergeFlag, i = funnySpring.wrapped_torque_deform(5000,funnySpring.deform_ODE,SF=SFGuess)
+    print(SF)
+
+    deformBool = not(divergeFlag)
+    funnySpring.spring_geometry(deformBool=deformBool)
+elif method=="slowRamp":
+    res, SF, divergeFlag, i = funnySpring.deform_by_torque_slowRamp(5000,funnySpring.deform_ODE)
+    deformBool = not(divergeFlag)
+    funnySpring.spring_geometry(deformBool=deformBool)
+
+### Evaluate the curve of angles and magnitudes ###
 # for i in np.linspace(5,5000,5):
 #     fuck, SF, you = funnySpring.wrapped_torque_deform(i,funnySpring.deform_ODE)
 #     print(SF)

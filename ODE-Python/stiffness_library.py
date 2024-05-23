@@ -279,13 +279,13 @@ class Deform_Wrapper:
         self.all_initial_guess = []
         self.function = function
 
-    def __call__(self, torqueTarg, ODE, torqueResolution=10, SF = np.array([0,0,0])):
+    def __call__(self, torqueTarg, ODE, torqueResolution=10, SF = np.array([0,0,0]), breakBool=False):
         self.all_initial_guess.append(np.array([0,0,torqueTarg]))
         SSProfile("BVP").tic()
-        res, SF, divergeFlag  = self.function(torqueTarg, ODE, torqueResolution, SF)
+        res, SF, divergeFlag, i  = self.function(torqueTarg, ODE, torqueResolution, SF, breakBool)
         SSProfile("BVP").toc()
         self.all_output.append(SF)
-        return res, SF, divergeFlag
+        return res, SF, divergeFlag, i
 
 class Spring:
     def __init__(self,
@@ -409,49 +409,38 @@ class Spring:
         print("done getting initial guess")
         return(SFGuess)
 
-    def deform_by_torque_slowRamp(self, torqueTarg, ODE, torqueResolution=10):
-        pass
+    def deform_by_torque_slowRamp(self, torqueTarg, ODE, torqueResolution=15):
+        self.rampWrapper = Deform_Wrapper(self.deform_by_torque)
         # this method goes straight to full loading condition lmao
         # TODO: MAKE THIS AUTOMATIC
-        SF = np.array([0,0,0])
+        SFStart = np.array([0,0,0])
         # the err is a two vector, so make it arbitrarily high to enter loop
         err = np.ones(2)*float('inf')
         # 0th iteration
+        i = 0
         j = 0
         k = 0
         divergeFlag = 0
         # limit to 100 iterations to converge
         n = len(err)
-        while j < torqueResolution:
-            SF += np.array([0,0,torqueTarg*torqueResolution])
-            errPrev = err
-            i = 0
-            while i < 100:
-                # determine boundary condition compliance, estimate jacobian
-                err, res = self.forward_integration(ODE,SF,torqueTarg)
-                err = err[0:2]
-                J = self.estimate_jacobian_fd(ODE,SF,torqueTarg,2)
-                # freak the fuck out if it didnt work
-                # print(err)
-                if lin.norm(err)>lin.norm(errPrev):
-                    print("torque deform diverging", i)
-                    # print(err, errPrev)
-                    # print(SF)
-                    print(J)
-                    divergeFlag = 1
-                    # break
-                # make a new guess if it did
-                elif lin.norm(err,2) > 10e-6:
-                    SF[0:2] = SF[0:2]-lin.inv(J).dot(err)
-                    # print(lin.inv(J))
-                else:
-                    break
-                i+=1
-            k += i
-        print(torqueTarg, k)
-        return res, SF, divergeFlag
+        stepTorque = 0
+        while stepTorque <= torqueTarg:
+            print(stepTorque, j, i)
+            SFStart[2] = stepTorque
+            res, SF, divergeFlag, i = self.rampWrapper(stepTorque,ODE,SF=SFStart,breakBool=True)
+            if divergeFlag:
+                if stepTorque:
+                    stepTorque-=torqueTarg/torqueResolution
+                torqueResolution *= 2
+            else:
+                stepTorque+=torqueTarg/torqueResolution
+                SFStart = SF
+                SFStart[2] += torqueTarg/torqueResolution
+            j+=1
+            k+=i
+        return res, SF, divergeFlag, k
 
-    def deform_by_torque(self,torqueTarg,ODE,torqueResolution=10,SF=np.array([0,0,0])):
+    def deform_by_torque(self,torqueTarg,ODE,torqueResolution=10,SF=np.array([0,0,0]),breakBool=False):
         # this method goes straight to full loading condition lmao
 
         # the err is a two vector, so make it arbitrarily high to enter loop
@@ -473,7 +462,8 @@ class Spring:
                 # print(SF)
                 print(J)
                 divergeFlag = 1
-                # break
+                if breakBool:
+                    break
             # make a new guess if it did
             elif lin.norm(err,2) > 10e-6:
                 SF = SF-lin.inv(J).dot(err)
@@ -481,9 +471,8 @@ class Spring:
             else:
                 break
             i+=1
-        print(torqueTarg, i)
         self.solnSF = SF
-        return self.res, self.solnSF, divergeFlag
+        return self.res, self.solnSF, divergeFlag, i
 
     def forward_integration(self, ODE, SF, torqueTarg):
         # set up initial condition
@@ -548,7 +537,7 @@ class Spring:
     def l_a_l_b_rootfinding(self, s, lABPrev, printBool=0):
         # get the relevant values at a given point
         rn = r_n(s, self.XCoeffs, self.YCoeffs)
-        Ic = PPoly_Eval(s, self.IcCoeffs)
+        Ic = PPoly_Eval(s, self.IcCoeffs, ranges = self.domains)
         # define the system to be solved
         def func(x, rn, cI):
             f1 = (x[0]+x[1])/(np.log((rn+x[1])/(rn-x[0])))-rn
@@ -571,7 +560,6 @@ class Spring:
             err = 0
             l = np.cbrt(12*Ic/self.t)/2
             x0 = [l, l]
-            # print("entered")
         x = x0
 
         iii = 0
@@ -610,7 +598,6 @@ class Spring:
         self.h = np.empty(len(self.smesh))
         self.Ic = PPoly_Eval(self.smesh, self.IcCoeffs, ranges=self.domains)
         self.rn = r_n(self.smesh, self.XCoeffs, self.YCoeffs)
-        print(self.rn)
         for i in range(len(self.smesh)):
             SSProfile("lAB rootfinding").tic()
             lAB = self.l_a_l_b_rootfinding(self.smesh[i], lABPrev)
@@ -618,15 +605,15 @@ class Spring:
             self.la[i] = lAB[0]
             self.lb[i] = lAB[1]
             self.h[i] = self.lb[i]+self.la[i]
+            lABPrev = lAB
         self.ecc = self.Ic/(self.t*self.h*self.rn)
         self.a = self.rn-self.la
         self.b = self.rn+self.la
 
         alpha = alpha_xy(self.smesh, self.XCoeffs, self.YCoeffs)
-
         # generate xy paths for surfaces
-        self.undeformedBSurface = np.hstack((np.atleast_2d(-self.lb*np.sin(alpha)).T, np.atleast_2d(self.lb*np.cos(alpha)).T))
-        self.undeformedASurface = np.hstack((np.atleast_2d(-self.la*np.sin(alpha)).T, np.atleast_2d(self.la*np.cos(alpha)).T))
+        self.undeformedBSurface = self.undeformedNeutralSurface+np.hstack((np.atleast_2d(-self.lb*np.sin(alpha)).T, np.atleast_2d(self.lb*np.cos(alpha)).T))
+        self.undeformedASurface = self.undeformedNeutralSurface-np.hstack((np.atleast_2d(-self.la*np.sin(alpha)).T, np.atleast_2d(self.la*np.cos(alpha)).T))
         # generate centroidal surface
         self.undeformedCentroidalSurface = self.undeformedNeutralSurface+np.hstack((np.atleast_2d(self.ecc*np.sin(alpha)).T, np.atleast_2d(self.ecc*np.cos(alpha)).T))
 
@@ -667,13 +654,8 @@ def r_n(s, xCoeffs, yCoeffs):
     d2xds2 = PPoly_Eval(s, xCoeffs, deriv=2)
     dyds   = PPoly_Eval(s, yCoeffs, deriv=1)
     dxds   = PPoly_Eval(s, xCoeffs, deriv=1)
-    # DEBUG
     # dAlphadS = (d2yds2/dxds-d2xds2*dyds/dxds)/(1+dyds**2/dxds)
     if hasattr(s, "__len__"):
-        # DEBUG
-        plt.figure(0)
-        plt.plot(s, dyds)
-        plt.plot(s, dxds)
         rn = ((1+dyds**2/dxds**2)/(d2yds2/dxds-d2xds2*dyds/dxds**2))
         for i in range(len(rn)):
             if rn[i] == float('nan'):
