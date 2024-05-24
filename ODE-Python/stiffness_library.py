@@ -542,12 +542,13 @@ class Spring:
         return Jac
 
     def deform_ODE(self, xi, p, *args):
-        # print(args)
+        # Deal with args in the most stupid way possible
         Fx    = args[0][0][0][0]
         Fy    = args[0][0][0][1]
         dgds0 = args[0][0][0][2]
-
+        # prepare moment dimensionalizer
         Mdim = self.E*PPoly_Eval(xi, self.IcCoeffs, ranges=self.domains)
+        # prepare xi->s space transform and all derivatives
         dxdxi = PPoly_Eval(xi, self.XCoeffs, deriv=1)
         dydxi = PPoly_Eval(xi, self.YCoeffs, deriv=1)
 
@@ -556,21 +557,18 @@ class Spring:
         dxds = dxids*dxdxi
         dyds = dxids*dydxi
 
+        ### DO THE DIFFEQ ###
+
         LHS = np.empty(3)
-        # print(dgds0)
-        LHS[0] = (dgds0 + Fy/Mdim*(p[1]-self.x0) - Fx/Mdim*(p[2]-self.y0))/dxids
+        LHS[0] = (dgds0 + Fy/Mdim*(p[1]-self.x0) - Fx/Mdim*(p[2]-self.y0))
+        LHS[1] = np.cos(np.arctan2(dyds,dxds)+p[0])
+        LHS[2] = np.sin(np.arctan2(dyds,dxds)+p[0])
+        # check to make sure the math makes sense
         if xi==0:
             # print(LHS[0],dgds0)
             assert(np.isclose(LHS[0],dgds0,rtol=1e-5))
-        LHS[1] = np.cos(np.arctan2(dyds,dxds)+p[0])/dxids
-        LHS[2] = np.sin(np.arctan2(dyds,dxds)+p[0])/dxids
-
-        # if np.sin(np.arctan2(dydxi,dxdxi))==0:
-        #     LHS = LHS*dxdxi/np.cos(np.arctan2(dydxi,dxdxi))
-        #     # print(LHS)
-        # else:
-        #     LHS = LHS*dydxi/np.sin(np.arctan2(dydxi,dxdxi))
-            # print(LHS)
+        # transfer from s space to xi space
+        LHS = LHS/dxids
         return LHS
 
     def l_a_l_b_rootfinding(self, s, lABPrev, printBool=0):
@@ -656,8 +654,14 @@ class Spring:
     def calculate_stresses(self):
         dgdxi = numerical_fixed_mesh_diff(self.res[0,:], self.ximesh)
         self.dgds = dgdxi*self.dxids
-        self.innerSurfaceStress = abs(self.E*(1-self.rn/self.a)*self.rn*self.dgds)
-        self.outerSurfaceStress = abs(self.E*(1-self.rn/self.b)*self.rn*self.dgds)
+        self.innerSurfaceStress = np.empty(len(self.ximesh))
+        self.outerSurfaceStress = np.empty(len(self.ximesh))
+        for i in range(len(self.innerSurfaceStress)):
+            if not np.isinf(self.rn[i]):
+                self.innerSurfaceStress[i] = abs(self.E*(1-self.rn[i]/self.a[i])*self.rn[i]*self.dgds[i])
+                self.outerSurfaceStress[i] = abs(self.E*(1-self.rn[i]/self.b[i])*self.rn[i]*self.dgds[i])
+            else:
+                self.innerSurfaceStress[i] = self.E*self.dgds[i]*0.5*self.h[i]
 
         self.normalizedInnerStress =self.innerSurfaceStress/self.designStress
         self.normalizedOuterStress =self.outerSurfaceStress/self.designStress
