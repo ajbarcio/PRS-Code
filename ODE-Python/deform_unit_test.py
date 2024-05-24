@@ -18,7 +18,7 @@ Ics = np.array([0.006, 0.0000025, 0.001])
 curvedSpring = Spring(n = 1, radii=np.array([R0,R1,R2,R3]),betaAngles=np.array([0,betaB,betaC,beta0]),IcPts=Ics,IcArcLens=np.array([0.5]))
 
 straightSpring = Spring(n = 1, fullArcLength = 6, radii = np.array([1,3,5,7]),
-                        betaAngles=np.array([0,1,2,3])*deg2rad,
+                        betaAngles=np.array([0,0,0,0])*deg2rad,
                         IcPts = np.array([0.03125, 0.03125, 0.03125]), resolution = 200)
 
 ## True Unit Test: Make sure that for the degenerate case (straight beam and arbit. beam with 0 torque)
@@ -36,12 +36,16 @@ assert(np.isclose(lin.norm(err),0))
 ## Straight Beam Unit Test: see if the straight beam behavior matches theory
 
 # print(straightSpring.dxids)
-testTorque = 1000
+testTorque = 5000
 err, res = straightSpring.forward_integration(straightSpring.deform_ODE, np.array([0,0,testTorque]),testTorque)
 straightSpring.spring_geometry(plotBool=1,deformBool=1)
-print(straightSpring.deformedNeutralSurface[-1,-1]-straightSpring.undeformedNeutralSurface[-1,-1])
+# get resultant displacement to compare:
+resultantDisplacement = np.sqrt((straightSpring.deformedNeutralSurface[-1,-1]-straightSpring.undeformedNeutralSurface[-1,-1])**2+(straightSpring.deformedNeutralSurface[0,-1]-straightSpring.undeformedNeutralSurface[0,-1])**2)
+print(resultantDisplacement)
 r = (straightSpring.E*0.03125/testTorque)
-print(r-np.sqrt(r**2-straightSpring.fullArcLength**2))
+theoryDisplacement = r-np.sqrt(r**2-straightSpring.fullArcLength**2)
+print(theoryDisplacement)
+print(1-resultantDisplacement/theoryDisplacement)
 # assert(np.isclose(straightSpring.deformedNeutralSurface[-1,-1],r-np.sqrt(r**2-straightSpring.fullArcLength**2)))
 
 ## Not really a unit test, but still a test
