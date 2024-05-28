@@ -1,4 +1,3 @@
-# from stiffness_library import *
 import numpy as np
 import numpy.linalg as lin
 import matplotlib.pyplot as plt
@@ -36,17 +35,19 @@ Ics = np.array([0.008, 0.0000025, 0.0008])
 #                         straight beam
 # THE ONLY DIFFERENCE BETWEEN straight AND quasiStraight IS THE BETA ANGLES
 
-curvedSpring = Spring(n = 1, radii=np.array([R0,R1,R2,R3]),betaAngles=np.array([0,beta1,beta2,beta0]),IcPts=Ics,IcArcLens=np.array([0.4]))
-straightSpring = Spring(n = 1, fullArcLength = 6, radii = np.array([1,3,5,7]),
+curvedSpring = Spring(n = 1, radii=np.array([R0,R1,R2,R3]),betaAngles=np.array([0,beta1,beta2,beta0]),IcPts=Ics,IcParamLens=np.array([0.4]))
+straightSpring = Spring(n = 1, fullParamLength = 6, radii = np.array([1,3,5,7]),
                         betaAngles=np.array([0,0,0,0])*deg2rad,
                         IcPts = np.array([0.03125, 0.03125, 0.03125]), resolution = 200)
-quasiStraightSpring = Spring(n = 1, fullArcLength = 6, radii = np.array([1,3,5,7]),
+quasiStraightSpring = Spring(n = 1, fullParamLength = 6, radii = np.array([1,3,5,7]),
                         betaAngles=np.array([0,1,2,3])*deg2rad,
                         IcPts = np.array([0.03125, 0.03125, 0.03125]), resolution = 200)
 
-## True Unit Test: Make sure that for the degenerate case
-#                  (all beams with 0 torque)
-#                  the expected values are returned (no deflection at all)
+############################ True Unit Test ############################
+# Make sure that for the degenerate case, (beams with 0 torque)        #
+# the expected values are returned (no deflection at all)              #
+########################################################################
+
 print("#################### UNIT TEST 0: Checking 0-torque case ####################")
 # perform a single pass of solving the deformation ODE under 0 load for each spring
 err, res = straightSpring.forward_integration(straightSpring.deform_ODE, np.array([0,0,0]), 0)
@@ -59,9 +60,11 @@ assert(np.isclose(lin.norm(err),0))
 err, res = curvedSpring.forward_integration(curvedSpring.deform_ODE, np.array([0,0,0]), 0)
 assert(np.isclose(lin.norm(err),0))
 
-## Straight Beam Unit Test: see if the straight beam behavior matches theory
-#                           and if the quasi straight beam behavior matches
-#                           the straight beam behavior
+######################## Straight Beam Unit Test #######################
+# Compare the deflections of a straight, quasi-straight, and           #
+# theoretical beam under pure bending moment and ensure they agree     #
+########################################################################
+
 print("#################### UNIT TEST 1: Checking Math in straight and quasi-straight cases ####################")
 # this test torque is arbitrary
 testTorque = 5000
@@ -71,9 +74,9 @@ err, res = straightSpring.forward_integration(straightSpring.deform_ODE, np.arra
 err, res = quasiStraightSpring.forward_integration(quasiStraightSpring.deform_ODE, np.array([0,0,testTorque]),testTorque)
 
 # plot the results of bending the straight spring to ensure expected result
-straightSpring.spring_geometry()
+straightSpring.vis_results()
 # get the geometry results for the quasi straight beam as well
-quasiStraightSpring.spring_geometry(0,1)
+quasiStraightSpring.vis_results(0,1)
 
 # get resultant displacements to compare:
 straightResDisp = np.sqrt((straightSpring.deformedNeutralSurface[-1,-1]-straightSpring.undeformedNeutralSurface[-1,-1])**2+
@@ -81,17 +84,19 @@ straightResDisp = np.sqrt((straightSpring.deformedNeutralSurface[-1,-1]-straight
 print("tip displacement for straight beam:               ",straightResDisp)
 # evaluate beam theory solution:
 radiusCurvature = (straightSpring.E*straightSpring.IcPts[0]/testTorque)
-theoryDisplacement = radiusCurvature-np.sqrt(radiusCurvature**2-straightSpring.fullArcLength**2)
+theoryDisplacement = radiusCurvature-np.sqrt(radiusCurvature**2-straightSpring.fullParamLength**2)
 print("tip displacement for straight beam by beam theory:",theoryDisplacement)
 # compare with quasi straight beam
 quasiStraightResDisp = np.sqrt((quasiStraightSpring.deformedNeutralSurface[-1,-1]-quasiStraightSpring.undeformedNeutralSurface[-1,-1])**2+
                                (quasiStraightSpring.deformedNeutralSurface[0,-1]-quasiStraightSpring.undeformedNeutralSurface[0,-1])**2)
 print("tip displacement for quasi-straight beam:         ",quasiStraightResDisp)
 
-## Not really a unit test, but still a test: ensure convergence for realistic
-#                                            loading of arbitrarily defined
-#                                            spring
-print("#################### TEST 2: Deforming Single Spring ####################")
+######################## Curved Beam Unit Test #######################
+# Test the deformation functions all together, and use either method #
+# to deform a beam under a target torque load.                        #
+######################################################################
+
+print("#################### UNIT TEST 2: Deforming Single Spring ####################")
 # this torque is arbitrary but in the ballpark for capacity on a gen2 size 6
 # actuator
 testTorque = 5000
@@ -113,7 +118,7 @@ if method=="smartGuess":
     # if it didnt diverge consider the deform ation succesful
     deformBool = not(divergeFlag)
     # plot results
-    curvedSpring.spring_geometry(deformBool=deformBool, plotBool=True)
+    curvedSpring.vis_results(deformBool=deformBool, plotBool=True)
 elif method=="slowRamp":
     print("using slow ramp method")
     # starting at an unloaded condition, calculate solutions for progressively increasing torque conditions
@@ -121,7 +126,7 @@ elif method=="slowRamp":
     deformBool = not(divergeFlag)
     print("angular deformation:", curvedSpring.dBeta/deg2rad)
     # plot results
-    curvedSpring.spring_geometry(deformBool=deformBool)
+    curvedSpring.vis_results(deformBool=deformBool)
 
 ## output curves for use in solidworks
 # add a "zero" column for z-values (needed by solidworks) and save as .txt files

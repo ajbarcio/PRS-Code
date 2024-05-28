@@ -9,9 +9,9 @@ from polynomials import xy_poly, PPoly_Eval
 testSpring = Spring()
 
 # generate polynomials in x and y
-XCoeffs, YCoeffs = xy_poly(testSpring.pts, testSpring.XYArcLens)
+XCoeffs, YCoeffs = xy_poly(testSpring.pts, testSpring.XYParamLens)
 # generate mesh over which to evaluate polynomial
-mesh = np.linspace(0, testSpring.fullArcLength,101)
+mesh = np.linspace(0, testSpring.fullParamLength,101)
 # generate x, y coordinates of surface
 X = PPoly_Eval(mesh, XCoeffs)
 Y = PPoly_Eval(mesh, YCoeffs)

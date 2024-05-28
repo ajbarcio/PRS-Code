@@ -26,25 +26,42 @@ class Deform_Wrapper:
 class Spring:
     def __init__(self,
                  # whole bunch of default values:
-                 E                 = 27.5*10**6,
-                 designStress      = 270000,
-                 n                 = 2,
-                 fullArcLength     = 4.8,
-                 outPlaneThickness = 0.375,
-                 radii             = np.array([1.1,2.025,2.025,2.95]),
-                 betaAngles        = np.array([0,50,100,150])*deg2rad, # FIRST VALUE IS ALWAYS 0 !!!!, same length as radii
-                 IcPts             = np.array([0.008, 0.001, 0.008]),
-                 IcArcLens         = np.array([0.5]),                              # IcPts - 2
-                 XYArcLens         = np.array([0.333,0.667]),             # radii - 2
-                 resolution        = 200
+                 E                   = 27.5*10**6,
+                 designStress        = 270000,
+                 n                   = 2,
+                 fullParamLength = 4.8,
+                 outPlaneThickness   = 0.375,
+                 radii               = np.array([1.1,2.025,2.025,2.95]),
+                 betaAngles          = np.array([0,50,100,150])*deg2rad, # FIRST VALUE IS ALWAYS 0 !!!!, same length as radii
+                 IcPts               = np.array([0.008, 0.001, 0.008]),
+                 IcParamLens           = np.array([0.5]),                              # IcPts - 2
+                 XYParamLens           = np.array([0.333,0.667]),             # radii - 2
+                 resolution          = 200
                  ):
+
+        ############################ PARAMETER KEY ############################
+        # E                 - youngs modulus                                  #
+        # designStress      - max allowable stress, currently 80% yield       #
+        # n                 - # of flexures                                   #
+        # fullParamLength   - maximum value of internal parameter             #
+        # outPlaneThickness - axial thickness of spring (in)                  #
+        # radii             - radii of control points of netural surface (in) #
+        # betaAngles        - angle of control points of neutral surface (rad)#
+        # IcPts             - curved second moment of area of beam at points  #
+        #                     along beam (in^4)                               #
+        # IcParamLens       - internal parameter values at which Ic control   #
+        #                     points apply                                    #
+        # IcParamLens       - internal parameter values at which x-y          #
+        #                     (radii-angle) control points apply              #
+        # resolution        - number of points in mesh                        #
+        ########################################################################
 
         # stick all the arguments in the object
         self.E = E
         self.designStress = designStress
         self.n = n
         self.t = outPlaneThickness
-        self.fullArcLength = fullArcLength
+        self.fullParamLength = fullParamLength
         self.radii = radii
         self.betaAngles = betaAngles
 
@@ -55,29 +72,29 @@ class Spring:
 
         self.IcPts = IcPts
 
-        self.IcArcLens = np.empty(len(IcPts))
+        self.IcParamLens = np.empty(len(IcPts))
         for i in range(len(IcPts)):
             if i==0:
-                self.IcArcLens[i] = 0
+                self.IcParamLens[i] = 0
             elif i==len(IcPts)-1:
-                self.IcArcLens[i] = self.fullArcLength
+                self.IcParamLens[i] = self.fullParamLength
             else:
-                self.IcArcLens[i] = self.fullArcLength*IcArcLens[i-1]
+                self.IcParamLens[i] = self.fullParamLength*IcParamLens[i-1]
         # print(self.IcArcLens)
 
-        self.XYArcLens = np.empty(len(radii))
+        self.XYParamLens = np.empty(len(radii))
         for i in range(len(radii)):
             if i==0:
-                self.XYArcLens[i] = 0
+                self.XYParamLens[i] = 0
             elif i==len(radii)-1:
-                self.XYArcLens[i] = self.fullArcLength
+                self.XYParamLens[i] = self.fullParamLength
             else:
-                self.XYArcLens[i] = self.fullArcLength*XYArcLens[i-1]
+                self.XYParamLens[i] = self.fullParamLength*XYParamLens[i-1]
         # print(self.XYArcLens)
 
         self.parameterVector = np.concatenate((self.radii, self.betaAngles[1:],
-                                              self.IcPts, self.IcArcLens[1:-1],
-                                              self.XYArcLens[1:-1], np.atleast_1d(self.fullArcLength)))
+                                              self.IcPts, self.IcParamLens[1:-1],
+                                              self.XYParamLens[1:-1], np.atleast_1d(self.fullParamLength)))
 
         # assign some constants for approximating derivatives
         self.finiteDifferenceLength = 0.001
@@ -89,11 +106,11 @@ class Spring:
         # assign some constants for meshing the spring
         self.res = resolution
         self.len = self.res+1
-        self.step = fullArcLength/self.res
+        self.step = fullParamLength/self.res
         self.endIndex = self.len-1
 
         # create uniform mesh for spring
-        self.ximesh = np.linspace(0,self.fullArcLength,self.len)
+        self.ximesh = np.linspace(0,self.fullParamLength,self.len)
 
         self.geometry_coeffs()
         self.dxids = d_xi_d_s(self.ximesh, self.XCoeffs, self.YCoeffs)
@@ -103,8 +120,8 @@ class Spring:
         self.x0 = PPoly_Eval(0,self.XCoeffs)
         self.y0 = PPoly_Eval(0,self.YCoeffs)
         # at end of spring
-        self.xL = PPoly_Eval(self.fullArcLength,self.XCoeffs)
-        self.yL = PPoly_Eval(self.fullArcLength,self.YCoeffs)
+        self.xL = PPoly_Eval(self.fullParamLength,self.XCoeffs)
+        self.yL = PPoly_Eval(self.fullParamLength,self.YCoeffs)
         # at end of spring, interms of frame at base of spring
         self.momentArmX = self.xL - self.x0
         self.momentArmY = self.yL - self.y0
@@ -114,8 +131,8 @@ class Spring:
 
     def geometry_coeffs(self):
         # sticks the coefficients in the object
-        self.IcCoeffs, self.domains = Ic_multiPoly(self.IcPts, self.IcArcLens)
-        self.XCoeffs, self.YCoeffs  = xy_poly(self.pts, self.XYArcLens)
+        self.IcCoeffs, self.domains = Ic_multiPoly(self.IcPts, self.IcParamLens)
+        self.XCoeffs, self.YCoeffs  = xy_poly(self.pts, self.XYParamLens)
         # compiles all the coeffs into one variable
         self.geometryDef = [self.XCoeffs, self.YCoeffs, self.IcCoeffs]
         return self.geometryDef
@@ -385,7 +402,7 @@ class Spring:
         print("des stress:", self.designStress)
         return self.maxStress, self.maxStresses
 
-    def spring_geometry(self, plotBool=1, deformBool=1):
+    def vis_results(self, plotBool=1, deformBool=1):
 
         ## Things to make for the undeformed state:
 

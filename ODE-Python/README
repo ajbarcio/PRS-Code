@@ -1,0 +1,47 @@
+This folder consists of modules, scripts, and output files related to simulating
+the deformation of planar rotary springs under torque loads.
+
+To start, run deform_unit_test.py and click through each plot that appears.
+You can play around with the springs defined in this script to test the behavior
+of different geometries. This is the "main" script in this simulator.
+
+Modules:
+
+polynomials
+    functions relating to generating polynomials that fit certain constraints
+    and evaluating those polynomials.
+utils
+    functions that perform low level utilities like differentiating, integrating
+spring
+    functions that define the behavior of the spring
+    definition for a "Spring" class, which is an object that contains all the
+        parameters defining a spring, as well as all the functions to deform
+        said spring
+    definition for a "DeformWrapper" class, which is an object that can be used
+        within or without the "Spring" class to store the inputs and results of
+        each deformation attempt
+solidworks
+    functions for interfacing with and automating solidworks to analyze designs
+    prouced by the simulator. Currently not working
+StatProfiler
+
+
+Scripts:
+
+Ic_poly_unit_test
+    tests the functions which create an Ic profile. currently uses a
+    "representative" example but has been tested with edge cases to ensure
+    a reasonable robustness
+XY_poly_unit_test
+    tests the functions which create an x-y profile for the neutral surface of
+    the spring. currently uses the "default" (arbitrary) spring
+deform_unit_test
+    tests the functions which deform the spring, and attempts to validate some
+    of the underlying math behind it. See comments in files for more details
+
+Output files:
+'surfaces' folder
+    A_surface, B_surface are the x-y coordinates of the innrer and outer surface
+        for an arbitrary curved beam
+    A_surface_straight, B_surface_straight are the x-y coordinates of the upper
+        and lower surface for a straight beam
