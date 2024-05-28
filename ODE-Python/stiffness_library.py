@@ -19,10 +19,14 @@ import pythoncom
 
 deg2rad = np.pi/180
 
+## Automate SW Verification??
+
 def make_SW_part(Spring):
     startSW()
     sw = connectToSW()
     newFile(sw, "newPart.SLDPRT")
+
+## Turn design variables into polynomials/meshes/surfaces
 
 def Ic_multiPoly(IcPts, IcArcLens):
 
@@ -282,11 +286,116 @@ def PPoly_Eval(x, coeffs, deriv=0, ranges=0):
             y = U.dot(coeffs)
             return (y[0])
 
+## Calculate spring characteristics based off of parameter-driven polynomials
+
+def alpha_xy(s, xCoeffs, yCoeffs):
+    if hasattr(s, "__len__"):
+        alphaList = np.arctan2(PPoly_Eval(s, yCoeffs, deriv=1),PPoly_Eval(s, xCoeffs, deriv=1))
+        for i in range(len(alphaList)):
+            if alphaList[i]<0:
+                alphaList[i]=alphaList[i]+2*math.pi
+        return alphaList
+    else:
+        alpha = np.arctan2(PPoly_Eval(s, yCoeffs, deriv=1),PPoly_Eval(s, xCoeffs, deriv=1))
+        if alpha<0:
+            alpha=alpha+2*math.pi
+        return alpha
+
+def r_n(s, xCoeffs, yCoeffs):
+    d2yds2 = PPoly_Eval(s, yCoeffs, deriv=2)
+    d2xds2 = PPoly_Eval(s, xCoeffs, deriv=2)
+    dyds   = PPoly_Eval(s, yCoeffs, deriv=1)
+    dxds   = PPoly_Eval(s, xCoeffs, deriv=1)
+    # dAlphadS = (d2yds2/dxds-d2xds2*dyds/dxds)/(1+dyds**2/dxds)
+    if hasattr(s, "__len__"):
+        rn = ((1+dyds**2/dxds**2)/(d2yds2/dxds-d2xds2*dyds/dxds**2))
+        for i in range(len(rn)):
+            if rn[i] == float('nan'):
+                rn[i] = float('inf')
+            if abs((d2yds2[i]/dxds[i]-d2xds2[i]*dyds[i]/dxds[i]**2)) <= 10**-13:
+                rn[i] = float('inf')*np.sign(rn[i-1])
+    else:
+        if abs(d2yds2/dxds-d2xds2*dyds/dxds**2)<=10**-13:
+            rn = float('inf')
+        else:
+            rn = ((1+dyds**2/dxds**2)/(d2yds2/dxds-d2xds2*dyds/dxds**2))
+    return rn
+
+def d_rn_d_s(s, xCoeffs, yCoeffs):
+    d3yds3 = PPoly_Eval(s, yCoeffs, deriv=3)
+    d3xds3 = PPoly_Eval(s, xCoeffs, deriv=3)
+    d2yds2 = PPoly_Eval(s, yCoeffs, deriv=2)
+    d2xds2 = PPoly_Eval(s, xCoeffs, deriv=2)
+    dyds   = PPoly_Eval(s, yCoeffs, deriv=1)
+    dxds   = PPoly_Eval(s, yCoeffs, deriv=1)
+
+    denominator = (d2yds2*dxds-d2xds2*dyds)**2
+    numerator   = ( dxds**3*d3yds3 - dyds**3*d3xds3 +
+                    2*dyds*d2xds2**2*dxds - 2*dyds*d2yds2**2*dxds - dxds**2*d3xds3*dyds -
+                    2*dxds**2*d2yds2*d2xds2 + 2*dyds**2*d2yds2*d2xds2 +
+                    dyds**2*d3yds3*dxds )
+
+    drnds = -numerator/denominator
+
+    return drnds
+
 def d_xi_d_s(ximesh, XCoeffs, YCoeffs):
     dxdxi = PPoly_Eval(ximesh, XCoeffs, deriv=1)
     dydxi = PPoly_Eval(ximesh, YCoeffs, deriv=1)
     dxids = 1/np.sqrt(dxdxi**2+dydxi**2)
     return dxids
+
+def l_a_l_b_rootfinding(s, lABPrev, xCoeffs, yCoeffs, cICoeffs, printBool):
+    rn = r_n(s, xCoeffs, yCoeffs)
+    cI = PPoly_Eval(s, cICoeffs)
+    def func(x, rn, cI):
+        f1 = (x[0]+x[1])/(np.log((rn+x[1])/(rn-x[0])))-rn
+        # f2 = (x[0]+x[1])*(outPlaneThickness*(x[1]-(x[1]+x[0])/2)*rn)-cI
+        f2 = self.t*rn*(x[0]+x[1])*(x[1]/2-x[0]/2)-cI
+        return np.array([f1, f2])
+    def jac(x, rn, cI):
+        return np.array([[1/(np.log((rn+x[1])/(rn-x[0])))-(x[0]+x[1])/(((np.log((rn+x[1])/(rn-x[0])))**2)*(rn-x[0])), \
+                          1/(np.log((rn+x[1])/(rn-x[0])))-(x[0]+x[1])/(((np.log((rn+x[1])/(rn-x[0])))**2)*(rn+x[1]))], \
+                         [-rn*self.t*x[0], rn*self.t*x[1]]])
+    # print(rn)
+    if not np.isinf(rn):
+        if lABPrev[0]==lABPrev[1]:
+            x0 = [lABPrev[0], lABPrev[1]+0.001]
+        else:
+            x0 = lABPrev
+        err = 1
+    else:
+        err = 0
+        l = np.cbrt(12*cI/self.t)/2
+        x0 = [l, l]
+        # print("entered")
+    x = x0
+    # print("x0:",x0)
+    iii = 0
+    while err > 10**-6 and iii <500:
+        # print("entered while")
+        xprev = x
+        x = x - np.transpose(lin.inv(jac(x, rn, cI)).dot(func(x, rn, cI)))
+        # print(x)
+        err = lin.norm(x-xprev)
+        # err = lin.norm(func(x, rn, cI))
+        iii+=1
+    if(lin.norm(x)>lin.norm(lABPrev)*100):
+        l = np.cbrt(12*cI/self.t)/2
+        x = [l,l]
+    if(printBool):
+        print(x0)
+        print(x)
+        print(iii)
+        print(rn)
+        print(err)
+        if iii > 2999:
+            print("--------------------DID NOT CONVERGE-------------------------")
+
+    # print("DONE WITH S = ",s)
+    return x    # here x is [la, lb]
+
+## General function to differentiate an array of values in a fixed mesh
 
 def numerical_fixed_mesh_diff(ymesh, xmesh):
     dydx = np.zeros(len(xmesh))
@@ -299,6 +408,98 @@ def numerical_fixed_mesh_diff(ymesh, xmesh):
         else:
             dydx[i] = (ymesh[i+1]-ymesh[i-1])/(2*step)
     return dydx
+
+## Low-Level functions used to evaluate ODE's: Fixed mesh RK4
+
+def fixed_rk4(fun, y0, xmesh, *args): # (fun, alphaCoeffs, cICoeffs, y0, Fx, Fy, xmesh)
+    step = xmesh[1]-xmesh[0]
+    y0 = np.atleast_1d(y0)
+    if hasattr(y0, '__len__'):
+        res = np.empty((len(y0), len(xmesh)))
+        # print(range(len(xmesh))[-1])
+        for i in range(len(xmesh)):
+            # print("i in rk:",i)
+            if i == 0:
+                # stepRes = rk4_step(fun, xmesh[i], y0, step, args)
+                for j in range(len(y0)):
+                #     res[j,i] = stepRes[j]
+                # y0 = stepRes
+                    res[j,i] = y0[j]
+            else:
+                stepRes = rk4_step(fun, xmesh[i-1], y0, step, args)
+                for j in range(len(y0)):
+                    res[j,i] = stepRes[j]
+                y0 = stepRes
+    else:
+        res = np.empty((len(xmesh)))
+        for i in range(len(xmesh)):
+            # print(i)
+            if i == 0:
+                res[i] = y0
+            else:
+                stepRes = rk4_step(fun, xmesh[i-1], y0, step, args)
+                res[i] = stepRes
+                y0 = stepRes
+    # print("gonna return")
+    return res
+
+def rk4_step(fun, x0, y0, dx, *args): # (fun, alphaCoeffs, cICoeffs, x0, y0, du, Fx, Fy)
+    #
+    #  Get four sample values of the derivative.
+    #
+    f1 = fun ( x0,            y0, args)
+    f2 = fun ( x0 + dx / 2.0, y0 + dx * f1 / 2.0, args)
+    f3 = fun ( x0 + dx / 2.0, y0 + dx * f2 / 2.0, args)
+    f4 = fun ( x0 + dx,       y0 + dx * f3, args)
+    #
+    #  Combine them to estimate the solution gamma at time T1 = T0 + DT.
+    #
+    y1 = y0 + dx * ( f1 + 2.0 * f2 + 2.0 * f3 + f4 ) / 6.0
+
+    return y1
+
+## Code from the internet used to graph stress
+
+def colorline(
+    x, y, z=None, cmap=plt.get_cmap('copper'), norm=plt.Normalize(0.0, 1.0),
+        linewidth=3, alpha=1.0):
+    """
+    http://nbviewer.ipython.org/github/dpsanders/matplotlib-examples/blob/master/colorline.ipynb
+    http://matplotlib.org/examples/pylab_examples/multicolored_line.html
+    Plot a colored line with coordinates x and y
+    Optionally specify colors in the array z
+    Optionally specify a colormap, a norm function and a line width
+    """
+
+    # Default colors equally spaced on [0,1]:
+    if z is None:
+        z = np.linspace(0.0, 1.0, len(x))
+
+    # Special case if a single number:
+    if not hasattr(z, "__iter__"):  # to check for numerical input -- this is a hack
+        z = np.array([z])
+
+    z = np.asarray(z)
+
+    segments = make_segments(x, y)
+    lc = mcoll.LineCollection(segments, array=z, cmap=cmap, norm=norm,
+                              linewidth=linewidth, alpha=alpha)
+
+    ax = plt.gca()
+    ax.add_collection(lc)
+
+    return lc
+
+def make_segments(x, y):
+    """
+    Create list of line segments from x and y coordinates, in the correct format
+    for LineCollection: an array of the form numlines x (points per line) x 2 (x
+    and y) array
+    """
+
+    points = np.array([x, y]).T.reshape(-1, 1, 2)
+    segments = np.concatenate([points[:-1], points[1:]], axis=1)
+    return segments
 
 class Deform_Wrapper:
     def __init__(self, function):
@@ -689,13 +890,14 @@ class Spring:
         # generate centroidal surface
         self.undeformedCentroidalSurface = self.undeformedNeutralSurface+np.hstack((np.atleast_2d(self.ecc*np.sin(self.alpha)).T, np.atleast_2d(self.ecc*np.cos(self.alpha)).T))
 
-        if plotBool and not deformBool:
+        if plotBool:
             # plot shit
             plt.figure(1)
-            plt.plot(self.undeformedNeutralSurface[:,0],self.undeformedNeutralSurface[:,1])
-            plt.plot(self.undeformedCentroidalSurface[:,0],self.undeformedCentroidalSurface[:,1])
-            plt.plot(self.undeformedASurface[:,0],self.undeformedASurface[:,1])
-            plt.plot(self.undeformedBSurface[:,0],self.undeformedBSurface[:,1])
+            if not deformBool:
+                plt.plot(self.undeformedNeutralSurface[:,0],self.undeformedNeutralSurface[:,1])
+                plt.plot(self.undeformedCentroidalSurface[:,0],self.undeformedCentroidalSurface[:,1])
+            plt.plot(self.undeformedASurface[:,0],self.undeformedASurface[:,1],"--b")
+            plt.plot(self.undeformedBSurface[:,0],self.undeformedBSurface[:,1],"--b")
 
         ## Things to make for the deformed state:
 
@@ -717,56 +919,39 @@ class Spring:
             plt.axis("equal")
             plt.show()
 
-def alpha_xy(s, xCoeffs, yCoeffs):
-    if hasattr(s, "__len__"):
-        alphaList = np.arctan2(PPoly_Eval(s, yCoeffs, deriv=1),PPoly_Eval(s, xCoeffs, deriv=1))
-        for i in range(len(alphaList)):
-            if alphaList[i]<0:
-                alphaList[i]=alphaList[i]+2*math.pi
-        return alphaList
-    else:
-        alpha = np.arctan2(PPoly_Eval(s, yCoeffs, deriv=1),PPoly_Eval(s, xCoeffs, deriv=1))
-        if alpha<0:
-            alpha=alpha+2*math.pi
-        return alpha
+## Low level solidworks automation codes
 
-def r_n(s, xCoeffs, yCoeffs):
-    d2yds2 = PPoly_Eval(s, yCoeffs, deriv=2)
-    d2xds2 = PPoly_Eval(s, xCoeffs, deriv=2)
-    dyds   = PPoly_Eval(s, yCoeffs, deriv=1)
-    dxds   = PPoly_Eval(s, xCoeffs, deriv=1)
-    # dAlphadS = (d2yds2/dxds-d2xds2*dyds/dxds)/(1+dyds**2/dxds)
-    if hasattr(s, "__len__"):
-        rn = ((1+dyds**2/dxds**2)/(d2yds2/dxds-d2xds2*dyds/dxds**2))
-        for i in range(len(rn)):
-            if rn[i] == float('nan'):
-                rn[i] = float('inf')
-            if abs((d2yds2[i]/dxds[i]-d2xds2[i]*dyds[i]/dxds[i]**2)) <= 10**-13:
-                rn[i] = float('inf')*np.sign(rn[i-1])
-    else:
-        if abs(d2yds2/dxds-d2xds2*dyds/dxds**2)<=10**-13:
-            rn = float('inf')
-        else:
-            rn = ((1+dyds**2/dxds**2)/(d2yds2/dxds-d2xds2*dyds/dxds**2))
-    return rn
+def startSW():
+    ## Starts Solidworks
+    SW_PROCESS_NAME = r'C:/Program Files/SOLIDWORKS Corp/SOLIDWORKS/SLDWORKS.exe'
+    sb.Popen(SW_PROCESS_NAME)
 
-def d_rn_d_s(s, xCoeffs, yCoeffs):
-    d3yds3 = PPoly_Eval(s, yCoeffs, deriv=3)
-    d3xds3 = PPoly_Eval(s, xCoeffs, deriv=3)
-    d2yds2 = PPoly_Eval(s, yCoeffs, deriv=2)
-    d2xds2 = PPoly_Eval(s, xCoeffs, deriv=2)
-    dyds   = PPoly_Eval(s, yCoeffs, deriv=1)
-    dxds   = PPoly_Eval(s, yCoeffs, deriv=1)
+def shutSW():
+    ## Kills Solidworks
+    sb.call('Taskkill /IM SLDWORKS.exe /F')
 
-    denominator = (d2yds2*dxds-d2xds2*dyds)**2
-    numerator   = ( dxds**3*d3yds3 - dyds**3*d3xds3 +
-                    2*dyds*d2xds2**2*dxds - 2*dyds*d2yds2**2*dxds - dxds**2*d3xds3*dyds -
-                    2*dxds**2*d2yds2*d2xds2 + 2*dyds**2*d2yds2*d2xds2 +
-                    dyds**2*d3yds3*dxds )
+def connectToSW():
+    ## With Solidworks window open, connects to application
+    sw = win32com.client.Dispatch("SLDWORKS.Application")
+    return sw
 
-    drnds = -numerator/denominator
+def openFile(sw, Path):
+    ## With connection established (sw), opens part, assembly, or drawing file
+    f = sw.getopendocspec(Path)
+    model = sw.opendoc7(f)
+    return model
 
-    return drnds
+def newFile(sw, Path):
+    template = "C:\ProgramData\SolidWorks\SOLIDWORKS 2014\templates\Part.prtdot"
+    model = sw.NewDocument(template, 0,0,0)
+    model.SaveAs(Path, 0, 2)
+    return model
+
+def updatePrt(model):
+    ## Rebuilds the active part, assembly, or drawing (model)
+    model.EditRebuild3
+
+## Things below this point are deprecated
 
 def deform_ODE(s, p, *args): #Fx, Fy, geometryDef, dgds0 THIS IS THE NON_OBJECT ORIENTED VERSION
 
@@ -824,7 +1009,7 @@ def deform_ODE(s, p, *args): #Fx, Fy, geometryDef, dgds0 THIS IS THE NON_OBJECT 
 
     return LHS
 
-def d_rn_d_s_numerical(s, xCoeffs, yCoeffs, eps=1e-5):
+# def d_rn_d_s_numerical(s, xCoeffs, yCoeffs, eps=1e-5): # DEPRECATED
     rnf = r_n(s+eps, xCoeffs, yCoeffs)
     rnb = r_n(s-eps, xCoeffs, yCoeffs)
     derivative = (rnf-rnb)/(2*eps)
@@ -959,17 +1144,17 @@ def ndiff(s, f, eps=1e-5):
 #             alpha=alpha+2*math.pi
 #         return alpha
 
-def d_alpha_d_s(s, xCoeffs, yCoeffs):
-    d2yds2 = d2_coord_d_s2(s, yCoeffs)
-    d2xds2 = d2_coord_d_s2(s, xCoeffs)
-    dyds   = d_coord_d_s  (s, yCoeffs)
-    dxds   = d_coord_d_s  (s, xCoeffs)
-    dads = ((d2yds2/dxds-d2xds2*dyds/dxds**2)/(1+dyds**2/dxds**2))
-    return dads
+# def d_alpha_d_s(s, xCoeffs, yCoeffs):
+#     d2yds2 = d2_coord_d_s2(s, yCoeffs)
+#     d2xds2 = d2_coord_d_s2(s, xCoeffs)
+#     dyds   = d_coord_d_s  (s, yCoeffs)
+#     dxds   = d_coord_d_s  (s, xCoeffs)
+#     dads = ((d2yds2/dxds-d2xds2*dyds/dxds**2)/(1+dyds**2/dxds**2))
+#     return dads
 
-def d_2_alpha_d_s_2(s, xCoeffs, yCoeffs):
-    d2ads2 = -d_alpha_d_s(s, xCoeffs, yCoeffs)**2*d_rn_d_s(s, xCoeffs, yCoeffs)
-    return d2ads2
+# def d_2_alpha_d_s_2(s, xCoeffs, yCoeffs):
+#     d2ads2 = -d_alpha_d_s(s, xCoeffs, yCoeffs)**2*d_rn_d_s(s, xCoeffs, yCoeffs)
+#     return d2ads2
 
 # def r_n(s, xCoeffs, yCoeffs): DEPRECATED
 #     d2yds2 = d2_coord_d_s2(s, yCoeffs)
@@ -989,23 +1174,23 @@ def d_2_alpha_d_s_2(s, xCoeffs, yCoeffs):
 #             rn = ((1+dyds**2/dxds**2)/(d2yds2/dxds-d2xds2*dyds/dxds**2))
 #     return rn
 
-def d_rn_d_s(s, xCoeffs, yCoeffs):
-    d3yds3 = d3_coord_d_s3(s, yCoeffs)
-    d3xds3 = d3_coord_d_s3(s, xCoeffs)
-    d2yds2 = d2_coord_d_s2(s, yCoeffs)
-    d2xds2 = d2_coord_d_s2(s, xCoeffs)
-    dyds   = d_coord_d_s  (s, yCoeffs)
-    dxds   = d_coord_d_s  (s, xCoeffs)
+# def d_rn_d_s(s, xCoeffs, yCoeffs):
+#     d3yds3 = d3_coord_d_s3(s, yCoeffs)
+#     d3xds3 = d3_coord_d_s3(s, xCoeffs)
+#     d2yds2 = d2_coord_d_s2(s, yCoeffs)
+#     d2xds2 = d2_coord_d_s2(s, xCoeffs)
+#     dyds   = d_coord_d_s  (s, yCoeffs)
+#     dxds   = d_coord_d_s  (s, xCoeffs)
 
-    denominator = (d2yds2*dxds-d2xds2*dyds)**2
-    numerator   = ( dxds**3*d3yds3 - dyds**3*d3xds3 +
-                    2*dyds*d2xds2**2*dxds - 2*dyds*d2yds2**2*dxds - dxds**2*d3xds3*dyds -
-                    2*dxds**2*d2yds2*d2xds2 + 2*dyds**2*d2yds2*d2xds2 +
-                    dyds**2*d3yds3*dxds )
+#     denominator = (d2yds2*dxds-d2xds2*dyds)**2
+#     numerator   = ( dxds**3*d3yds3 - dyds**3*d3xds3 +
+#                     2*dyds*d2xds2**2*dxds - 2*dyds*d2yds2**2*dxds - dxds**2*d3xds3*dyds -
+#                     2*dxds**2*d2yds2*d2xds2 + 2*dyds**2*d2yds2*d2xds2 +
+#                     dyds**2*d3yds3*dxds )
 
-    drnds = -numerator/denominator
+#     drnds = -numerator/denominator
 
-    return drnds
+#     return drnds
 
 
 
@@ -1119,59 +1304,6 @@ def h_e_rootfinding(s, xCoeffs, yCoeffs, cICoeffs, printbool):
         return np.array([[1/(np.log((rn+x[1])/(rn-x[0])))-(x[0]+x[1])/(((np.log((rn+x[1])/(rn-x[0])))**2)*(rn-x[0])), \
                           1/(np.log((rn+x[1])/(rn-x[0])))-(x[0]+x[1])/(((np.log((rn+x[1])/(rn-x[0])))**2)*(rn+x[1]))], \
                          [cI/(2*rn*self.t*(x[1]-(x[1]+x[0])/2)**2)-1, -cI/(2*rn*self.t*(x[1]-(x[1]+x[0])/2)**2)-1]])
-
-
-def l_a_l_b_rootfinding(s, lABPrev, xCoeffs, yCoeffs, cICoeffs, printBool):
-    rn = r_n(s, xCoeffs, yCoeffs)
-    cI = PPoly_Eval(s, cICoeffs)
-    def func(x, rn, cI):
-        f1 = (x[0]+x[1])/(np.log((rn+x[1])/(rn-x[0])))-rn
-        # f2 = (x[0]+x[1])*(outPlaneThickness*(x[1]-(x[1]+x[0])/2)*rn)-cI
-        f2 = self.t*rn*(x[0]+x[1])*(x[1]/2-x[0]/2)-cI
-        return np.array([f1, f2])
-    def jac(x, rn, cI):
-        return np.array([[1/(np.log((rn+x[1])/(rn-x[0])))-(x[0]+x[1])/(((np.log((rn+x[1])/(rn-x[0])))**2)*(rn-x[0])), \
-                          1/(np.log((rn+x[1])/(rn-x[0])))-(x[0]+x[1])/(((np.log((rn+x[1])/(rn-x[0])))**2)*(rn+x[1]))], \
-                         [-rn*self.t*x[0], rn*self.t*x[1]]])
-    # print(rn)
-    if not np.isinf(rn):
-        if lABPrev[0]==lABPrev[1]:
-            x0 = [lABPrev[0], lABPrev[1]+0.001]
-        else:
-            x0 = lABPrev
-        err = 1
-    else:
-        err = 0
-        l = np.cbrt(12*cI/self.t)/2
-        x0 = [l, l]
-        # print("entered")
-    x = x0
-    # print("x0:",x0)
-    iii = 0
-    while err > 10**-6 and iii <500:
-        # print("entered while")
-        xprev = x
-        x = x - np.transpose(lin.inv(jac(x, rn, cI)).dot(func(x, rn, cI)))
-        # print(x)
-        err = lin.norm(x-xprev)
-        # err = lin.norm(func(x, rn, cI))
-        iii+=1
-    if(lin.norm(x)>lin.norm(lABPrev)*100):
-        l = np.cbrt(12*cI/self.t)/2
-        x = [l,l]
-    if(printBool):
-        print(x0)
-        print(x)
-        print(iii)
-        print(rn)
-        print(err)
-        if iii > 2999:
-            print("--------------------DID NOT CONVERGE-------------------------")
-
-    # print("DONE WITH S = ",s)
-    return x    # here x is [la, lb]
-
-
 
 # def cI_s(s, xCoeffs, yCoeffs, hCoeffs):
     if r_n(s, xCoeffs, yCoeffs) == float('inf'):
@@ -1382,52 +1514,6 @@ class geo_ODE_wrapper:
 
 geo_ODE = geo_ODE_wrapper()
 
-def fixed_rk4(fun, y0, xmesh, *args): # (fun, alphaCoeffs, cICoeffs, y0, Fx, Fy, xmesh)
-    step = xmesh[1]-xmesh[0]
-    y0 = np.atleast_1d(y0)
-    if hasattr(y0, '__len__'):
-        res = np.empty((len(y0), len(xmesh)))
-        # print(range(len(xmesh))[-1])
-        for i in range(len(xmesh)):
-            # print("i in rk:",i)
-            if i == 0:
-                # stepRes = rk4_step(fun, xmesh[i], y0, step, args)
-                for j in range(len(y0)):
-                #     res[j,i] = stepRes[j]
-                # y0 = stepRes
-                    res[j,i] = y0[j]
-            else:
-                stepRes = rk4_step(fun, xmesh[i-1], y0, step, args)
-                for j in range(len(y0)):
-                    res[j,i] = stepRes[j]
-                y0 = stepRes
-    else:
-        res = np.empty((len(xmesh)))
-        for i in range(len(xmesh)):
-            # print(i)
-            if i == 0:
-                res[i] = y0
-            else:
-                stepRes = rk4_step(fun, xmesh[i-1], y0, step, args)
-                res[i] = stepRes
-                y0 = stepRes
-    # print("gonna return")
-    return res
-
-def rk4_step(fun, x0, y0, dx, *args): # (fun, alphaCoeffs, cICoeffs, x0, y0, du, Fx, Fy)
-    #
-    #  Get four sample values of the derivative.
-    #
-    f1 = fun ( x0,            y0, args)
-    f2 = fun ( x0 + dx / 2.0, y0 + dx * f1 / 2.0, args)
-    f3 = fun ( x0 + dx / 2.0, y0 + dx * f2 / 2.0, args)
-    f4 = fun ( x0 + dx,       y0 + dx * f3, args)
-    #
-    #  Combine them to estimate the solution gamma at time T1 = T0 + DT.
-    #
-    y1 = y0 + dx * ( f1 + 2.0 * f2 + 2.0 * f3 + f4 ) / 6.0
-
-    return y1
 
 def spring_deform_eval(SF, geometryDef, totalSpringLength, deformFunc):
     xCoeffs = geometryDef[0]
@@ -2035,144 +2121,3 @@ def drag_vector_spring(dragVectorArg):
     smesh = np.linspace(0, dragVectorArg[-1], globalLen)
 
     return geometryDef, smesh
-
-def colorline(
-    x, y, z=None, cmap=plt.get_cmap('copper'), norm=plt.Normalize(0.0, 1.0),
-        linewidth=3, alpha=1.0):
-    """
-    http://nbviewer.ipython.org/github/dpsanders/matplotlib-examples/blob/master/colorline.ipynb
-    http://matplotlib.org/examples/pylab_examples/multicolored_line.html
-    Plot a colored line with coordinates x and y
-    Optionally specify colors in the array z
-    Optionally specify a colormap, a norm function and a line width
-    """
-
-    # Default colors equally spaced on [0,1]:
-    if z is None:
-        z = np.linspace(0.0, 1.0, len(x))
-
-    # Special case if a single number:
-    if not hasattr(z, "__iter__"):  # to check for numerical input -- this is a hack
-        z = np.array([z])
-
-    z = np.asarray(z)
-
-    segments = make_segments(x, y)
-    lc = mcoll.LineCollection(segments, array=z, cmap=cmap, norm=norm,
-                              linewidth=linewidth, alpha=alpha)
-
-    ax = plt.gca()
-    ax.add_collection(lc)
-
-    return lc
-
-
-def make_segments(x, y):
-    """
-    Create list of line segments from x and y coordinates, in the correct format
-    for LineCollection: an array of the form numlines x (points per line) x 2 (x
-    and y) array
-    """
-
-    points = np.array([x, y]).T.reshape(-1, 1, 2)
-    segments = np.concatenate([points[:-1], points[1:]], axis=1)
-    return segments
-
-def startSW():
-    ## Starts Solidworks
-    SW_PROCESS_NAME = r'C:/Program Files/SOLIDWORKS Corp/SOLIDWORKS/SLDWORKS.exe'
-    sb.Popen(SW_PROCESS_NAME)
-
-def shutSW():
-    ## Kills Solidworks
-    sb.call('Taskkill /IM SLDWORKS.exe /F')
-
-def connectToSW():
-    ## With Solidworks window open, connects to application
-    sw = win32com.client.Dispatch("SLDWORKS.Application")
-    return sw
-
-def openFile(sw, Path):
-    ## With connection established (sw), opens part, assembly, or drawing file
-    f = sw.getopendocspec(Path)
-    model = sw.opendoc7(f)
-    return model
-
-def newFile(sw, Path):
-    template = "C:\ProgramData\SolidWorks\SOLIDWORKS 2014\templates\Part.prtdot"
-    model = sw.NewDocument(template, 0,0,0)
-    model.SaveAs(Path, 0, 2)
-    return model
-
-def updatePrt(model):
-    ## Rebuilds the active part, assembly, or drawing (model)
-    model.EditRebuild3
-
-
-deg2rad = np.pi/180
-n = 2
-finiteDifferenceLength = 0.001
-finiteDifferenceAngle  = .1*deg2rad
-ffForce  = .5
-finiteDifferenceTorque = 0.1
-finiteDifferenceCI     = 20
-
-straights = []
-
-fullArcLength = 4.8
-globalRes = 200
-globalLen = globalRes+1
-globalStep = fullArcLength/globalRes
-globalMaxIndex = globalLen-1
-
-E = 27.5*10**6
-outPlaneThickness = .375
-
-# profile design variables:
-#   R0: inner radius
-#   R3: outer radius
-#   R1: radius ctrl. pt. 1
-#   R2: radius ctrl. pt. 2
-#   beta0/betaD: angle of final point
-#   betaB:       angle ctrl. pt. 1
-#   betaC:       angle ctrl. pt. 2
-#   hs:          spline with 3 controlled in-plane thicknesses
-#   ctrlHs:      arc-length positions of thicknesses: only ctrlHs[1] is a parameter
-#   ctrlLengths: arc-length positions of ctrl points: only ctrlLengths[1] and ctrlLengths[2] are parameters
-
-# Total # of design variables: 13 :((((((((((
-
-globalInnerRadiusLimit = 0.75
-globalOuterRadiusLimit = 6/2
-
-R0 = 2.2/2
-R3 = 5.9/2*.9
-
-R1 = (R0+R3)/2+.26
-R2 = (R0+R3)/2-.25
-
-betaB = 150/3*deg2rad*.5
-betaC = 2*150/3*deg2rad
-betaD = 150*deg2rad
-beta0 = betaD
-
-x0 = R0
-y0 = 0
-
-pts = np.array([[x0, y0],[R1*np.cos(betaB),R1*np.sin(betaB)],[R2*np.cos(betaC),R2*np.sin(betaC)],[R3*np.cos(betaD),R3*np.sin(betaD)]])
-cIs  = np.array([.008, .001, .008])
-
-ctrlcIs      = np.array([0,fullArcLength*.6,fullArcLength])
-ctrlLengths = np.array([0,fullArcLength*0.333,fullArcLength*0.667,fullArcLength])
-
-maxTorque = 13541.64
-maxDBeta  = 0.087266463
-
-dragVector0 = [R0, R1, R2, R3, \
-               betaB, betaC, beta0, \
-               cIs[0], cIs[1], cIs[2], \
-               ctrlcIs[1], \
-               ctrlLengths[1], ctrlLengths[2],
-               fullArcLength]
-
-lABPrevOuter = [0,0]
