@@ -90,7 +90,7 @@ print("tip displacement for straight beam by beam theory:",theoryDisplacement)
 quasiStraightResDisp = np.sqrt((quasiStraightSpring.deformedNeutralSurface[-1,-1]-quasiStraightSpring.undeformedNeutralSurface[-1,-1])**2+
                                (quasiStraightSpring.deformedNeutralSurface[0,-1]-quasiStraightSpring.undeformedNeutralSurface[0,-1])**2)
 print("tip displacement for quasi-straight beam:         ",quasiStraightResDisp)
-
+print("the above three values should be close to the same")
 ######################## Curved Beam Unit Test #######################
 # Test the deformation functions all together, and use either method #
 # to deform a beam under a target torque load.                        #
@@ -113,8 +113,10 @@ if method=="smartGuess":
     res, SF, divergeFlag, i = curvedSpring.wrapped_torque_deform(testTorque,curvedSpring.deform_ODE,SF=SFGuess)
     # compare the two guesses
     print("solution planar force vector:", SF)
-    # print out deflection value
+    # print out results
+    print("torque:", testTorque)
     print("angular deformation:", curvedSpring.dBeta/deg2rad)
+    print("stiffness (lbf/deg)", testTorque/(curvedSpring.dBeta/deg2rad))
     # if it didnt diverge consider the deform ation succesful
     deformBool = not(divergeFlag)
     # plot results

@@ -1,6 +1,10 @@
 This folder consists of modules, scripts, and output files related to simulating
 the deformation of planar rotary springs under torque loads.
 
+The current goal of the simulator is to be able to take in spring geometry and
+return the deformation behavior of that geometry. This currently happens in the
+deform_unit_test.py script.
+
 To start, run deform_unit_test.py and click through each plot that appears.
 You can play around with the springs defined in this script to test the behavior
 of different geometries. This is the "main" script in this simulator.
@@ -24,7 +28,7 @@ solidworks
     functions for interfacing with and automating solidworks to analyze designs
     prouced by the simulator. Currently not working
 StatProfiler
-
+    library from Dr. Thomas to keep track of compute time of different functions
 
 Scripts:
 
