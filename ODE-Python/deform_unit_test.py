@@ -1,4 +1,10 @@
-from stiffness_library import *
+# from stiffness_library import *
+import numpy as np
+import numpy.linalg as lin
+import matplotlib.pyplot as plt
+from spring import Spring
+
+deg2rad = np.pi/180
 
 ################################################################################
 # This script tests functions used to apply loading conditions to a spring geometry

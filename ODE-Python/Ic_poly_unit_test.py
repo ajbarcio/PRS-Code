@@ -1,6 +1,9 @@
-from stiffness_library import *
+# from stiffness_library import *
+
 import numpy as np
 import sympy as sp
+import matplotlib.pyplot as plt
+from polynomials import Ic_multiPoly, Ic_poly, Ic_spline, PPoly_Eval
 
 ################################################################################
 # This script tests the functions that generate Ic
@@ -17,8 +20,8 @@ import sympy as sp
 # Lists should be able to be any (matching) length and
 # include any (real positive) values and produce good results
 
-IcPts = np.array([.008,.001,.008])
-IcArcLens = np.array([0,2.5,5])
+IcPts = np.array([.008,.001,.006])
+IcArcLens = np.array([0,3,5])
 
 method = "multiPoly"
 # the "multiPoly" method is the only current "supported" method for Ic generation

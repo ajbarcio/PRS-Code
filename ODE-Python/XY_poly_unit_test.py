@@ -1,6 +1,9 @@
-from stiffness_library import *
+# from stiffness_library import *
 import numpy as np
 import matplotlib.pyplot as plt
+
+from spring import Spring
+from polynomials import xy_poly, PPoly_Eval
 
 # use default spring for test
 testSpring = Spring()
