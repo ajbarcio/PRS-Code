@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 from StatProfiler import SSProfile
 import scipy
 
+from copy import deepcopy as dc
+
 from utils import numerical_fixed_mesh_diff, fixed_rk4, rk4_step, colorline
 from polynomials import Ic_multiPoly, xy_poly, PPoly_Eval
 
@@ -45,7 +47,8 @@ class Spring:
         # set the fullParamLength to the correct
         correctedFullLength = self.measure_length()
         # initialize the spring, properly this time
-        self.init(E, designStress, n, correctedFullLength, outPlaneThickness, radii,
+        self.init(E, designStress, n, correctedFullLength, ### WE ONLY CHANGE THIS
+                  outPlaneThickness, radii,
                   betaAngles, IcPts, IcParamLens, XYParamLens, resolution)
 
     def init(self,
@@ -94,6 +97,9 @@ class Spring:
         self.radii = radii
         self.betaAngles = betaAngles
 
+        self.IcFactors = IcParamLens
+        self.XYFactors = XYParamLens
+
         # create control points for polynomials
         self.pts = np.empty((len(radii),2))
         for i in range(len(radii)):
@@ -121,9 +127,11 @@ class Spring:
                 self.XYParamLens[i] = self.fullParamLength*XYParamLens[i-1]
         # print(self.XYArcLens)
 
-        self.parameterVector = np.concatenate((self.radii, self.betaAngles[1:],
-                                              self.IcPts, self.IcParamLens[1:-1],
-                                              self.XYParamLens[1:-1], np.atleast_1d(self.fullParamLength)))
+        # create a vector of all mutable parameters
+
+        self.parameterVector = np.concatenate((self.radii, self.betaAngles,
+                                              self.IcPts, self.IcFactors,
+                                              self.XYFactors))
 
         # assign some constants for approximating derivatives
         self.finiteDifferenceLength = 0.001
@@ -133,12 +141,13 @@ class Spring:
         self.finiteDifferenceCI     = 20
 
         # assign some constants for meshing the spring
-        self.res = resolution
-        self.len = self.res+1
-        self.step = fullParamLength/self.res
+        self.resl = resolution
+        self.len = self.resl+1
+        self.step = fullParamLength/self.resl
         self.endIndex = self.len-1
 
-        # create uniform mesh for spring
+        # create uniform mesh for spring\
+        # print("len:",self.len)
         self.ximesh = np.linspace(0,self.fullParamLength,self.len)
 
         self.geometry_coeffs()
@@ -157,6 +166,91 @@ class Spring:
 
         # inherit deform wrapper
         self.wrapped_torque_deform = Deform_Wrapper(self.deform_by_torque)
+
+    def sensitivity_study(self, index, factor, resolution, testTorque):
+
+        sensitivityTorqueWrapper = Deform_Wrapper(self.deform_by_torque)
+
+        oldParameterVector = dc(self.parameterVector)
+        # print(oldParameterVector)
+
+        start = (1-factor)*self.parameterVector[index]
+        end   = (1+factor)*self.parameterVector[index]
+        values = np.linspace(start, end, resolution+1)
+        stresses    = np.empty(len(values))
+        deflections = np.empty(len(values))
+        for i in range(len(values)):
+            SSProfile("sensitivity study").tic()
+            self.parameterVector[index] = values[i]
+            print("trying:",values[i])
+            self.redefine_spring_from_parameterVector()
+            SFGuess = self.smart_initial_load_guess(testTorque,self.deform_ODE)
+            sensitivityTorqueWrapper(testTorque,self.deform_ODE,SF=SFGuess)
+            self.generate_surfaces()
+            self.calculate_stresses()
+            stresses[i] = self.maxStress
+            deflections[i] = self.dBeta/deg2rad
+            SSProfile("sensitivity study").toc()
+        output = np.array(sensitivityTorqueWrapper.all_output)
+        sensitivityResults = np.hstack((output, np.atleast_2d(deflections).T,
+                                        np.atleast_2d(stresses).T,
+                                        np.atleast_2d(values).T))
+        self.parameterVector = dc(oldParameterVector)
+        self.redefine_spring_from_parameterVector()
+        return sensitivityResults
+
+    def redefine_spring_from_parameterVector(self):
+
+        """
+        THIS FUNCTION:
+            regenerates a spring when the parameter vector is changed
+        """
+
+        # self.parameterVector = np.concatenate((self.radii, self.betaAngles,
+        #                                       self.IcPts, self.IcParamLens,
+        #                                       self.XYParamLens))
+        newRadii      = self.parameterVector[0:len(self.radii)]
+        startIndex = len(newRadii)
+        newBetaAngles = self.parameterVector[startIndex:
+                                             startIndex+len(self.betaAngles)]
+        startIndex = len(np.concatenate([newRadii,newBetaAngles]))
+        newIcPts = self.parameterVector[startIndex:
+                                        startIndex+len(self.IcPts)]
+        startIndex = len(np.concatenate([newRadii,newBetaAngles,newIcPts]))
+        newIcFactors = self.parameterVector[startIndex:
+                                              startIndex+len(self.IcFactors)]
+        startIndex = len(np.concatenate([newRadii,newBetaAngles,
+                                        newIcPts,newIcFactors]))
+        newXYFactors = self.parameterVector[startIndex:
+                                              startIndex+len(self.XYFactors)]
+        startIndex = len(np.concatenate([newRadii,newBetaAngles,
+                                        newIcPts,newIcFactors,newXYFactors]))
+        assert(startIndex==len(self.parameterVector))
+
+        self.init(E                 = self.E,
+                  designStress      = self.designStress,
+                  n                 = self.n,
+                  fullParamLength   = self.fullParamLength,
+                  outPlaneThickness = self.t,
+                  radii             = newRadii,
+                  betaAngles        = newBetaAngles,
+                  IcPts             = newIcPts,
+                  IcParamLens       = newIcFactors,
+                  XYParamLens       = newXYFactors,
+                  resolution        = self.resl)
+        correctedFullLength = self.measure_length()
+        self.init(E                 = self.E,
+                  designStress      = self.designStress,
+                  n                 = self.n,
+                  fullParamLength   = correctedFullLength,
+                  outPlaneThickness = self.t,
+                  radii             = self.radii,
+                  betaAngles        = self.betaAngles,
+                  IcPts             = self.IcPts,
+                  IcParamLens       = self.IcFactors,
+                  XYParamLens       = self.XYFactors,
+                  resolution        = self.resl)
+
 
     def geometry_coeffs(self):
 
@@ -440,6 +534,9 @@ class Spring:
             coordinates)
         """
 
+        # Generate neutral radius path and give it nicely formatted class variables
+        self.undeformedNeutralSurface = np.hstack((np.atleast_2d(PPoly_Eval(self.ximesh, self.XCoeffs)).T, np.atleast_2d(PPoly_Eval(self.ximesh, self.YCoeffs)).T))
+
         lABPrev = [0,0]
 
         self.la = np.empty(len(self.ximesh))
@@ -495,8 +592,6 @@ class Spring:
                 self.maxStresses[i] = self.normalizedOuterStress[i]
         # print(self.maxStresses)
         self.maxStress = np.nanmax([self.innerSurfaceStress, self.outerSurfaceStress])
-        print("max stress:", self.maxStress)
-        print("des stress:", self.designStress)
         return self.maxStress, self.maxStresses
 
     def full_results(self, plotBool=1, deformBool=1):
@@ -510,8 +605,6 @@ class Spring:
 
         ## Things to make for the undeformed state:
 
-        # Generate neutral radius path and give it nicely formatted class variables
-        self.undeformedNeutralSurface = np.hstack((np.atleast_2d(PPoly_Eval(self.ximesh, self.XCoeffs)).T, np.atleast_2d(PPoly_Eval(self.ximesh, self.YCoeffs)).T))
         # Generate outer and inner surfaces
         self.generate_surfaces() # A and B surface come from here
         # generate centroidal surface

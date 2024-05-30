@@ -117,6 +117,8 @@ if method=="smartGuess":
     print("torque:", testTorque)
     print("angular deformation:", curvedSpring.dBeta/deg2rad)
     print("stiffness (lbf/deg)", testTorque/(curvedSpring.dBeta/deg2rad))
+    print("max stress:", curvedSpring.maxStress)
+    print("des stress:", curvedSpring.designStress)
     # if it didnt diverge consider the deform ation succesful
     deformBool = not(divergeFlag)
     # plot results
