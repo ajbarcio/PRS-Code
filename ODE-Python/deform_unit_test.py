@@ -25,7 +25,7 @@ beta1 = fullAngle/3*deg2rad*.5
 beta2 = 2*fullAngle/3*deg2rad
 beta0 = fullAngle*deg2rad
 
-Ics = np.array([0.008, 0.0000025, 0.0008])
+Ics = np.array([0.008, 0.000025, 0.008])
 
 # Generate three springs for test and comparison:
 # curvedSpring:        An arbitrarily notional idea of what a spring should
@@ -35,7 +35,7 @@ Ics = np.array([0.008, 0.0000025, 0.0008])
 #                         straight beam
 # THE ONLY DIFFERENCE BETWEEN straight AND quasiStraight IS THE BETA ANGLES
 
-curvedSpring = Spring(n = 1, radii=np.array([R0,R1,R2,R3]),betaAngles=np.array([0,beta1,beta2,beta0]),IcPts=Ics,IcParamLens=np.array([0.4]))
+curvedSpring = Spring(n = 2, radii=np.array([R0,R1,R2,R3]),betaAngles=np.array([0,beta1,beta2,beta0]),IcPts=Ics,IcParamLens=np.array([0.6]))
 straightSpring = Spring(n = 1, fullParamLength = 6, radii = np.array([1,3,5,7]),
                         betaAngles=np.array([0,0,0,0])*deg2rad,
                         IcPts = np.array([0.03125, 0.03125, 0.03125]), resolution = 200)
@@ -74,9 +74,9 @@ err, res = straightSpring.forward_integration(straightSpring.deform_ODE, np.arra
 err, res = quasiStraightSpring.forward_integration(quasiStraightSpring.deform_ODE, np.array([0,0,testTorque]),testTorque)
 
 # plot the results of bending the straight spring to ensure expected result
-straightSpring.vis_results()
+straightSpring.full_results()
 # get the geometry results for the quasi straight beam as well
-quasiStraightSpring.vis_results(0,1)
+quasiStraightSpring.full_results(0,1)
 
 # get resultant displacements to compare:
 straightResDisp = np.sqrt((straightSpring.deformedNeutralSurface[-1,-1]-straightSpring.undeformedNeutralSurface[-1,-1])**2+
@@ -120,15 +120,17 @@ if method=="smartGuess":
     # if it didnt diverge consider the deform ation succesful
     deformBool = not(divergeFlag)
     # plot results
-    curvedSpring.vis_results(deformBool=deformBool, plotBool=True)
+    curvedSpring.full_results(deformBool=deformBool, plotBool=True)
 elif method=="slowRamp":
     print("using slow ramp method")
     # starting at an unloaded condition, calculate solutions for progressively increasing torque conditions
     res, SF, divergeFlag, i = curvedSpring.deform_by_torque_slowRamp(testTorque,curvedSpring.deform_ODE)
     deformBool = not(divergeFlag)
+    print("solution planar force vector:", SF)
     print("angular deformation:", curvedSpring.dBeta/deg2rad)
+    print("stiffness (lbf/deg)", testTorque/(curvedSpring.dBeta/deg2rad))
     # plot results
-    curvedSpring.vis_results(deformBool=deformBool)
+    curvedSpring.full_results(deformBool=deformBool, plotBool=True)
 
 ## output curves for use in solidworks
 # add a "zero" column for z-values (needed by solidworks) and save as .txt files
