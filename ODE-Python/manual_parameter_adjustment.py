@@ -3,6 +3,7 @@ import numpy.linalg as lin
 import matplotlib.pyplot as plt
 from spring import Spring
 
+
 deg2rad = np.pi/180
 
 ################################################################################
@@ -33,8 +34,8 @@ beta0 = fullAngle*deg2rad
 inputRadii      = np.array([R0,R1,R2,R3])
 inputBetaAngles = np.array([0,beta1,beta2,beta0])
 
-Ics = np.array([0.008, 0.000025, 0.000025, 0.008])
-IcLens=np.array([0.4, 0.6])
+Ics = np.array([0.008, 0.00025, 0.00025, 0.008])
+IcLens=np.array([0.4, 0.66])
 
 XYParamLens = np.array([0.333,0.667])
 
@@ -45,7 +46,7 @@ curvedSpring = Spring(n = 2, radii=inputRadii,
                              IcPts=Ics,
                              IcParamLens=IcLens)
 
-testTorque = 5000
+testTorque = 4554.6
 # select method
 method = "smartGuess"
 # for the smartGuess method, linear extrapolation for the BC forces determines
