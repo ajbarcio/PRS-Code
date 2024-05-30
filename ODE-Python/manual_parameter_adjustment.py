@@ -17,7 +17,7 @@ R3 = 5.9/2
 # can be considered as arbitrary starting points
 
 R1 = (R0+R3)/2+.26+.125
-R2 = (R0+R3)/2-.25+.125
+R2 = (R0+R3)/2-.25
 
 fullAngle = 165
 
@@ -82,5 +82,5 @@ elif method=="slowRamp":
 # add a "zero" column for z-values (needed by solidworks) and save as .txt files
 A = np.hstack((curvedSpring.undeformedASurface,np.atleast_2d(np.zeros(len(curvedSpring.undeformedASurface))).T))
 B = np.hstack((curvedSpring.undeformedBSurface,np.atleast_2d(np.zeros(len(curvedSpring.undeformedBSurface))).T))
-np.savetxt("surfaces\adjusted_A_surface.txt", A, delimiter=",", fmt='%f')
-np.savetxt("surfaces\adjusted_B_surface.txt", B, delimiter=",", fmt='%f')
+np.savetxt("surfaces\\adjusted_A_surface.txt", A, delimiter=",", fmt='%f')
+np.savetxt("surfaces\\adjusted_B_surface.txt", B, delimiter=",", fmt='%f')
