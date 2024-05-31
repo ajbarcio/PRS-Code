@@ -35,7 +35,7 @@ Ics = np.array([0.008, 0.0000025, 0.0008])
 #                         straight beam
 # THE ONLY DIFFERENCE BETWEEN straight AND quasiStraight IS THE BETA ANGLES
 
-curvedSpring = Spring(n = 1, radii=np.array([R0,R1,R2,R3]),betaAngles=np.array([0,beta1,beta2,beta0]),IcPts=Ics,IcParamLens=np.array([0.4]))
+curvedSpring = Spring(n = 2, radii=np.array([R0,R1,R2,R3]),betaAngles=np.array([0,beta1,beta2,beta0]),IcPts=Ics,IcArcLens=np.array([0.4]))
 straightSpring = Spring(n = 1, fullParamLength = 6, radii = np.array([1,3,5,7]),
                         betaAngles=np.array([0,0,0,0])*deg2rad,
                         IcPts = np.array([0.03125, 0.03125, 0.03125]), resolution = 200)
@@ -116,7 +116,7 @@ if method=="smartGuess":
     # print out results
     print("torque:", testTorque)
     print("angular deformation:", curvedSpring.dBeta/deg2rad)
-    print("stiffness (lbf/deg)", testTorque/(curvedSpring.dBeta/deg2rad))
+    print("stiffness (lbf.in/deg)", testTorque/(curvedSpring.dBeta/deg2rad))
     # if it didnt diverge consider the deform ation succesful
     deformBool = not(divergeFlag)
     # plot results
@@ -132,10 +132,12 @@ elif method=="slowRamp":
 
 ## output curves for use in solidworks
 # add a "zero" column for z-values (needed by solidworks) and save as .txt files
-A = np.hstack((curvedSpring.undeformedASurface,np.atleast_2d(np.zeros(len(curvedSpring.undeformedASurface))).T))
-B = np.hstack((curvedSpring.undeformedBSurface,np.atleast_2d(np.zeros(len(curvedSpring.undeformedBSurface))).T))
+A   = np.hstack((curvedSpring.undeformedASurface,np.atleast_2d(np.zeros(len(curvedSpring.undeformedASurface))).T))
+B   = np.hstack((curvedSpring.undeformedBSurface,np.atleast_2d(np.zeros(len(curvedSpring.undeformedBSurface))).T))
+All = np.vstack((A,B))
 np.savetxt("surfaces\A_surface.txt", A, delimiter=",", fmt='%f')
 np.savetxt("surfaces\B_surface.txt", B, delimiter=",", fmt='%f')
+np.savetxt("surfaces\outer_surfaces.txt", All, delimiter=",", fmt = '%f')
 
 A = np.hstack((straightSpring.undeformedASurface,np.atleast_2d(np.zeros(len(curvedSpring.undeformedASurface))).T))
 B = np.hstack((straightSpring.undeformedBSurface,np.atleast_2d(np.zeros(len(curvedSpring.undeformedBSurface))).T))

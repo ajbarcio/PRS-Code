@@ -29,31 +29,28 @@ class Spring:
                  E                   = 27.5*10**6,
                  designStress        = 270000,
                  n                   = 2,
-                 fullParamLength = 4.8,
                  outPlaneThickness   = 0.375,
                  radii               = np.array([1.1,2.025,2.025,2.95]),
                  betaAngles          = np.array([0,50,100,150])*deg2rad, # FIRST VALUE IS ALWAYS 0 !!!!, same length as radii
                  IcPts               = np.array([0.008, 0.001, 0.008]),
-                 IcParamLens           = np.array([0.5]),                              # IcPts - 2
-                 XYParamLens           = np.array([0.333,0.667]),             # radii - 2
                  resolution          = 200
                  ):
 
-        ############################ PARAMETER KEY ############################
-        # E                 - youngs modulus                                  #
-        # designStress      - max allowable stress, currently 80% yield       #
-        # n                 - # of flexures                                   #
-        # fullParamLength   - maximum value of internal parameter             #
-        # outPlaneThickness - axial thickness of spring (in)                  #
-        # radii             - radii of control points of netural surface (in) #
-        # betaAngles        - angle of control points of neutral surface (rad)#
-        # IcPts             - curved second moment of area of beam at points  #
-        #                     along beam (in^4)                               #
-        # IcParamLens       - internal parameter values at which Ic control   #
-        #                     points apply                                    #
-        # IcParamLens       - internal parameter values at which x-y          #
-        #                     (radii-angle) control points apply              #
-        # resolution        - number of points in mesh                        #
+        ############################ PARAMETER KEY #############################
+        # E                 - youngs modulus                                   #
+        # designStress      - max allowable stress, currently 80% yield        #
+        # n                 - # of flexures                                    #
+        # fullParamLength   - maximum value of internal parameter              #
+        # outPlaneThickness - axial thickness of spring (in)                   #
+        # radii             - radii of control points of netural surface (in)  #
+        # betaAngles        - angle of control points of neutral surface (rad) #
+        # IcPts             - curved second moment of area of beam at points   #
+        #                     along beam (in^4)                                #
+        # IcParamLens       - internal parameter values at which Ic control    #
+        #                     points apply                                     #
+        # IcParamLens       - internal parameter values at which x-y           #
+        #                     (radii-angle) control points apply               #
+        # resolution        - number of points in mesh                         #
         ########################################################################
 
         # stick all the arguments in the object
@@ -61,9 +58,9 @@ class Spring:
         self.designStress = designStress
         self.n = n
         self.t = outPlaneThickness
-        self.fullParamLength = fullParamLength
         self.radii = radii
         self.betaAngles = betaAngles
+        self.fullParamLength = len(self.radii)-1
 
         # create control points for polynomials
         self.pts = np.empty((len(radii),2))
@@ -73,24 +70,27 @@ class Spring:
         self.IcPts = IcPts
 
         self.IcParamLens = np.empty(len(IcPts))
+        # self.IcParamLens = range(len(IcPts))
         for i in range(len(IcPts)):
-            if i==0:
-                self.IcParamLens[i] = 0
-            elif i==len(IcPts)-1:
-                self.IcParamLens[i] = self.fullParamLength
-            else:
-                self.IcParamLens[i] = self.fullParamLength*IcParamLens[i-1]
-        # print(self.IcArcLens)
+            # if i==0:
+            #     self.IcParamLens[i] = 0
+            # elif i==len(IcPts)-1:
+            #     self.IcParamLens[i] = self.fullParamLength
+            # else:
+            #     self.IcParamLens[i] = self.fullParamLength*IcParamLens[i-1]
+            self.IcParamLens[i] = i/(len(IcPts)-1)*self.fullParamLength
+        # print(self.IcParamLens)
 
-        self.XYParamLens = np.empty(len(radii))
-        for i in range(len(radii)):
-            if i==0:
-                self.XYParamLens[i] = 0
-            elif i==len(radii)-1:
-                self.XYParamLens[i] = self.fullParamLength
-            else:
-                self.XYParamLens[i] = self.fullParamLength*XYParamLens[i-1]
-        # print(self.XYArcLens)
+        # self.XYParamLens = np.empty(len(radii))
+        self.XYParamLens = np.array(range(len(self.pts)))
+        # for i in range(len(radii)):
+        #     if i==0:
+        #         self.XYParamLens[i] = 0
+        #     elif i==len(radii)-1:
+        #         self.XYParamLens[i] = self.fullParamLength
+        #     else:
+        #         self.XYParamLens[i] = self.fullParamLength*XYParamLens[i-1]
+        # print(self.XYParamLens)
 
         self.parameterVector = np.concatenate((self.radii, self.betaAngles[1:],
                                               self.IcPts, self.IcParamLens[1:-1],
@@ -106,7 +106,7 @@ class Spring:
         # assign some constants for meshing the spring
         self.res = resolution
         self.len = self.res+1
-        self.step = fullParamLength/self.res
+        self.step = self.fullParamLength/self.res
         self.endIndex = self.len-1
 
         # create uniform mesh for spring
@@ -444,12 +444,15 @@ class Spring:
                 # plot scale
                 colorline(np.ones(101)*(np.nanmax(self.deformedASurface[:,0])+.5),np.linspace(0,2,101),np.linspace(0,1,101),cmap=plt.get_cmap('rainbow'),linewidth=10)
         if plotBool:
-            outerCircle = plt.Circle([0,0],self.radii[3],color ="k",fill=False)
+            outerCircle = plt.Circle([0,0],self.radii[-1],color ="k",fill=False)
             innerCircle = plt.Circle([0,0],self.radii[0],color ="k",fill=False)
             fig = plt.gcf()
             ax = fig.gca()
             ax.add_patch(outerCircle)
             ax.add_patch(innerCircle)
+
+            plt.plot(self.pts[:,0],self.pts[:,1])
+
             plt.axis("equal")
             plt.show()
 
