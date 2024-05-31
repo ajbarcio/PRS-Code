@@ -325,6 +325,8 @@ class Spring:
         stepTorque = 0
         while stepTorque <= torqueTarg:
             SFStart[2] = stepTorque
+            print("torque level:", stepTorque)
+            print(SFStart)
             res, SF, divergeFlag, i = self.rampWrapper(stepTorque,ODE,SF=SFStart,breakBool=True)
             if divergeFlag:
                 if stepTorque:
@@ -351,6 +353,7 @@ class Spring:
         divergeFlag = 0
         # limit to 100 iterations to converge
         while i <100:
+            # print(i)
             errPrev = err
             # determine boundary condition compliance, estimate jacobian
             err, self.res = self.forward_integration(ODE,SF,torqueTarg)
@@ -359,14 +362,17 @@ class Spring:
             # print(err)
             if lin.norm(err)>lin.norm(errPrev):
                 print("torque deform diverging", i)
-                # print(err, errPrev)
-                # print(SF)
-                print(J)
+                print(err, errPrev)
+                print(SF)
+                # print(J)
+                # print(lin.inv(J))
+                # print(lin.det(J))
                 divergeFlag = 1
                 if breakBool:
                     break
             # make a new guess if it did
             elif lin.norm(err,2) > 10e-10:
+                # print(lin.det(J))
                 SF = SF-lin.inv(J).dot(err)
                 # print(lin.inv(J))
             else:
@@ -398,7 +404,7 @@ class Spring:
         # print("radius before integration:",Rinitial)
         # print("radius assumed by integration:",Rfinal)
         # print(res[1,-2], res[2,-1])
-        self.dBeta    = np.arctan2(self.res[2,-1],self.res[1,-1])-self.betaAngles[-1]
+        self.dBeta    = abs(np.arctan2(self.res[2,-1],self.res[1,-1]))-self.betaAngles[-1]
         # print("deflection:",dBeta)
         # Err = diff. in radius, diff between gamma(L) and beta(L)
         err = np.array([Rinitial-Rfinal, self.res[0,-1]-self.dBeta, SF[2]-torqueTarg])
@@ -667,7 +673,8 @@ class Spring:
                     plt.plot(transformedLine[:,0],transformedLine[:,1],"-k")
 
             plt.axis("equal")
-            plt.show()
+            plt.show(block=False)
+            plt.pause(10)
 
     def measure_length(self):
 

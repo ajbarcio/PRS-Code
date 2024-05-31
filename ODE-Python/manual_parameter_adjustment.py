@@ -20,7 +20,7 @@ R3 = 5.9/2
 R1 = (R0+R3)/2+.26+.125
 R2 = (R0+R3)/2-.25
 
-fullAngle = 165
+fullAngle = 179
 
 beta1 = fullAngle/3*deg2rad*.5
 
@@ -58,6 +58,12 @@ if method=="smartGuess":
     print("guess planar force vector:", SFGuess)
     # use that initial guess to deform the beam
     res, SF, divergeFlag, i = curvedSpring.wrapped_torque_deform(testTorque,curvedSpring.deform_ODE,SF=SFGuess)
+
+    # if it didnt diverge consider the deform ation succesful
+    deformBool = not(divergeFlag)
+    # plot results
+    curvedSpring.full_results(deformBool=deformBool, plotBool=True)
+
     # compare the two guesses
     print("solution planar force vector:", SF)
     # print out results
@@ -66,14 +72,10 @@ if method=="smartGuess":
     print("stiffness (lbf/deg)", testTorque/(curvedSpring.dBeta/deg2rad))
     print("max stress:", curvedSpring.maxStress)
     print("des stress:", curvedSpring.designStress)
-    # if it didnt diverge consider the deform ation succesful
-    deformBool = not(divergeFlag)
-    # plot results
-    curvedSpring.full_results(deformBool=deformBool, plotBool=True)
 elif method=="slowRamp":
     print("using slow ramp method")
     # starting at an unloaded condition, calculate solutions for progressively increasing torque conditions
-    res, SF, divergeFlag, i = curvedSpring.deform_by_torque_slowRamp(testTorque,curvedSpring.deform_ODE)
+    res, SF, divergeFlag, i = curvedSpring.deform_by_torque_slowRamp(testTorque,curvedSpring.deform_ODE,torqueResolution=50)
     deformBool = not(divergeFlag)
     print("solution planar force vector:", SF)
     print("angular deformation:", curvedSpring.dBeta/deg2rad)

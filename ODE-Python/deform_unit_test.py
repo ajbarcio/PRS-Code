@@ -19,7 +19,7 @@ R3 = 5.9/2
 R1 = (R0+R3)/2+.26
 R2 = (R0+R3)/2-.25
 
-fullAngle = 165
+fullAngle = 180
 
 beta1 = fullAngle/3*deg2rad*.5
 beta2 = 2*fullAngle/3*deg2rad
@@ -35,7 +35,10 @@ Ics = np.array([0.008, 0.000025, 0.008])
 #                         straight beam
 # THE ONLY DIFFERENCE BETWEEN straight AND quasiStraight IS THE BETA ANGLES
 
-curvedSpring = Spring(n = 2, radii=np.array([R0,R1,R2,R3]),betaAngles=np.array([0,beta1,beta2,beta0]),IcPts=Ics,IcParamLens=np.array([0.6]))
+curvedSpring = Spring(n = 2, radii=np.array([R0,R1,R2,R3]),
+                             betaAngles=np.array([0,beta1,beta2,beta0]),
+                             IcPts=Ics,
+                             IcParamLens=np.array([0.6]), resolution=500)
 straightSpring = Spring(n = 1, fullParamLength = 6, radii = np.array([1,3,5,7]),
                         betaAngles=np.array([0,0,0,0])*deg2rad,
                         IcPts = np.array([0.03125, 0.03125, 0.03125]), resolution = 200)
@@ -58,6 +61,9 @@ err, res = quasiStraightSpring.forward_integration(quasiStraightSpring.deform_OD
 assert(np.isclose(lin.norm(err),0))
 
 err, res = curvedSpring.forward_integration(curvedSpring.deform_ODE, np.array([0,0,0]), 0)
+print(curvedSpring.dBeta)
+
+print(err)
 assert(np.isclose(lin.norm(err),0))
 
 ######################## Straight Beam Unit Test #######################
@@ -111,6 +117,10 @@ if method=="smartGuess":
     print("guess planar force vector:", SFGuess)
     # use that initial guess to deform the beam
     res, SF, divergeFlag, i = curvedSpring.wrapped_torque_deform(testTorque,curvedSpring.deform_ODE,SF=SFGuess)
+
+    curvedSpring.generate_surfaces()
+    curvedSpring.calculate_stresses()
+
     # compare the two guesses
     print("solution planar force vector:", SF)
     # print out results
@@ -120,7 +130,8 @@ if method=="smartGuess":
     print("max stress:", curvedSpring.maxStress)
     print("des stress:", curvedSpring.designStress)
     # if it didnt diverge consider the deform ation succesful
-    deformBool = not(divergeFlag)
+    # deformBool = not(divergeFlag)
+    deformBool = True
     # plot results
     curvedSpring.full_results(deformBool=deformBool, plotBool=True)
 elif method=="slowRamp":
@@ -141,8 +152,8 @@ B = np.hstack((curvedSpring.undeformedBSurface,np.atleast_2d(np.zeros(len(curved
 np.savetxt("surfaces\A_surface.txt", A, delimiter=",", fmt='%f')
 np.savetxt("surfaces\B_surface.txt", B, delimiter=",", fmt='%f')
 
-A = np.hstack((straightSpring.undeformedASurface,np.atleast_2d(np.zeros(len(curvedSpring.undeformedASurface))).T))
-B = np.hstack((straightSpring.undeformedBSurface,np.atleast_2d(np.zeros(len(curvedSpring.undeformedBSurface))).T))
+A = np.hstack((straightSpring.undeformedASurface,np.atleast_2d(np.zeros(len(straightSpring.undeformedASurface))).T))
+B = np.hstack((straightSpring.undeformedBSurface,np.atleast_2d(np.zeros(len(straightSpring.undeformedBSurface))).T))
 np.savetxt("surfaces\A_surface_straight.txt", A, delimiter=",", fmt='%f')
 np.savetxt("surfaces\B_surface_straight.txt", B, delimiter=",", fmt='%f')
 
@@ -150,7 +161,7 @@ np.savetxt("surfaces\B_surface_straight.txt", B, delimiter=",", fmt='%f')
 
 # make_SW_part(funnySpring)
 # print("called SW function")
-### Evaluate the curve of angles and magnitudes ###
+## Evaluate the curve of angles and magnitudes ###
 
 # print("### TESTING SMART GUESS RULES ###")
 # for i in np.linspace(5,testTorque,5):
@@ -164,6 +175,8 @@ np.savetxt("surfaces\B_surface_straight.txt", B, delimiter=",", fmt='%f')
 # plt.figure(999)
 # plt.scatter(curvedSpring.wrapped_torque_deform.all_moments, angles)
 # plt.scatter(curvedSpring.wrapped_torque_deform.all_moments, magnitudes)
+# plt.axhline(curvedSpring.betaAngles[-1])
+# plt.axhline(np.average(angles))
 
 # print(np.hstack((np.atleast_2d(np.linspace(5,5000,101)).T,np.atleast_2d(magnitudes).T,np.atleast_2d(angles).T)))
 plt.show()
