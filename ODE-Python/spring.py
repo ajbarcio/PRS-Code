@@ -1,3 +1,5 @@
+# TODO: Consistent formatting
+
 import numpy as np
 import math
 import numpy.linalg as lin
@@ -9,21 +11,28 @@ from copy import deepcopy as dc
 
 from utils import numerical_fixed_mesh_diff, fixed_rk4, rk4_step, colorline
 from polynomials import Ic_multiPoly, xy_poly, PPoly_Eval
+from spring_utils import alpha_xy, r_n, d_rn_d_s, d_xi_d_s
 
 deg2rad = np.pi/180
 
 class Deform_Wrapper:
     def __init__(self, function):
+        # Log all the outputs, input moments
         self.all_output = []
         self.all_moments = []
+        # pass the function to be wrapped
         self.function = function
 
     def __call__(self, torqueTarg, ODE, torqueResolution=10, SF = np.array([0,0,0]), breakBool=False):
+        # stick the torque targe in the moments list
         self.all_moments.append(torqueTarg)
+        # time how long the deformation takes to solve
         SSProfile("BVP").tic()
         res, SF, divergeFlag, i  = self.function(torqueTarg, ODE, torqueResolution, SF, breakBool)
         SSProfile("BVP").toc()
+        # log the solution
         self.all_output.append(SF)
+        # return the quantities that the wrapped function would
         return res, SF, divergeFlag, i
 
 class Spring:
@@ -101,12 +110,17 @@ class Spring:
         self.XYFactors = XYParamLens
 
         # create control points for polynomials
+
+        # x-y control points
         self.pts = np.empty((len(radii),2))
         for i in range(len(radii)):
             self.pts[i,:] = [self.radii[i]*np.cos(self.betaAngles[i]),self.radii[i]*np.sin(self.betaAngles[i])]
 
+        # Ic control points are input directly
         self.IcPts = IcPts
 
+        # convert IcParamLens, input as proportions of the full parameter length
+        # to parameter lengths
         self.IcParamLens = np.empty(len(IcPts))
         for i in range(len(IcPts)):
             if i==0:
@@ -115,8 +129,8 @@ class Spring:
                 self.IcParamLens[i] = self.fullParamLength
             else:
                 self.IcParamLens[i] = self.fullParamLength*IcParamLens[i-1]
-        # print(self.IcArcLens)
-
+        
+        # Do the same with the parameter length controls on x-y points
         self.XYParamLens = np.empty(len(radii))
         for i in range(len(radii)):
             if i==0:
@@ -125,20 +139,19 @@ class Spring:
                 self.XYParamLens[i] = self.fullParamLength
             else:
                 self.XYParamLens[i] = self.fullParamLength*XYParamLens[i-1]
-        # print(self.XYArcLens)
 
         # create a vector of all mutable parameters
-
         self.parameterVector = np.concatenate((self.radii, self.betaAngles,
                                               self.IcPts, self.IcFactors,
                                               self.XYFactors))
 
         # assign some constants for approximating derivatives
+        # NOTE THAT NOT ALL OF THESE ARE USED
         self.finiteDifferenceLength = 0.001
         self.finiteDifferenceAngle  = .1*deg2rad
         self.finiteDifferenceForce  = 0.1
         self.finiteDifferenceTorque = 0.5
-        self.finiteDifferenceCI     = 20
+        self.finiteDifferenceIc     = 0.00001
 
         # assign some constants for meshing the spring
         self.resl = resolution
@@ -146,13 +159,19 @@ class Spring:
         self.step = fullParamLength/self.resl
         self.endIndex = self.len-1
 
-        # create uniform mesh for spring\
-        # print("len:",self.len)
+        # create uniform mesh for spring
+        # 'xi' is the internal parameter
         self.ximesh = np.linspace(0,self.fullParamLength,self.len)
 
+        # generate the coefficients for x-y and Ic polynomials
         self.geometry_coeffs()
+        # find the derivative to convert between the internal parameter mesh
+        # and an arc length based mesh
         self.dxids = d_xi_d_s(self.ximesh, self.XCoeffs, self.YCoeffs)
-        # this takes way too many lines but fuck it IDC, better to see the math
+
+        # this takes way too many lines but its better to see the math written
+        # out:
+
         # Find coordinates of frames:
         # at base of spring
         self.x0 = PPoly_Eval(0,self.XCoeffs)
@@ -169,34 +188,55 @@ class Spring:
 
     def sensitivity_study(self, index, factor, resolution, testTorque):
 
+        """
+        THIS FUNCTION:
+            Runs a sensitivity study across a single design variable, to expose
+            how a single variable locally affects max stress and deflection
+        """
+
+        # initialize a wrapper to log results
         sensitivityTorqueWrapper = Deform_Wrapper(self.deform_by_torque)
 
+        # store a copy of the original "parameters"
         oldParameterVector = dc(self.parameterVector)
         # print(oldParameterVector)
 
+        # establish the design variable range over which to evaluate
+        # deformations
         start = (1-factor)*self.parameterVector[index]
         end   = (1+factor)*self.parameterVector[index]
+        # uniform mesh over the range
         values = np.linspace(start, end, resolution+1)
+        # prepare arrays to store performance characteristics
         stresses    = np.empty(len(values))
         deflections = np.empty(len(values))
-        for i in range(len(values)):
+        # over the range
+        for i in range(len(values)):\
+            # time the study
             SSProfile("sensitivity study").tic()
+            # set the parameter in question to the changed value
             self.parameterVector[index] = values[i]
             print("trying:",values[i])
+            # re-initialize spring with appropriate design variables
             self.redefine_spring_from_parameterVector()
+            # USE SMART GUESS METHOD (see deform_unit_test for documentation)
             SFGuess = self.smart_initial_load_guess(testTorque,self.deform_ODE)
             sensitivityTorqueWrapper(testTorque,self.deform_ODE,SF=SFGuess)
-            self.generate_surfaces()
+            self.generate_undeformed_surfaces()
             self.calculate_stresses()
+            # record stress and deflection with these design variables
             stresses[i] = self.maxStress
             deflections[i] = self.dBeta/deg2rad
             SSProfile("sensitivity study").toc()
+        # combine all the results into one array structure (for output to csv)
         output = np.array(sensitivityTorqueWrapper.all_output)
         sensitivityResults = np.hstack((output, np.atleast_2d(deflections).T,
                                         np.atleast_2d(stresses).T,
                                         np.atleast_2d(values).T))
+        # reset the spring to its original state
         self.parameterVector = dc(oldParameterVector)
         self.redefine_spring_from_parameterVector()
+
         return sensitivityResults
 
     def redefine_spring_from_parameterVector(self):
@@ -206,9 +246,10 @@ class Spring:
             regenerates a spring when the parameter vector is changed
         """
 
-        # self.parameterVector = np.concatenate((self.radii, self.betaAngles,
-        #                                       self.IcPts, self.IcParamLens,
-        #                                       self.XYParamLens))
+        ### This is done in a very dumb way, TODO to make this into a dict and
+        #   use for loops
+
+        # record all the new "parameters"
         newRadii      = self.parameterVector[0:len(self.radii)]
         startIndex = len(newRadii)
         newBetaAngles = self.parameterVector[startIndex:
@@ -225,8 +266,11 @@ class Spring:
                                               startIndex+len(self.XYFactors)]
         startIndex = len(np.concatenate([newRadii,newBetaAngles,
                                         newIcPts,newIcFactors,newXYFactors]))
+        # make sure you created the right length of vector
         assert(startIndex==len(self.parameterVector))
 
+
+        # re-initialize spring like in __init__
         self.init(E                 = self.E,
                   designStress      = self.designStress,
                   n                 = self.n,
@@ -250,7 +294,6 @@ class Spring:
                   IcParamLens       = self.IcFactors,
                   XYParamLens       = self.XYFactors,
                   resolution        = self.resl)
-
 
     def geometry_coeffs(self):
 
@@ -278,27 +321,34 @@ class Spring:
             diverging for most springs
         """
 
-        # print("getting initial guess")
+        # initialize guess wrapper for use in linear extrapolation
         guessWrapper = Deform_Wrapper(self.deform_by_torque)
 
+
+        # evaluate spring at two ("arbitrarily") low-torque points that should
+        # converge nicely
         SF = np.array([0,0,torqueTarg*0.05])
         guessWrapper(SF[2],ODE,SF=SF)
         SF = np.array([0,0,torqueTarg*0.15])
         guessWrapper(SF[2],ODE,SF=SF)
 
+        # record angles and magnitudes of [Fx,Fy] vector at each torque level
         torques = np.array([torqueTarg*0.1,torqueTarg*0.2])
         angles = np.empty(len(guessWrapper.all_output))
         magnitudes = np.empty(len(guessWrapper.all_output))
         for i in range(len(guessWrapper.all_output)):
             angles[i] = np.arctan2(guessWrapper.all_output[i][1],guessWrapper.all_output[i][0])
             magnitudes[i] = lin.norm(guessWrapper.all_output[i][0:2])
+        # fit a first-order regression to angles and magnitudes
         anglePoly = np.polyfit(torques,angles,1)
         magPoly = np.polyfit(torques,magnitudes,1)
+        # evaluate that regression at the true torque target
         angleGuess  = np.polyval(anglePoly, torqueTarg)
         magGuess  = np.polyval(magPoly, torqueTarg)
+        # create a spacial force vector guess from that magnitude and angle
         SFGuess = np.array([magGuess*np.cos(angleGuess), magGuess*np.sin(angleGuess), torqueTarg])
-        # print("done getting initial guess")
-        return(SFGuess)
+        
+        return SFGuess
 
     def deform_by_torque_slowRamp(self, torqueTarg, ODE, torqueResolution=15):
 
@@ -308,10 +358,9 @@ class Spring:
             spatial force vector solution at each torque level as the initial
             guess vector for the next torque level
         """
-
+        # initialize wrapper to record results
         self.rampWrapper = Deform_Wrapper(self.deform_by_torque)
-        # this method goes straight to full loading condition lmao
-        # TODO: MAKE THIS AUTOMATIC
+        # start at 0
         SFStart = np.array([0,0,0])
         # the err is a two vector, so make it arbitrarily high to enter loop
         err = np.ones(2)*float('inf')
@@ -320,23 +369,31 @@ class Spring:
         j = 0
         k = 0
         divergeFlag = 0
-        # limit to 100 iterations to converge
-        n = len(err)
         stepTorque = 0
+        # until you reach full torque
         while stepTorque <= torqueTarg:
             SFStart[2] = stepTorque
             print("torque level:", stepTorque)
             print(SFStart)
+            # defrom using previous SF Force guess at curent torque step
             res, SF, divergeFlag, i = self.rampWrapper(stepTorque,ODE,SF=SFStart,breakBool=True)
             if divergeFlag:
+                # if it diverges, and it isn't the first step:
                 if stepTorque:
-                    stepTorque-=torqueTarg/torqueResolution
+                    # decrease the torque to the previous level
+                    stepTorque -= torqueTarg/torqueResolution
+                # double the torque resolution (halve the step size)
                 torqueResolution *= 2
+            # if it's successful:
             else:
+                # increase the torque by one step
                 stepTorque+=torqueTarg/torqueResolution
+                # use the previous guess
                 SFStart = SF
-            j+=1
-            k+=i
+            # used for debugging/evaluation purposes: j tracks number of torque
+            # steps, k tracks number of forward integrations
+            j += 1
+            k += i
         return res, SF, divergeFlag, k
 
     def deform_by_torque(self,torqueTarg,ODE,torqueResolution=10,SF=np.array([0,0,0]),breakBool=False):
@@ -353,31 +410,31 @@ class Spring:
         divergeFlag = 0
         # limit to 100 iterations to converge
         while i <100:
-            # print(i)
             errPrev = err
             # determine boundary condition compliance, estimate jacobian
             err, self.res = self.forward_integration(ODE,SF,torqueTarg)
             J = self.estimate_jacobian_fd(ODE,SF,torqueTarg)
-            # freak the fuck out if it didnt work
-            # print(err)
+            # freak out if it didnt work
             if lin.norm(err)>lin.norm(errPrev):
+                # print information on what is happening
                 print("torque deform diverging", i)
                 print(err, errPrev)
                 print(SF)
-                # print(J)
-                # print(lin.inv(J))
-                # print(lin.det(J))
                 divergeFlag = 1
+                # If break bool is true, break if you diverge even once
+                # usually for debug purposes, I just let it run, and see if
+                # it can find its way back to a convergent solution
                 if breakBool:
                     break
-            # make a new guess if it did
+            # make a new guess if it did work
             elif lin.norm(err,2) > 10e-10:
-                # print(lin.det(J))
+                # (according to a newton's method)
                 SF = SF-lin.inv(J).dot(err)
-                # print(lin.inv(J))
+            # and if the error is small enough to converge, break out
             else:
                 break
             i+=1
+        # store the final solution in the object
         self.solnSF = SF
         return self.res, self.solnSF, divergeFlag, i
 
@@ -392,21 +449,17 @@ class Spring:
 
         # set up initial condition
         dgds0 = (SF[2]/self.n + self.momentArmY*SF[0] - self.momentArmX*SF[1])/(self.E*PPoly_Eval(0, self.IcCoeffs, ranges=self.domains))
-        # print(dgds0)
-        # print(self.IcCoeffs)
-        # print("Ic(0):", PPoly_Eval(0, self.IcCoeffs, ranges=self.domains))
+
         # perform forward integration
         self.res  = fixed_rk4(ODE, np.array([0,self.x0,self.y0]), self.ximesh, (SF[0], SF[1], dgds0))
-        # calcualte error values
+        # calcualte error values (difference in pre-and post-iteration radii)
+        #                        (difference in final gamma and final beta)
         Rinitial = lin.norm([self.xL,self.yL])
-        # print(self.xL, self.yL)
         Rfinal   = lin.norm([self.res[1,-1],self.res[2,-1]])
-        # print("radius before integration:",Rinitial)
-        # print("radius assumed by integration:",Rfinal)
-        # print(res[1,-2], res[2,-1])
+        # TODO: This bakes in the assumption that 
         self.dBeta    = abs(np.arctan2(self.res[2,-1],self.res[1,-1]))-self.betaAngles[-1]
-        # print("deflection:",dBeta)
-        # Err = diff. in radius, diff between gamma(L) and beta(L)
+        # Err = diff. in radius, diff between gamma(L) and beta(L), distance
+        #       from target torque (just to make matrix square)
         err = np.array([Rinitial-Rfinal, self.res[0,-1]-self.dBeta, SF[2]-torqueTarg])
         return err, self.res
 
@@ -418,22 +471,27 @@ class Spring:
             the spatial force vector using a finite difference method
         """
 
-        Jac = np.empty((3,3))
+        # Jacobian is square because square matrix good
+        Jac = np.empty((n,n))
+        # assign each row at a time
         for i in range(n):
             finiteDifference = np.zeros(len(SF))
+            # decide based on whether you're using a force or torque which 
+            # difference to use
             if i < 2:
                 finiteDifference[i] = self.finiteDifferenceForce
-                # step = 1
             else:
                 finiteDifference[i] = self.finiteDifferenceTorque
-                # step = 0.1
+            # evaluate the ODE at a forwards and backwards step
             errBack, resG = self.forward_integration(ODE, SF-finiteDifference, torqueTarg)
             errForw, resG = self.forward_integration(ODE, SF+finiteDifference, torqueTarg)
+            # assign row of jacobian
             Jac[0,i]     = (errForw[0]-errBack[0])/(2*lin.norm(finiteDifference))
             Jac[1,i]     = (errForw[1]-errBack[1])/(2*lin.norm(finiteDifference))
             Jac[2,i]     = (errForw[2]-errBack[2])/(2*lin.norm(finiteDifference))
+        # this line included in case you ever want to use a partial jacobian
         Jac = Jac[0:n,0:n]
-        # print(Jac)
+
         return Jac
 
     def deform_ODE(self, xi, p, *args):
@@ -455,21 +513,22 @@ class Spring:
         dydxi = PPoly_Eval(xi, self.YCoeffs, deriv=1)
 
         dxids = d_xi_d_s(xi, self.XCoeffs, self.YCoeffs)
-        # print(dxids)
+        # dxds and dyds are used in diffeq
         dxds = dxids*dxdxi
         dyds = dxids*dydxi
 
         ### DO THE DIFFEQ ###
 
         LHS = np.empty(3)
+
         LHS[0] = (dgds0 + Fy/Mdim*(p[1]-self.x0) - Fx/Mdim*(p[2]-self.y0))
         LHS[1] = np.cos(np.arctan2(dyds,dxds)+p[0])
         LHS[2] = np.sin(np.arctan2(dyds,dxds)+p[0])
-        # check to make sure the math makes sense
+        # check to make sure the math makes sense (I.C. satisfied)
         if xi==0:
-            # print(LHS[0],dgds0)
             assert(np.isclose(LHS[0],dgds0,rtol=1e-5))
-        # transfer from s space to xi space
+
+        # transfer back from s space to xi space
         LHS = LHS/dxids
         return LHS
 
@@ -488,42 +547,50 @@ class Spring:
         # define the system to be solved
         def func(x, rn, Ic):
             f1 = (x[0]+x[1])/(np.log((rn+x[1])/(rn-x[0])))-rn
-            # f2 = (x[0]+x[1])*(outPlaneThickness*(x[1]-(x[1]+x[0])/2)*rn)-cI
             f2 = self.t*rn*(x[0]+x[1])*(x[1]/2-x[0]/2)-Ic
             return np.array([f1, f2])
-        def jac(x, rn, Ic):
+        def jac(x, rn, Ic): # IC doesn't happen to occur in the derivatives
             return np.array([[1/(np.log((rn+x[1])/(rn-x[0])))-(x[0]+x[1])/(((np.log((rn+x[1])/(rn-x[0])))**2)*(rn-x[0])), \
                             1/(np.log((rn+x[1])/(rn-x[0])))-(x[0]+x[1])/(((np.log((rn+x[1])/(rn-x[0])))**2)*(rn+x[1]))], \
                             [-rn*self.t*x[0], rn*self.t*x[1]]])
-        # some error checking an escapes for possible non-convergent cases
-        if not np.isinf(rn):
+        # some error checking and escapes for possible non-convergent cases
+        if not np.isinf(rn): # TODO: change this to some large finite threshold
+            # check for if the beam was locally straight on the last iteration
             if lABPrev[0]==lABPrev[1]:
+                # perturb the initial guess a bit to avoid convergence issues
                 x0 = [lABPrev[0], lABPrev[1]+0.001]
             else:
+                # THIS IS THE "NORMAL" CASE (in which the previous step was curved)
                 x0 = lABPrev
             err = 1
-        # excape for locally straight beam
+        # escape for locally straight beam
         else:
+            # set the error to 0 to not enter the root finder
             err = 0
+            # use the straight beam definition of I to find the thickness
             l = np.cbrt(12*Ic/self.t)/2
             x0 = [l, l]
         x = x0
 
         iii = 0
-        # solve the problem
+        # solve the problem (do newtons method to rootfind)
         while err > 10**-6 and iii <500:
-            # print("entered while")
+            # newtons method
             xprev = x
             x = x - np.transpose(lin.inv(jac(x, rn, Ic)).dot(func(x, rn, Ic)))
-            # print(x)
+            # error to track convergence
             err = lin.norm(x-xprev)
-            # err = lin.norm(func(x, rn, cI))
             iii+=1
-        # escape for beam so uncurved that its _basically_ straight:
+        # escape if convergence goes towards beam so uncurved that 
+        # its _basically_ straight (this results in very high thicknesses):
         # this threshold is arbitrary
+
+        # TODO: Delete this
         if(lin.norm(x)>lin.norm(lABPrev)*100):
+            # use straight beam definition
             l = np.cbrt(12*Ic/self.t)/2
             x = [l,l]
+        # boolean value used to print out debug info
         if(printBool):
             print(x0)
             print(x)
@@ -532,40 +599,54 @@ class Spring:
             print(err)
         return x    # here x is [la, lb]
 
-    def generate_surfaces(self):
+    def generate_undeformed_surfaces(self):
 
         """
         THIS FUNCTION:
             generates the inner and outer surfaces of the spring (in x-y
-            coordinates)
+            coordinates) as well as the centroidal surface
+            in the undeformed state
         """
 
-        # Generate neutral radius path and give it nicely formatted class variables
-        self.undeformedNeutralSurface = np.hstack((np.atleast_2d(PPoly_Eval(self.ximesh, self.XCoeffs)).T, np.atleast_2d(PPoly_Eval(self.ximesh, self.YCoeffs)).T))
+        # Generate neutral radius path and give it nicely formatted class variable
+        self.undeformedNeutralSurface = np.hstack((np.atleast_2d(PPoly_Eval(self.ximesh, self.XCoeffs)).T, 
+                                                   np.atleast_2d(PPoly_Eval(self.ximesh, self.YCoeffs)).T))
 
+        # prepare a whole bunch of output arrays
         lABPrev = [0,0]
-
         self.la = np.empty(len(self.ximesh))
         self.lb = np.empty(len(self.ximesh))
         self.h = np.empty(len(self.ximesh))
+        # create meshed Ic and rn arrays for use in calculating inner/outer
+        # surface
         self.Ic = PPoly_Eval(self.ximesh, self.IcCoeffs, ranges=self.domains)
         self.rn = r_n(self.ximesh, self.XCoeffs, self.YCoeffs)
+        # perform la/lb rootfinding for each step in the xi mesh
         for i in range(len(self.ximesh)):
             SSProfile("lAB rootfinding").tic()
             lAB = self.l_a_l_b_rootfinding(self.ximesh[i], lABPrev)
             SSProfile("lAB rootfinding").toc()
             self.la[i] = lAB[0]
             self.lb[i] = lAB[1]
+            # calculate overall thickness
             self.h[i] = self.lb[i]+self.la[i]
             lABPrev = lAB
+        # calculate eccentricity as well as radius of curvature for each surface
         self.ecc = self.Ic/(self.t*self.h*self.rn)
         self.a = self.rn-self.la
         self.b = self.rn+self.la
-
+        # meshed tangent angle
         self.alpha = alpha_xy(self.ximesh, self.XCoeffs, self.YCoeffs)
         # generate xy paths for surfaces
-        self.undeformedBSurface = self.undeformedNeutralSurface+np.hstack((np.atleast_2d(-self.lb*np.sin(self.alpha)).T, np.atleast_2d(self.lb*np.cos(self.alpha)).T))
-        self.undeformedASurface = self.undeformedNeutralSurface-np.hstack((np.atleast_2d(-self.la*np.sin(self.alpha)).T, np.atleast_2d(self.la*np.cos(self.alpha)).T))
+        self.undeformedBSurface = self.undeformedNeutralSurface + \
+                                  np.hstack((np.atleast_2d(-self.lb*np.sin(self.alpha)).T, 
+                                             np.atleast_2d(self.lb*np.cos(self.alpha)).T))
+        self.undeformedASurface = self.undeformedNeutralSurface - \
+                                np.hstack((np.atleast_2d(-self.la*np.sin(self.alpha)).T, 
+                                           np.atleast_2d(self.la*np.cos(self.alpha)).T))
+
+        # generate centroidal surface
+        self.undeformedCentroidalSurface = self.undeformedNeutralSurface+np.hstack((np.atleast_2d(self.ecc*np.sin(self.alpha)).T, np.atleast_2d(self.ecc*np.cos(self.alpha)).T))
 
         return self.undeformedASurface, self.undeformedBSurface
 
@@ -576,28 +657,39 @@ class Spring:
             Calcualtes the maximum stress at any point along the beam
         """
 
+        # calculate gamma derivative for stress calcs
         dgdxi = numerical_fixed_mesh_diff(self.res[0,:], self.ximesh)
         self.dgds = dgdxi*self.dxids
+        
+        # prepare stress arrays
         self.innerSurfaceStress = np.empty(len(self.ximesh))
         self.outerSurfaceStress = np.empty(len(self.ximesh))
+        # calculate stress differently depending on whether or not beam is 
+        # locally straight
         for i in range(len(self.innerSurfaceStress)):
             if not np.isinf(self.rn[i]):
-                self.innerSurfaceStress[i] = abs(self.E*(1-self.rn[i]/self.a[i])*self.rn[i]*self.dgds[i])
-                self.outerSurfaceStress[i] = abs(self.E*(1-self.rn[i]/self.b[i])*self.rn[i]*self.dgds[i])
+                self.innerSurfaceStress[i] =  \
+                    abs(self.E*(1-self.rn[i]/self.a[i])*self.rn[i]*self.dgds[i])
+                self.outerSurfaceStress[i] =  \
+                    abs(self.E*(1-self.rn[i]/self.b[i])*self.rn[i]*self.dgds[i])
             else:
                 self.innerSurfaceStress[i] = self.E*self.dgds[i]*0.5*self.h[i]
 
+        # create arrays normalized to the allowable stress (for plotting)
         self.normalizedInnerStress =self.innerSurfaceStress/self.designStress
         self.normalizedOuterStress =self.outerSurfaceStress/self.designStress
 
+        # record only the max stress between inner and outer at any point
         self.maxStresses = np.empty(len(self.normalizedInnerStress))
         for i in range(len(self.normalizedInnerStress)):
             if self.normalizedInnerStress[i] > self.normalizedOuterStress[i]:
                 self.maxStresses[i] = self.normalizedInnerStress[i]
             else:
                 self.maxStresses[i] = self.normalizedOuterStress[i]
-        # print(self.maxStresses)
+        
+        # record the maximum stress along whole beam
         self.maxStress = np.nanmax([self.innerSurfaceStress, self.outerSurfaceStress])
+        
         return self.maxStress, self.maxStresses
 
     def full_results(self, plotBool=1, deformBool=1):
@@ -609,12 +701,8 @@ class Spring:
             state
         """
 
-        ## Things to make for the undeformed state:
-
         # Generate outer and inner surfaces
-        self.generate_surfaces() # A and B surface come from here
-        # generate centroidal surface
-        self.undeformedCentroidalSurface = self.undeformedNeutralSurface+np.hstack((np.atleast_2d(self.ecc*np.sin(self.alpha)).T, np.atleast_2d(self.ecc*np.cos(self.alpha)).T))
+        self.generate_undeformed_surfaces() # A and B surface come from here
 
         plottedLines = []
 
@@ -656,13 +744,14 @@ class Spring:
 
         # extra "visual sugar" included here, at end of function, for organizational purposes
         if plotBool:
+            # plot geometry of inner and outer rotor of spring
             outerCircle = plt.Circle([0,0],self.radii[3],color ="k",fill=False)
             innerCircle = plt.Circle([0,0],self.radii[0],color ="k",fill=False)
             fig = plt.gcf()
             ax = fig.gca()
             ax.add_patch(outerCircle)
             ax.add_patch(innerCircle)
-
+            # plot the rest of the arms of the spring (rotate calculated geometry)
             ang = 2*np.pi/self.n
             for i in range(len(plottedLines)):
                 for j in np.linspace(1,self.n-1,self.n-1):
@@ -671,10 +760,10 @@ class Spring:
                     transformedLine = R.dot(plottedLines[i].T)
                     transformedLine = transformedLine.T
                     plt.plot(transformedLine[:,0],transformedLine[:,1],"-k")
-
+            plt.plot(self.pts[:,0],self.pts[:,1])
+            # show it
             plt.axis("equal")
-            plt.show(block=False)
-            plt.pause(10)
+            plt.show()
 
     def measure_length(self):
 
@@ -683,65 +772,12 @@ class Spring:
             measures the length of an initialized spring
         """
 
+        # calcualte derivative of x and y with respect to xi (internal parameter)
         self.dxdxi = PPoly_Eval(self.ximesh, self.XCoeffs, deriv = 1)
         self.dydxi = PPoly_Eval(self.ximesh, self.YCoeffs, deriv = 1)
         integrand = np.sqrt(self.dxdxi**2+self.dydxi**2)
+        # create a mesh in s according by integrating along the parameter to find
+        # arc length
         self.smesh = scipy.integrate.cumulative_trapezoid(integrand, self.ximesh, self.ximesh[1]-self.ximesh[0])
+        # return the overall length of the spring
         return self.smesh[-1]
-
-def alpha_xy(s, xCoeffs, yCoeffs):
-    if hasattr(s, "__len__"):
-        alphaList = np.arctan2(PPoly_Eval(s, yCoeffs, deriv=1),PPoly_Eval(s, xCoeffs, deriv=1))
-        for i in range(len(alphaList)):
-            if alphaList[i]<0:
-                alphaList[i]=alphaList[i]+2*math.pi
-        return alphaList
-    else:
-        alpha = np.arctan2(PPoly_Eval(s, yCoeffs, deriv=1),PPoly_Eval(s, xCoeffs, deriv=1))
-        if alpha<0:
-            alpha=alpha+2*math.pi
-        return alpha
-
-def r_n(s, xCoeffs, yCoeffs):
-    d2yds2 = PPoly_Eval(s, yCoeffs, deriv=2)
-    d2xds2 = PPoly_Eval(s, xCoeffs, deriv=2)
-    dyds   = PPoly_Eval(s, yCoeffs, deriv=1)
-    dxds   = PPoly_Eval(s, xCoeffs, deriv=1)
-    # dAlphadS = (d2yds2/dxds-d2xds2*dyds/dxds)/(1+dyds**2/dxds)
-    if hasattr(s, "__len__"):
-        rn = ((1+dyds**2/dxds**2)/(d2yds2/dxds-d2xds2*dyds/dxds**2))
-        for i in range(len(rn)):
-            if not np.isfinite(rn[i]):
-                rn[i] = float('inf')
-            if abs((d2yds2[i]/dxds[i]-d2xds2[i]*dyds[i]/dxds[i]**2)) <= 10**-13:
-                rn[i] = float('inf')*np.sign(rn[i-1])
-    else:
-        if abs(d2yds2/dxds-d2xds2*dyds/dxds**2)<=10**-13:
-            rn = float('inf')
-        else:
-            rn = ((1+dyds**2/dxds**2)/(d2yds2/dxds-d2xds2*dyds/dxds**2))
-    return rn
-
-def d_rn_d_s(s, xCoeffs, yCoeffs):
-    d3yds3 = PPoly_Eval(s, yCoeffs, deriv=3)
-    d3xds3 = PPoly_Eval(s, xCoeffs, deriv=3)
-    d2yds2 = PPoly_Eval(s, yCoeffs, deriv=2)
-    d2xds2 = PPoly_Eval(s, xCoeffs, deriv=2)
-    dyds   = PPoly_Eval(s, yCoeffs, deriv=1)
-    dxds   = PPoly_Eval(s, yCoeffs, deriv=1)
-
-    denominator = (d2yds2*dxds-d2xds2*dyds)**2
-    numerator   = ( dxds**3*d3yds3 - dyds**3*d3xds3 +
-                    2*dyds*d2xds2**2*dxds - 2*dyds*d2yds2**2*dxds - dxds**2*d3xds3*dyds -
-                    2*dxds**2*d2yds2*d2xds2 + 2*dyds**2*d2yds2*d2xds2 +
-                    dyds**2*d3yds3*dxds )
-
-    drnds = -numerator/denominator
-
-    return drnds
-
-def d_xi_d_s(ximesh, XCoeffs, YCoeffs):
-    dxdxi = PPoly_Eval(ximesh, XCoeffs, deriv=1)
-    dydxi = PPoly_Eval(ximesh, YCoeffs, deriv=1)
-    dxids = 1/np.sqrt(dxdxi**2+dydxi**2)
-    return dxids

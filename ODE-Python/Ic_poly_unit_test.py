@@ -18,8 +18,8 @@ from polynomials import Ic_multiPoly, Ic_poly, Ic_spline, PPoly_Eval
 # Lists should be able to be any (matching) length and
 # include any (real positive) values and produce good results
 
-IcPts = np.array([.008,.001,.006])
-IcParamLens = np.array([0,3,5])
+IcPts = np.array([.008,.001,.001,.006])
+IcParamLens = np.array([0,2,3,5])
 
 method = "multiPoly"
 # the "multiPoly" method is the only current "supported" method for Ic generation
@@ -58,6 +58,7 @@ elif method=="spline":
     sp.plotting.plot((soln[0],(x,splPts[0],splPts[1])),(soln[1],(x,splPts[1],splPts[2])),(soln[2],(x,splPts[2],splPts[3])),(soln[3],(x,splPts[3],splPts[4])))
     sp.plotting.plot((diff[0],(x,splPts[0],splPts[1])),(diff[1],(x,splPts[1],splPts[2])),(diff[2],(x,splPts[2],splPts[3])),(diff[3],(x,splPts[3],splPts[4])))
     # plt.plot(theList[:,0],theList[:,1])
+## PIECEWISE POLYNOMIAL METHOD (This is the currently used version)
 elif method=="multiPoly":
     # Generate the coefficients of multiple quadratic polynomials and the
     # domains over which they apply so that the input variables are satisfied

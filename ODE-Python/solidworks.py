@@ -9,10 +9,9 @@ def make_SW_part(Spring):
     sw = connectToSW()
     newFile(sw, "newPart.SLDPRT")
 
-
 def startSW():
     ## Starts Solidworks
-    SW_PROCESS_NAME = r'C:/Program Files/SOLIDWORKS Corp/SOLIDWORKS/SLDWORKS.exe'
+    SW_PROCESS_NAME = 'C:/Program Files/SOLIDWORKS Corp/SOLIDWORKS/SLDWORKS.exe'
     sb.Popen(SW_PROCESS_NAME)
 
 def shutSW():
