@@ -456,6 +456,7 @@ class Spring:
         #                        (difference in final gamma and final beta)
         Rinitial = lin.norm([self.xL,self.yL])
         Rfinal   = lin.norm([self.res[1,-1],self.res[2,-1]])
+        # TODO: This bakes in the assumption that 
         self.dBeta    = abs(np.arctan2(self.res[2,-1],self.res[1,-1]))-self.betaAngles[-1]
         # Err = diff. in radius, diff between gamma(L) and beta(L), distance
         #       from target torque (just to make matrix square)
@@ -553,7 +554,7 @@ class Spring:
                             1/(np.log((rn+x[1])/(rn-x[0])))-(x[0]+x[1])/(((np.log((rn+x[1])/(rn-x[0])))**2)*(rn+x[1]))], \
                             [-rn*self.t*x[0], rn*self.t*x[1]]])
         # some error checking and escapes for possible non-convergent cases
-        if not np.isinf(rn):
+        if not np.isinf(rn): # TODO: change this to some large finite threshold
             # check for if the beam was locally straight on the last iteration
             if lABPrev[0]==lABPrev[1]:
                 # perturb the initial guess a bit to avoid convergence issues
@@ -583,6 +584,8 @@ class Spring:
         # escape if convergence goes towards beam so uncurved that 
         # its _basically_ straight (this results in very high thicknesses):
         # this threshold is arbitrary
+
+        # TODO: Delete this
         if(lin.norm(x)>lin.norm(lABPrev)*100):
             # use straight beam definition
             l = np.cbrt(12*Ic/self.t)/2

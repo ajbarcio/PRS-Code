@@ -155,10 +155,11 @@ def Ic_poly(IcPts, IcArcLens): # Deprecated
 def xy_poly(pts, XYArcLens):
 
     # if we have n points we need:
-    # n constraints on first derivative
+    # n constraints on zeroth derivative
     # 2 constraints on first derivative (angle at start and end)
     # 2 constraints on second derivative (straightness at start and end)
     # n + 4 constraints
+    # n + 3 degree polynomial
 
     # initialize matrix sizes
     nConstraints = len(pts)+4
@@ -197,6 +198,7 @@ def xy_poly(pts, XYArcLens):
     # print(Mat)
     XCoeffs = lin.solve(Mat, XTarg)
     YCoeffs = lin.solve(Mat, YTarg)
+    # TODO: assert(lin.cond(Mat)<tol)
     # print(XCoeffs, YCoeffs)
     return XCoeffs, YCoeffs
 

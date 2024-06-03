@@ -20,7 +20,7 @@ R3 = 5.9/2
 R1 = (R0+R3)/2+.26+.125+.125
 R2 = (R0+R3)/2-.25+.125
 
-fullAngle = 147
+fullAngle = 120
 
 beta1 = fullAngle/3*deg2rad*.5*1.2
 

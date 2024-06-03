@@ -20,7 +20,7 @@ R3 = 5.9/2
 R1 = (R0+R3)/2+.26
 R2 = (R0+R3)/2-.25
 
-fullAngle = 180
+fullAngle = 145
 
 beta1 = fullAngle/3*deg2rad*.5
 beta2 = 2*fullAngle/3*deg2rad
@@ -101,7 +101,7 @@ print("the above three values should be close to the same")
 
 ######################## Curved Beam Unit Test #######################
 # Test the deformation functions all together, and use either method #
-# to deform a beam under a target torque load.                        #
+# to deform a beam under a target torque load.                       #
 ######################################################################
 
 print("#################### UNIT TEST 2: Deforming Single Spring ####################")

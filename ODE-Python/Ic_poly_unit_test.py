@@ -18,8 +18,8 @@ from polynomials import Ic_multiPoly, Ic_poly, Ic_spline, PPoly_Eval
 # Lists should be able to be any (matching) length and
 # include any (real positive) values and produce good results
 
-IcPts = np.array([.008,.001,.006])
-IcParamLens = np.array([0,3,5])
+IcPts = np.array([.008,.001,.001,.006])
+IcParamLens = np.array([0,2,3,5])
 
 method = "multiPoly"
 # the "multiPoly" method is the only current "supported" method for Ic generation
