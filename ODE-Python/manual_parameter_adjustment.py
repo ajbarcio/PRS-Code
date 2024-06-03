@@ -2,6 +2,22 @@ import numpy as np
 import numpy.linalg as lin
 import matplotlib.pyplot as plt
 from spring import Spring
+import sys
+import logbook
+
+logger = logbook.Logger(__name__)
+f = open("test.txt", 'w')
+sys.stdout = f
+handler = logbook.StreamHandler(sys.stdout , level="INFO")
+handler.format_string = "{record.channel} | {record.level_name} | {record.message}"
+handler.push_application()
+
+logger.info("Successfully connected to the database 'my_db' on host 'ubuntu'")
+
+logger.warning("Detected suspicious activity from IP address: 111.222.333.444")
+#file = logbook.FileHandler('/logs/foo.log', mode='a', encoding=None, level=0, format_string=None, delay=False, filter=None, bubble=False)
+#handler = TimedRotatingFileHandler('/var/log/foo.log',date_format='%Y-%m-%d')
+#file.write("Successfully created log file")
 
 
 deg2rad = np.pi/180
@@ -20,7 +36,7 @@ R3 = 5.9/2
 R1 = (R0+R3)/2+.26+.125+.125
 R2 = (R0+R3)/2-.25+.125
 
-fullAngle = 147
+fullAngle = 90
 
 beta1 = fullAngle/3*deg2rad*.5*1.2
 
@@ -90,3 +106,4 @@ A = np.hstack((curvedSpring.undeformedASurface,np.atleast_2d(np.zeros(len(curved
 B = np.hstack((curvedSpring.undeformedBSurface,np.atleast_2d(np.zeros(len(curvedSpring.undeformedBSurface))).T))
 np.savetxt("surfaces\\adjusted_A_surface.txt", A, delimiter=",", fmt='%f')
 np.savetxt("surfaces\\adjusted_B_surface.txt", B, delimiter=",", fmt='%f')
+f.close()
