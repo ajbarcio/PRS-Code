@@ -6,7 +6,8 @@ from spring import Spring
 deg2rad = np.pi/180
 
 ################################################################################
-# This script tests functions used to apply loading conditions to a spring geometry
+# This script tests functions used to apply loading conditions to a 
+# spring geometry
 ################################################################################
 
 # Fit the Gen 2 actuator form factor
@@ -46,21 +47,21 @@ quasiStraightSpring = Spring(n = 1, fullParamLength = 6, radii = np.array([1,3,5
                         betaAngles=np.array([0,1,2,3])*deg2rad,
                         IcPts = np.array([0.03125, 0.03125, 0.03125]), resolution = 200)
 
-############################ True Unit Test ############################
+############################ Unit Test 0 ############################
 # Make sure that for the degenerate case, (beams with 0 torque)        #
 # the expected values are returned (no deflection at all)              #
 ########################################################################
 
 print("#################### UNIT TEST 0: Checking 0-torque case ####################")
 # perform a single pass of solving the deformation ODE under 0 load for each spring
-err, res = straightSpring.forward_integration(straightSpring.deform_ODE, np.array([0,0,0]), 0)
+err, res = straightSpring.forward_integration(straightSpring.deform_ODE, np.array([0, 0, 0]), 0)
 # if the spring does not deform, error should be near 0
 assert(np.isclose(lin.norm(err),0))
 
-err, res = quasiStraightSpring.forward_integration(quasiStraightSpring.deform_ODE, np.array([0,0,0]), 0)
+err, res = quasiStraightSpring.forward_integration(quasiStraightSpring.deform_ODE, np.array([0, 0, 0]), 0)
 assert(np.isclose(lin.norm(err),0))
 
-err, res = curvedSpring.forward_integration(curvedSpring.deform_ODE, np.array([0,0,0]), 0)
+err, res = curvedSpring.forward_integration(curvedSpring.deform_ODE, np.array([0, 0, 0]), 0)
 print(curvedSpring.dBeta)
 
 print(err)
@@ -88,7 +89,7 @@ quasiStraightSpring.full_results(0,1)
 straightResDisp = np.sqrt((straightSpring.deformedNeutralSurface[-1,-1]-straightSpring.undeformedNeutralSurface[-1,-1])**2+
                           (straightSpring.deformedNeutralSurface[0,-1]-straightSpring.undeformedNeutralSurface[0,-1])**2)
 print("tip displacement for straight beam:               ",straightResDisp)
-# evaluate beam theory solution:
+# evaluaeory sote beam thlution:
 radiusCurvature = (straightSpring.E*straightSpring.IcPts[0]/testTorque)
 theoryDisplacement = radiusCurvature-np.sqrt(radiusCurvature**2-straightSpring.fullParamLength**2)
 print("tip displacement for straight beam by beam theory:",theoryDisplacement)
@@ -97,6 +98,7 @@ quasiStraightResDisp = np.sqrt((quasiStraightSpring.deformedNeutralSurface[-1,-1
                                (quasiStraightSpring.deformedNeutralSurface[0,-1]-quasiStraightSpring.undeformedNeutralSurface[0,-1])**2)
 print("tip displacement for quasi-straight beam:         ",quasiStraightResDisp)
 print("the above three values should be close to the same")
+
 ######################## Curved Beam Unit Test #######################
 # Test the deformation functions all together, and use either method #
 # to deform a beam under a target torque load.                        #
@@ -118,7 +120,7 @@ if method=="smartGuess":
     # use that initial guess to deform the beam
     res, SF, divergeFlag, i = curvedSpring.wrapped_torque_deform(testTorque,curvedSpring.deform_ODE,SF=SFGuess)
 
-    curvedSpring.generate_surfaces()
+    curvedSpring.generate_undeformed_surfaces()
     curvedSpring.calculate_stresses()
 
     # compare the two guesses
