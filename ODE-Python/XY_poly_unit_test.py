@@ -5,6 +5,12 @@ import matplotlib.pyplot as plt
 from spring import Spring
 from polynomials import xy_poly, PPoly_Eval
 
+###############################################################################
+# This script tests the functions for creating x-y polynomials for the neutral
+#      surface
+###############################################################################
+
+
 # use default spring for test
 testSpring = Spring()
 

@@ -17,14 +17,14 @@ R3 = 5.9/2
 # All these radii, angles, and Ic come from a previous version of this code and
 # can be considered as arbitrary starting points
 
-R1 = (R0+R3)/2+.26+.125
-R2 = (R0+R3)/2-.25
+R1 = (R0+R3)/2+.26+.125+.125
+R2 = (R0+R3)/2-.25+.125
 
-fullAngle = 179
+fullAngle = 147
 
-beta1 = fullAngle/3*deg2rad*.5
+beta1 = fullAngle/3*deg2rad*.5*1.2
 
-beta2 = 2*fullAngle/3*deg2rad*0.9
+beta2 = 2*fullAngle/3*deg2rad*0.9*.9
 beta0 = fullAngle*deg2rad
 
 # generate all the input arrays for adjustible parameters
@@ -34,10 +34,10 @@ beta0 = fullAngle*deg2rad
 inputRadii      = np.array([R0,R1,R2,R3])
 inputBetaAngles = np.array([0,beta1,beta2,beta0])
 
-Ics = np.array([0.008, 0.00025, 0.00025, 0.008])
-IcLens=np.array([0.4, 0.66])
+Ics = np.array([0.008*.85, 0.00025*.85, 0.00025*1.15, 0.008*1.15])
+IcLens=np.array([0.4*1.2, 0.667*0.8])
 
-XYParamLens = np.array([0.333,0.667])
+XYParamLens = np.array([0.333*0.8,0.667*1.2])
 
 # Generate the spring:
 
@@ -83,6 +83,7 @@ elif method=="slowRamp":
     # plot results
     curvedSpring.full_results(deformBool=deformBool, plotBool=True)
 
+curvedSpring.full_results(deformBool=False)
 ## output curves for use in solidworks
 # add a "zero" column for z-values (needed by solidworks) and save as .txt files
 A = np.hstack((curvedSpring.undeformedASurface,np.atleast_2d(np.zeros(len(curvedSpring.undeformedASurface))).T))
