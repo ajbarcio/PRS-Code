@@ -1,0 +1,13 @@
+__main__ | INFO | Successfully connected to the database 'my_db' on host 'ubuntu'
+__main__ | WARNING | Detected suspicious activity from IP address: 111.222.333.444
+using smart guess method
+instantiating singleton StatProfiler BVP
+guess planar force vector: [1985.28210306 1143.88890396 4554.6       ]
+instantiating singleton StatProfiler lAB rootfinding
+design stress exceeded
+solution planar force vector: [1948.61519338 1121.83587607 4554.6       ]
+torque: 4554.6
+angular deformation: 2.067316001314443
+stiffness (lbf/deg) 2203.1464938616496
+max stress: 500688.1745281874
+des stress: 270000

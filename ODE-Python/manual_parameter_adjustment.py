@@ -5,8 +5,10 @@ from spring import Spring
 import sys
 import logbook
 
+#print("Enter log name:")
+log_name = input("Enter file name for log:  ") + ".txt"
 logger = logbook.Logger(__name__)
-f = open("test.txt", 'w')
+f = open(log_name, 'w')
 sys.stdout = f
 handler = logbook.StreamHandler(sys.stdout , level="INFO")
 handler.format_string = "{record.channel} | {record.level_name} | {record.message}"
