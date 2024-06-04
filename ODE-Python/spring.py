@@ -1,7 +1,6 @@
 # TODO: Consistent formatting
 
 import numpy as np
-import math
 import numpy.linalg as lin
 import matplotlib.pyplot as plt
 from StatProfiler import SSProfile
@@ -12,6 +11,7 @@ from copy import deepcopy as dc
 from utils import numerical_fixed_mesh_diff, fixed_rk4, rk4_step, colorline
 from polynomials import Ic_multiPoly, xy_poly, PPoly_Eval
 from spring_utils import alpha_xy, r_n, d_rn_d_s, d_xi_d_s
+from materials import * # This module ONLY includes materials objects so I think this is safe
 
 deg2rad = np.pi/180
 
@@ -36,29 +36,69 @@ class Deform_Wrapper:
         return res, SF, divergeFlag, i
 
 class Spring:
-    def __init__(self,
+    def __init__(self, material, name=None,
                  # whole bunch of default values:
-                 E                   = 27.5*10**6,
-                 designStress        = 270000,
                  n                   = 2,
                  fullParamLength     = 6,
                  outPlaneThickness   = 0.375,
                  radii               = np.array([1.1,2.025,2.025,2.95]),
                  betaAngles          = np.array([0,50,100,150])*deg2rad, # FIRST VALUE IS ALWAYS 0 !!!!, same length as radii
                  IcPts               = np.array([0.008, 0.001, 0.008]),
-                 IcParamLens           = np.array([0.5]),                              # IcPts - 2
-                 XYParamLens           = np.array([0.333,0.667]),             # radii - 2
+                 IcParamLens         = np.array([0.5]),                              # IcPts - 2
+                 XYParamLens         = np.array([0.333,0.667]),             # radii - 2
                  resolution          = 200
                  ):
         # improperly initialize the spring (unable to start with good guess for arc length)
+        E = material.E
+        designStress = material.yieldStress*0.8
         self.init(E, designStress, n, fullParamLength, outPlaneThickness, radii,
                   betaAngles, IcPts, IcParamLens, XYParamLens, resolution)
-        # set the fullParamLength to the correct
         correctedFullLength = self.measure_length()
-        # initialize the spring, properly this time
-        self.init(E, designStress, n, correctedFullLength, ### WE ONLY CHANGE THIS
-                  outPlaneThickness, radii,
-                  betaAngles, IcPts, IcParamLens, XYParamLens, resolution)
+        conv=1
+        err = 1
+        i = 0
+        while conv>10e-6:
+            self.full_results(deformBool=0)
+            plt.figure(0)
+            plt.plot(self.ximesh)
+            plt.plot(self.smesh)
+            plt.plot(self.dxids)
+            plt.figure(99)
+            plt.plot(self.smesh, self.ximesh)
+            plt.plot(self.smesh, self.dxids)
+            errPrev = err
+            # DUMB
+            # self.init(E, designStress, n, correctedFullLength+self.finiteDifferenceLength,
+            #         outPlaneThickness, radii,
+            #         betaAngles, IcPts, IcParamLens, XYParamLens, resolution)
+            # err = lin.norm(self.ximesh-self.smesh)
+            # deriv = (err-errPrev)/(self.finiteDifferenceLength)
+            # print(deriv)
+            # correctedFullLength = correctedFullLength-errPrev/deriv
+            # self.init(E, designStress, n, correctedFullLength,
+            #         outPlaneThickness, radii,
+            #         betaAngles, IcPts, IcParamLens, XYParamLens, resolution)
+            # err = lin.norm(self.ximesh-self.smesh)
+            # set the fullParamLength to the correct
+            correctedFullLength = self.measure_length()+.0001
+            # initialize the spring, properly this time
+            self.init(E, designStress, n, correctedFullLength, ### WE ONLY CHANGE THIS
+                    outPlaneThickness, radii,
+                    betaAngles, IcPts, IcParamLens, XYParamLens, resolution)
+            # err = lin.norm(self.ximesh-self.smesh)
+            err = lin.norm(self.dxids-np.ones(len(self.dxids)))
+            conv = abs(err-errPrev)
+            i+=1
+            print("reinit iters:",i)
+            print("err: ",err)
+            print(correctedFullLength)
+        if not name==None:
+            saveVariables = np.hstack([n,correctedFullLength,outPlaneThickness,
+                                       radii,betaAngles,IcParamLens,IcParamLens,
+                                       XYParamLens])
+            filepath = "springs\\"+name
+            np.savetxt(filepath, saveVariables, "%f", ",")
+        # np.savetxt("springs/")
 
     def init(self,
              # whole bunch of default values:
@@ -129,7 +169,7 @@ class Spring:
                 self.IcParamLens[i] = self.fullParamLength
             else:
                 self.IcParamLens[i] = self.fullParamLength*IcParamLens[i-1]
-        
+
         # Do the same with the parameter length controls on x-y points
         self.XYParamLens = np.empty(len(radii))
         for i in range(len(radii)):
@@ -347,7 +387,7 @@ class Spring:
         magGuess  = np.polyval(magPoly, torqueTarg)
         # create a spacial force vector guess from that magnitude and angle
         SFGuess = np.array([magGuess*np.cos(angleGuess), magGuess*np.sin(angleGuess), torqueTarg])
-        
+
         return SFGuess
 
     def deform_by_torque_slowRamp(self, torqueTarg, ODE, torqueResolution=15):
@@ -456,8 +496,13 @@ class Spring:
         #                        (difference in final gamma and final beta)
         Rinitial = lin.norm([self.xL,self.yL])
         Rfinal   = lin.norm([self.res[1,-1],self.res[2,-1]])
-        # TODO: This bakes in the assumption that 
-        self.dBeta    = abs(np.arctan2(self.res[2,-1],self.res[1,-1]))-self.betaAngles[-1]
+        # Calculate dBeta using arccos
+        ptInitial = self.pts[-1]/lin.norm(self.pts[-1])
+        ptFinal   = np.array([self.res[1,-1],self.res[2,-1]])/ \
+                             lin.norm(np.array([self.res[1,-1],self.res[2,-1]]))
+        # print(ptFinal.dot(ptInitial))
+        cosAngle = min(ptFinal.dot(ptInitial),1.0)
+        self.dBeta    = np.arccos(cosAngle)*np.sign(torqueTarg)
         # Err = diff. in radius, diff between gamma(L) and beta(L), distance
         #       from target torque (just to make matrix square)
         err = np.array([Rinitial-Rfinal, self.res[0,-1]-self.dBeta, SF[2]-torqueTarg])
@@ -554,7 +599,7 @@ class Spring:
                             1/(np.log((rn+x[1])/(rn-x[0])))-(x[0]+x[1])/(((np.log((rn+x[1])/(rn-x[0])))**2)*(rn+x[1]))], \
                             [-rn*self.t*x[0], rn*self.t*x[1]]])
         # some error checking and escapes for possible non-convergent cases
-        if not np.isinf(rn): # TODO: change this to some large finite threshold
+        if not(np.isinf(rn) or rn > 10e10): # TODO: change this to some large finite threshold
             # check for if the beam was locally straight on the last iteration
             if lABPrev[0]==lABPrev[1]:
                 # perturb the initial guess a bit to avoid convergence issues
@@ -581,15 +626,15 @@ class Spring:
             # error to track convergence
             err = lin.norm(x-xprev)
             iii+=1
-        # escape if convergence goes towards beam so uncurved that 
+        # escape if convergence goes towards beam so uncurved that
         # its _basically_ straight (this results in very high thicknesses):
         # this threshold is arbitrary
 
         # TODO: Delete this
-        if(lin.norm(x)>lin.norm(lABPrev)*100):
-            # use straight beam definition
-            l = np.cbrt(12*Ic/self.t)/2
-            x = [l,l]
+        # if(lin.norm(x)>lin.norm(lABPrev)*100):
+        #     # use straight beam definition
+        #     l = np.cbrt(12*Ic/self.t)/2
+        #     x = [l,l]
         # boolean value used to print out debug info
         if(printBool):
             print(x0)
@@ -707,7 +752,7 @@ class Spring:
         plottedLines = []
 
         if plotBool:
-            plt.figure(1)
+            plt.figure("Graphic Results")
             if not deformBool:
                 # only plot neutral and centroidal surface if undeformed
                 plt.plot(self.undeformedNeutralSurface[:,0],self.undeformedNeutralSurface[:,1])
@@ -745,7 +790,7 @@ class Spring:
         # extra "visual sugar" included here, at end of function, for organizational purposes
         if plotBool:
             # plot geometry of inner and outer rotor of spring
-            outerCircle = plt.Circle([0,0],self.radii[3],color ="k",fill=False)
+            outerCircle = plt.Circle([0,0],self.radii[-1],color ="k",fill=False)
             innerCircle = plt.Circle([0,0],self.radii[0],color ="k",fill=False)
             fig = plt.gcf()
             ax = fig.gca()
@@ -763,7 +808,6 @@ class Spring:
             plt.plot(self.pts[:,0],self.pts[:,1])
             # show it
             plt.axis("equal")
-            plt.show()
 
     def measure_length(self):
 
@@ -778,6 +822,9 @@ class Spring:
         integrand = np.sqrt(self.dxdxi**2+self.dydxi**2)
         # create a mesh in s according by integrating along the parameter to find
         # arc length
-        self.smesh = scipy.integrate.cumulative_trapezoid(integrand, self.ximesh, self.ximesh[1]-self.ximesh[0])
+        self.smesh = np.zeros(len(self.ximesh))
+        self.smesh[1:len(self.smesh)] = scipy.integrate.cumulative_trapezoid(integrand, self.ximesh, self.ximesh[1]-self.ximesh[0])
+        # print(self.smesh)
+        assert(self.smesh[0]==0)
         # return the overall length of the spring
         return self.smesh[-1]

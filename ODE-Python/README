@@ -55,7 +55,7 @@ manual_parameter_adjustment
 sensitivity_study
     from a static starting spring, adjusts each parameter over a range of values
     and records the effect on deflection and stiffness results under a uniform
-    orque. Use to determine the local effect of each design variable on 
+    orque. Use to determine the local effect of each design variable on
     performance
 
 Output files:
@@ -65,8 +65,7 @@ Output files:
         for an arbitrary curved beam
     A_surface_straight, B_surface_straight are the x-y coordinates of the upper
         and lower surface for a straight beam
-
-
-KNOWN BUGS:
-    springs with a beta0 near 180 tend to diverge; there seems to be some sort
-    of problem estimating the jacobian accurately in this region
+'sensitivity_results' folder
+    sens_to_[variable] are the results of moving each individual variable around
+        its starting point
+    allResults compiles all of these into one file

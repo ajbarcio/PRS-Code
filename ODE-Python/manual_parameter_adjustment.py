@@ -2,7 +2,7 @@ import numpy as np
 import numpy.linalg as lin
 import matplotlib.pyplot as plt
 from spring import Spring
-
+from materials import Maraging300Steel
 
 deg2rad = np.pi/180
 
@@ -20,7 +20,7 @@ R3 = 5.9/2
 R1 = (R0+R3)/2+.26+.125+.125
 R2 = (R0+R3)/2-.25+.125
 
-fullAngle = 120
+fullAngle = 180
 
 beta1 = fullAngle/3*deg2rad*.5*1.2
 
@@ -41,7 +41,7 @@ XYParamLens = np.array([0.333*0.8,0.667*1.2])
 
 # Generate the spring:
 
-curvedSpring = Spring(n = 2, radii=inputRadii,
+curvedSpring = Spring(Maraging300Steel(), n = 2, radii=inputRadii,
                              betaAngles=inputBetaAngles,
                              IcPts=Ics,
                              IcParamLens=IcLens)

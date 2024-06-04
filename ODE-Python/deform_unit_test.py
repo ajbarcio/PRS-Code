@@ -1,12 +1,14 @@
 import numpy as np
 import numpy.linalg as lin
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt\
+
 from spring import Spring
+from materials import * # This module ONLY includes materials objects so I think this is safe
 
 deg2rad = np.pi/180
 
 ################################################################################
-# This script tests functions used to apply loading conditions to a 
+# This script tests functions used to apply loading conditions to a
 # spring geometry
 ################################################################################
 
@@ -36,14 +38,16 @@ Ics = np.array([0.008, 0.000025, 0.008])
 #                         straight beam
 # THE ONLY DIFFERENCE BETWEEN straight AND quasiStraight IS THE BETA ANGLES
 
-curvedSpring = Spring(n = 2, radii=np.array([R0,R1,R2,R3]),
+allSpringsMaterial = Maraging300Steel()
+print(allSpringsMaterial.yieldStress)
+curvedSpring = Spring(allSpringsMaterial, n = 2, radii=np.array([R0,R1,R2,R3]),
                              betaAngles=np.array([0,beta1,beta2,beta0]),
                              IcPts=Ics,
                              IcParamLens=np.array([0.6]), resolution=500)
-straightSpring = Spring(n = 1, fullParamLength = 6, radii = np.array([1,3,5,7]),
+straightSpring = Spring(allSpringsMaterial, n = 1, fullParamLength = 6, radii = np.array([1,3,5,7]),
                         betaAngles=np.array([0,0,0,0])*deg2rad,
                         IcPts = np.array([0.03125, 0.03125, 0.03125]), resolution = 200)
-quasiStraightSpring = Spring(n = 1, fullParamLength = 6, radii = np.array([1,3,5,7]),
+quasiStraightSpring = Spring(allSpringsMaterial, n = 1, fullParamLength = 6, radii = np.array([1,3,5,7]),
                         betaAngles=np.array([0,1,2,3])*deg2rad,
                         IcPts = np.array([0.03125, 0.03125, 0.03125]), resolution = 200)
 

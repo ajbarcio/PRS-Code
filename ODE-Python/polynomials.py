@@ -198,7 +198,13 @@ def xy_poly(pts, XYArcLens):
     # print(Mat)
     XCoeffs = lin.solve(Mat, XTarg)
     YCoeffs = lin.solve(Mat, YTarg)
-    # TODO: assert(lin.cond(Mat)<tol)
+    # print(lin.cond(Mat))
+    for i in range(len(XYArcLens)):
+        diffX = PPoly_Eval(XYArcLens[i],XCoeffs)-pts[i,0]
+        diffY = PPoly_Eval(XYArcLens[i],YCoeffs)-pts[i,1]
+        diff = lin.norm([diffX,diffY])
+        assert(np.isclose(diff,0))
+    # TODO: assert(np.isclose(diff,0))
     # print(XCoeffs, YCoeffs)
     return XCoeffs, YCoeffs
 
