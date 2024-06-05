@@ -53,48 +53,30 @@ class Spring:
         designStress = material.yieldStress*0.8
         self.init(E, designStress, n, fullParamLength, outPlaneThickness, radii,
                   betaAngles, IcPts, IcParamLens, XYParamLens, resolution)
-        correctedFullLength = self.measure_length()
+        # iterate spring initialization until xi mesh approximates s mesh as well as possible
         conv=1
         err = 1
         i = 0
+        # iterate until you converge on a value
         while conv>10e-6:
-            self.full_results(deformBool=0)
-            plt.figure(0)
-            plt.plot(self.ximesh)
-            plt.plot(self.smesh)
-            plt.plot(self.dxids)
-            plt.figure(99)
-            plt.plot(self.smesh, self.ximesh)
-            plt.plot(self.smesh, self.dxids)
+            SSProfile("reinit").tic()
             errPrev = err
-            # DUMB
-            # self.init(E, designStress, n, correctedFullLength+self.finiteDifferenceLength,
-            #         outPlaneThickness, radii,
-            #         betaAngles, IcPts, IcParamLens, XYParamLens, resolution)
-            # err = lin.norm(self.ximesh-self.smesh)
-            # deriv = (err-errPrev)/(self.finiteDifferenceLength)
-            # print(deriv)
-            # correctedFullLength = correctedFullLength-errPrev/deriv
-            # self.init(E, designStress, n, correctedFullLength,
-            #         outPlaneThickness, radii,
-            #         betaAngles, IcPts, IcParamLens, XYParamLens, resolution)
-            # err = lin.norm(self.ximesh-self.smesh)
-            # set the fullParamLength to the correct
-            correctedFullLength = self.measure_length()+.0001
-            # initialize the spring, properly this time
+            # measure real arc length each time
+            correctedFullLength = self.measure_length()
+            # initialize the spring with the remeasured legnth
             self.init(E, designStress, n, correctedFullLength, ### WE ONLY CHANGE THIS
                     outPlaneThickness, radii,
                     betaAngles, IcPts, IcParamLens, XYParamLens, resolution)
-            # err = lin.norm(self.ximesh-self.smesh)
             err = lin.norm(self.dxids-np.ones(len(self.dxids)))
+            # err = self.fullParamLength-self.measure_length() # These two error values seem equivalent
             conv = abs(err-errPrev)
             i+=1
-            print("reinit iters:",i)
-            print("err: ",err)
-            print(correctedFullLength)
+            SSProfile("reinit").toc()
+        # if the spring was given a name, save its input parameters in a filej
+        self.name = name
         if not name==None:
             saveVariables = np.hstack([n,correctedFullLength,outPlaneThickness,
-                                       radii,betaAngles,IcParamLens,IcParamLens,
+                                       radii,betaAngles,IcPts,IcParamLens,
                                        XYParamLens])
             filepath = "springs\\"+name
             np.savetxt(filepath, saveVariables, "%f", ",")
@@ -184,14 +166,21 @@ class Spring:
         self.parameterVector = np.concatenate((self.radii, self.betaAngles,
                                               self.IcPts, self.IcFactors,
                                               self.XYFactors))
-
         # assign some constants for approximating derivatives
-        # NOTE THAT NOT ALL OF THESE ARE USED
+        # NOTE THAT NOT ALL OF THESE ARE USED YET
         self.finiteDifferenceLength = 0.001
         self.finiteDifferenceAngle  = .1*deg2rad
         self.finiteDifferenceForce  = 0.1
         self.finiteDifferenceTorque = 0.5
         self.finiteDifferenceIc     = 0.00001
+        self.finiteDifferenceFactor = 0.001
+        # create a vector of finite differences for mutable parameters
+        self.finiteDifferenceVector = np.concatenate((np.ones(len(self.radii))*self.finiteDifferenceLength,
+                                                      np.ones(len(self.betaAngles))*self.finiteDifferenceAngle,
+                                                      np.ones(len(self.IcPts))*self.finiteDifferenceIc,
+                                                      np.ones(len(self.IcFactors))*self.finiteDifferenceFactor,
+                                                      np.ones(len(self.XYFactors))*self.finiteDifferenceFactor,
+                                                      ))
 
         # assign some constants for meshing the spring
         self.resl = resolution
@@ -225,6 +214,80 @@ class Spring:
 
         # inherit deform wrapper
         self.wrapped_torque_deform = Deform_Wrapper(self.deform_by_torque)
+
+    def tune_stiffness(self, targetStiffness, targetTorque, discludeVector):
+        err = 1
+        convergenceLimit = 0.01
+        try:
+            while err > convergenceLimit:
+                # make a new spring from current parameter vector
+                self.redefine_spring_from_parameterVector()
+                # evaluate the stiffness of the spring
+                self.deform_by_torque_smartGuess(targetTorque, self.deform_ODE)
+                stiffness = targetTorque/(self.dBeta/deg2rad)
+                print("guess stiffness:", stiffness)
+                # calcualte the distance from the target stiffness
+                err = (stiffness-targetStiffness)/targetStiffness
+                print("err:", err)
+                # calcualte the jacobian
+                J = self.stiffness_jacobian(self.deform_ODE, targetStiffness, targetTorque, err)
+                for i in range(len(J)):
+                    J[i]*=discludeVector[i]
+                Jinv = lin.pinv(np.atleast_2d(J).T)
+                # print(Jinv)
+                # update parameter vector guess
+                # print("before:", self.parameterVector)
+                self.parameterVector = (self.parameterVector - Jinv*err)[0]
+                # print("after:", self.parameterVector)
+            print("successful convergence to ",convergenceLimit*100,"%")
+            print("stiffness (lbf/deg)", stiffness)
+            print("max stress:", self.maxStress)
+            print("des stress:", self.designStress)
+        except KeyboardInterrupt:
+                # If you get bored and kill it early:
+                # calculate and prepare for plotting the full results
+                print(self.n)
+                self.full_results()
+                # print out some results
+                print("torque:", targetTorque)
+                print("angular deformation:", self.dBeta/deg2rad)
+                print("stiffness (lbf/deg)", targetTorque/(self.dBeta/deg2rad))
+                print("ideal stiffness:   ", targetTorque/(5))
+                print("max stress:", self.maxStress)
+                print("des stress:", self.designStress)
+                # save parameter information to file
+                filepath = "springs\\"+self.name
+                np.savetxt(filepath, self.parameterVector, "%f", ",")
+                # save surface geometry to file
+                A = np.hstack((self.undeformedASurface,np.atleast_2d(np.zeros(len(self.undeformedASurface))).T))
+                B = np.hstack((self.undeformedBSurface,np.atleast_2d(np.zeros(len(self.undeformedBSurface))).T))
+                np.savetxt("surfaces\\premature_A_surface.txt", A, delimiter=",", fmt='%f')
+                np.savetxt("surfaces\\premature_B_surface.txt", B, delimiter=",", fmt='%f')
+    def stiffness_jacobian(self, ODE, targetStiffness, targetTorque, currErr):
+        print("calculating J")
+        initialParameterVector = dc(self.parameterVector)
+        J = np.empty(len(self.parameterVector))
+        for i in range(len(self.parameterVector)):
+            print("parameter derivative", i, "/15", end="\r")
+            # Forward difference
+            self.parameterVector[i] += self.finiteDifferenceVector[i]
+            self.redefine_spring_from_parameterVector()
+            self.deform_by_torque_smartGuess(targetTorque, self.deform_ODE)
+            stiffness = targetTorque/self.dBeta
+            # calcualte the distance from the target stiffness
+            errf = (stiffness-targetStiffness)/targetStiffness
+            # reset parameter vector
+            self.parameterVector = dc(initialParameterVector)
+            # Backwards difference
+            self.parameterVector[i] -= self.finiteDifferenceVector[i]
+            self.redefine_spring_from_parameterVector()
+            self.deform_by_torque_smartGuess(targetTorque, self.deform_ODE)
+            stiffness = targetTorque/self.dBeta
+            # calcualte the distance from the target stiffness
+            errb = (stiffness-targetStiffness)/targetStiffness
+            self.parameterVector = dc(initialParameterVector)
+            J[i] = (errf-errb)/(2*self.finiteDifferenceVector[i])
+        return J
 
     def sensitivity_study(self, index, factor, resolution, testTorque):
 
@@ -390,6 +453,11 @@ class Spring:
 
         return SFGuess
 
+    def deform_by_torque_smartGuess(self, torqueTarg, ODE):
+        SFGuess = self.smart_initial_load_guess(torqueTarg,self.deform_ODE)
+        res, SF, divergeFlag, i = self.deform_by_torque(torqueTarg,self.deform_ODE,SF=SFGuess)
+        return res, SF, divergeFlag, i
+
     def deform_by_torque_slowRamp(self, torqueTarg, ODE, torqueResolution=15):
 
         """
@@ -453,7 +521,7 @@ class Spring:
             errPrev = err
             # determine boundary condition compliance, estimate jacobian
             err, self.res = self.forward_integration(ODE,SF,torqueTarg)
-            J = self.estimate_jacobian_fd(ODE,SF,torqueTarg)
+            J = self.boundary_condition_jacobian(ODE,SF,torqueTarg)
             # freak out if it didnt work
             if lin.norm(err)>lin.norm(errPrev):
                 # print information on what is happening
@@ -508,7 +576,7 @@ class Spring:
         err = np.array([Rinitial-Rfinal, self.res[0,-1]-self.dBeta, SF[2]-torqueTarg])
         return err, self.res
 
-    def estimate_jacobian_fd(self, ODE, SF, torqueTarg, n=3):
+    def boundary_condition_jacobian(self, ODE, SF, torqueTarg, n=3):
 
         """
         THIS FUNCTION:
@@ -521,7 +589,7 @@ class Spring:
         # assign each row at a time
         for i in range(n):
             finiteDifference = np.zeros(len(SF))
-            # decide based on whether you're using a force or torque which 
+            # decide based on whether you're using a force or torque which
             # difference to use
             if i < 2:
                 finiteDifference[i] = self.finiteDifferenceForce

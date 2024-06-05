@@ -20,7 +20,7 @@ R3 = 5.9/2
 R1 = (R0+R3)/2+.26+.125+.125
 R2 = (R0+R3)/2-.25+.125
 
-fullAngle = 180
+fullAngle = 165
 
 beta1 = fullAngle/3*deg2rad*.5*1.2
 
@@ -37,14 +37,15 @@ inputBetaAngles = np.array([0,beta1,beta2,beta0])
 Ics = np.array([0.008*.85, 0.00025*.85, 0.00025*1.15, 0.008*1.15])
 IcLens=np.array([0.4*1.2, 0.667*0.8])
 
-XYParamLens = np.array([0.333*0.8,0.667*1.2])
+XYParamLens = np.array([0.333,0.667*1.02])
 
 # Generate the spring:
 
 curvedSpring = Spring(Maraging300Steel(), n = 2, radii=inputRadii,
                              betaAngles=inputBetaAngles,
                              IcPts=Ics,
-                             IcParamLens=IcLens)
+                             IcParamLens=IcLens, XYParamLens=XYParamLens,
+                             name="manual_spring")
 
 testTorque = 4554.6
 # select method
@@ -70,6 +71,7 @@ if method=="smartGuess":
     print("torque:", testTorque)
     print("angular deformation:", curvedSpring.dBeta/deg2rad)
     print("stiffness (lbf/deg)", testTorque/(curvedSpring.dBeta/deg2rad))
+    print("ideal stiffness:   ", testTorque/(5))
     print("max stress:", curvedSpring.maxStress)
     print("des stress:", curvedSpring.designStress)
 elif method=="slowRamp":
@@ -90,3 +92,5 @@ A = np.hstack((curvedSpring.undeformedASurface,np.atleast_2d(np.zeros(len(curved
 B = np.hstack((curvedSpring.undeformedBSurface,np.atleast_2d(np.zeros(len(curvedSpring.undeformedBSurface))).T))
 np.savetxt("surfaces\\adjusted_A_surface.txt", A, delimiter=",", fmt='%f')
 np.savetxt("surfaces\\adjusted_B_surface.txt", B, delimiter=",", fmt='%f')
+
+plt.show()

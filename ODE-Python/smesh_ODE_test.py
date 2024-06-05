@@ -1,4 +1,5 @@
 import numpy as np
+from numpy import linalg as lin
 import matplotlib.pyplot as plt
 from spring import Spring, Deform_Wrapper
 from materials import Maraging300Steel
@@ -45,12 +46,10 @@ testSpring = Spring(Maraging300Steel(), n = 2, radii=inputRadii,
                              betaAngles=inputBetaAngles,
                              IcPts=Ics,
                              IcParamLens=IcLens, name="testSpring")
-plt.figure(0)
-plt.plot(testSpring.ximesh)
-plt.plot(testSpring.smesh)
-plt.plot(testSpring.dxids)
-plt.figure(99)
-plt.plot(testSpring.smesh, testSpring.ximesh)
-plt.plot(testSpring.smesh, testSpring.dxids)
+
 testSpring.full_results(deformBool=0)
+print(testSpring.fullParamLength)
+print(testSpring.measure_length())
+print(lin.norm(testSpring.dxids-np.ones(len(testSpring.dxids))))
+
 plt.show()
