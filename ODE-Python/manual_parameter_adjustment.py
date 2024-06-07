@@ -92,5 +92,6 @@ A = np.hstack((curvedSpring.undeformedASurface,np.atleast_2d(np.zeros(len(curved
 B = np.hstack((curvedSpring.undeformedBSurface,np.atleast_2d(np.zeros(len(curvedSpring.undeformedBSurface))).T))
 np.savetxt("surfaces\\adjusted_A_surface.txt", A, delimiter=",", fmt='%f')
 np.savetxt("surfaces\\adjusted_B_surface.txt", B, delimiter=",", fmt='%f')
-
+fullSurfaceAttempt = np.vstack((A, np.flip(B, 0)))
+np.savetxt("surfaces\\adjusted_full_surface.txt", fullSurfaceAttempt, delimiter=",", fmt='%f')
 plt.show()
