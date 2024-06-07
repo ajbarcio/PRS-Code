@@ -230,7 +230,7 @@ class Spring:
                 err = (stiffness-targetStiffness)/targetStiffness
                 print("err:", err)
                 # calcualte the jacobian
-                J = self.stiffness_jacobian(self.deform_ODE, targetStiffness, targetTorque, err)
+                J = self.stiffness_jacobian(self.deform_ODE, targetStiffness, targetTorque, discludeVector)
                 for i in range(len(J)):
                     J[i]*=discludeVector[i]
                 Jinv = lin.pinv(np.atleast_2d(J).T)
@@ -264,30 +264,31 @@ class Spring:
                 np.savetxt("surfaces\\premature_A_surface.txt", A, delimiter=",", fmt='%f')
                 np.savetxt("surfaces\\premature_B_surface.txt", B, delimiter=",", fmt='%f')
 
-    def stiffness_jacobian(self, ODE, targetStiffness, targetTorque, currErr):
+    def stiffness_jacobian(self, ODE, targetStiffness, targetTorque, discludeVector):
         print("calculating J")
         initialParameterVector = dc(self.parameterVector)
         J = np.empty(len(self.parameterVector))
         for i in range(len(self.parameterVector)):
-            print("parameter derivative", i, "/15", end="\r")
-            # Forward difference
-            self.parameterVector[i] += self.finiteDifferenceVector[i]
-            self.redefine_spring_from_parameterVector()
-            self.deform_by_torque_smartGuess(targetTorque, self.deform_ODE)
-            stiffness = targetTorque/self.dBeta
-            # calcualte the distance from the target stiffness
-            errf = (stiffness-targetStiffness)/targetStiffness
-            # reset parameter vector
-            self.parameterVector = dc(initialParameterVector)
-            # Backwards difference
-            self.parameterVector[i] -= self.finiteDifferenceVector[i]
-            self.redefine_spring_from_parameterVector()
-            self.deform_by_torque_smartGuess(targetTorque, self.deform_ODE)
-            stiffness = targetTorque/self.dBeta
-            # calcualte the distance from the target stiffness
-            errb = (stiffness-targetStiffness)/targetStiffness
-            self.parameterVector = dc(initialParameterVector)
-            J[i] = (errf-errb)/(2*self.finiteDifferenceVector[i])
+            if discludeVector[i]:
+                print("parameter derivative", i, "/15", end="\r")
+                # Forward difference
+                self.parameterVector[i] += self.finiteDifferenceVector[i]
+                self.redefine_spring_from_parameterVector()
+                self.deform_by_torque_smartGuess(targetTorque, self.deform_ODE)
+                stiffness = targetTorque/self.dBeta
+                # calcualte the distance from the target stiffness
+                errf = (stiffness-targetStiffness)/targetStiffness
+                # reset parameter vector
+                self.parameterVector = dc(initialParameterVector)
+                # Backwards difference
+                self.parameterVector[i] -= self.finiteDifferenceVector[i]
+                self.redefine_spring_from_parameterVector()
+                self.deform_by_torque_smartGuess(targetTorque, self.deform_ODE)
+                stiffness = targetTorque/self.dBeta
+                # calcualte the distance from the target stiffness
+                errb = (stiffness-targetStiffness)/targetStiffness
+                self.parameterVector = dc(initialParameterVector)
+                J[i] = (errf-errb)/(2*self.finiteDifferenceVector[i])
         return J
 
     def sensitivity_study(self, index, factor, resolution, testTorque):
@@ -845,7 +846,7 @@ class Spring:
             # flag if overstressed
             if self.maxStress > self.designStress:
                 # print("oops you broke lmao")
-                print("design stress exceeded")
+                print("############################# WARNING: design stress exceeded #############################")
             if plotBool:
                 # plot the neutral surface with max stress at each point
                 colorline(self.deformedNeutralSurface[:,0],self.deformedNeutralSurface[:,1],self.maxStresses,cmap=plt.get_cmap('rainbow'))

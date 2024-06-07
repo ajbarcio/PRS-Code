@@ -20,11 +20,11 @@ R3 = 5.9/2
 R1 = (R0+R3)/2+.26+.125+.125
 R2 = (R0+R3)/2-.25+.125
 
-fullAngle = 165
+fullAngle = 163
 
-beta1 = fullAngle/3*deg2rad*.5*1.2
+beta1 = fullAngle/3*deg2rad*.5*1.3+15*deg2rad
 
-beta2 = 2*fullAngle/3*deg2rad*0.9*.9
+beta2 = 2*fullAngle/3*deg2rad*0.9*.9+30*deg2rad
 beta0 = fullAngle*deg2rad
 
 # generate all the input arrays for adjustible parameters
@@ -34,7 +34,7 @@ beta0 = fullAngle*deg2rad
 inputRadii      = np.array([R0,R1,R2,R3])
 inputBetaAngles = np.array([0,beta1,beta2,beta0])
 
-Ics = np.array([0.008*.85, 0.00025*.85, 0.00025*1.15, 0.008*1.15])
+Ics = np.array([0.008*.85, 0.00025*.25, 0.00025*.25, 0.008*1.15])
 IcLens=np.array([0.4*1.2, 0.667*0.8])
 
 XYParamLens = np.array([0.333,0.667*1.02])
@@ -54,23 +54,15 @@ method = "smartGuess"
 # an initial guess for the forces at full torque
 if method=="smartGuess":
     print("using smart guess method")
-    # get a ballpark initial guess
-    # SFGuess = curvedSpring.smart_initial_load_guess(testTorque,curvedSpring.deform_ODE)
-    # print("guess planar force vector:", SFGuess)
-    # # use that initial guess to deform the beam
-    # res, SF, divergeFlag, i = curvedSpring.wrapped_torque_deform(testTorque,curvedSpring.deform_ODE,SF=SFGuess)
-
+    # use smart guess method to solve spring
     res, SF, divergeFlag, i = curvedSpring.deform_by_torque_smartGuess \
                              (testTorque,curvedSpring.deform_ODE,printBool=True)
-
     # if it didnt diverge consider the deform ation succesful
     deformBool = not(divergeFlag)
     # plot results
     curvedSpring.full_results(deformBool=deformBool, plotBool=True)
-
-    # compare the two guesses
-    print("solution planar force vector:", SF)
     # print out results
+    print("solution planar force vector:", SF)
     print("torque:", testTorque)
     print("angular deformation:", curvedSpring.dBeta/deg2rad)
     print("stiffness (lbf/deg)", testTorque/(curvedSpring.dBeta/deg2rad))
