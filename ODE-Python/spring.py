@@ -263,6 +263,7 @@ class Spring:
                 B = np.hstack((self.undeformedBSurface,np.atleast_2d(np.zeros(len(self.undeformedBSurface))).T))
                 np.savetxt("surfaces\\premature_A_surface.txt", A, delimiter=",", fmt='%f')
                 np.savetxt("surfaces\\premature_B_surface.txt", B, delimiter=",", fmt='%f')
+
     def stiffness_jacobian(self, ODE, targetStiffness, targetTorque, currErr):
         print("calculating J")
         initialParameterVector = dc(self.parameterVector)
@@ -453,8 +454,10 @@ class Spring:
 
         return SFGuess
 
-    def deform_by_torque_smartGuess(self, torqueTarg, ODE):
+    def deform_by_torque_smartGuess(self, torqueTarg, ODE, printBool=False):
         SFGuess = self.smart_initial_load_guess(torqueTarg,self.deform_ODE)
+        if printBool:
+            print("guess planar force vector:", SFGuess)
         res, SF, divergeFlag, i = self.deform_by_torque(torqueTarg,self.deform_ODE,SF=SFGuess)
         return res, SF, divergeFlag, i
 
@@ -876,6 +879,19 @@ class Spring:
             plt.plot(self.pts[:,0],self.pts[:,1])
             # show it
             plt.axis("equal")
+
+    def surfaces_to_txt(self):
+        # create 3-d vectors for A and B surfaces
+        A = np.hstack((self.undeformedASurface, 
+                       np.atleast_2d(np.zeros(len(self.undeformedASurface))).T))
+        B = np.hstack((self.undeformedBSurface,
+                       np.atleast_2d(np.zeros(len(self.undeformedBSurface))).T))
+        np.savetxt("surfaces\\adjusted_A_surface.txt", A, delimiter=",", fmt='%f')
+        np.savetxt("surfaces\\adjusted_B_surface.txt", B, delimiter=",", fmt='%f')
+        # combine A and B surfaces into one curve
+        fullSurface = np.vstack((A, np.flip(B, 0)))
+        np.savetxt("surfaces\\adjusted_full_surface.txt", fullSurface, 
+                                                          delimiter=",", fmt='%f')
 
     def measure_length(self):
 

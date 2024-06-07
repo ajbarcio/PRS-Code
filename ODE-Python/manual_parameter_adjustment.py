@@ -55,10 +55,13 @@ method = "smartGuess"
 if method=="smartGuess":
     print("using smart guess method")
     # get a ballpark initial guess
-    SFGuess = curvedSpring.smart_initial_load_guess(testTorque,curvedSpring.deform_ODE)
-    print("guess planar force vector:", SFGuess)
-    # use that initial guess to deform the beam
-    res, SF, divergeFlag, i = curvedSpring.wrapped_torque_deform(testTorque,curvedSpring.deform_ODE,SF=SFGuess)
+    # SFGuess = curvedSpring.smart_initial_load_guess(testTorque,curvedSpring.deform_ODE)
+    # print("guess planar force vector:", SFGuess)
+    # # use that initial guess to deform the beam
+    # res, SF, divergeFlag, i = curvedSpring.wrapped_torque_deform(testTorque,curvedSpring.deform_ODE,SF=SFGuess)
+
+    res, SF, divergeFlag, i = curvedSpring.deform_by_torque_smartGuess \
+                             (testTorque,curvedSpring.deform_ODE,printBool=True)
 
     # if it didnt diverge consider the deform ation succesful
     deformBool = not(divergeFlag)
@@ -87,11 +90,6 @@ elif method=="slowRamp":
 
 curvedSpring.full_results(deformBool=False)
 ## output curves for use in solidworks
-# add a "zero" column for z-values (needed by solidworks) and save as .txt files
-A = np.hstack((curvedSpring.undeformedASurface,np.atleast_2d(np.zeros(len(curvedSpring.undeformedASurface))).T))
-B = np.hstack((curvedSpring.undeformedBSurface,np.atleast_2d(np.zeros(len(curvedSpring.undeformedBSurface))).T))
-np.savetxt("surfaces\\adjusted_A_surface.txt", A, delimiter=",", fmt='%f')
-np.savetxt("surfaces\\adjusted_B_surface.txt", B, delimiter=",", fmt='%f')
-fullSurfaceAttempt = np.vstack((A, np.flip(B, 0)))
-np.savetxt("surfaces\\adjusted_full_surface.txt", fullSurfaceAttempt, delimiter=",", fmt='%f')
+curvedSpring.surfaces_to_txt()
+
 plt.show()

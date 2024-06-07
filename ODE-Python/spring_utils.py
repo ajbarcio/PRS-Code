@@ -1,6 +1,7 @@
 # TODO: Put spring utils in here (function is spring file which aren't in spring class)
 import numpy as np
 import math
+import warnings
 from polynomials import PPoly_Eval
 
 def alpha_xy(s, xCoeffs, yCoeffs):
@@ -23,7 +24,11 @@ def r_n(s, xCoeffs, yCoeffs):
     dxds   = PPoly_Eval(s, xCoeffs, deriv=1)
     # dAlphadS = (d2yds2/dxds-d2xds2*dyds/dxds)/(1+dyds**2/dxds)
     if hasattr(s, "__len__"):
-        rn = ((1+dyds**2/dxds**2)/(d2yds2/dxds-d2xds2*dyds/dxds**2))
+        # we already know this will throw a warning for most springs, 
+        # for a spring with locally straight zones, so ignore it
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            rn = ((1+dyds**2/dxds**2)/(d2yds2/dxds-d2xds2*dyds/dxds**2))
         for i in range(len(rn)):
             if not np.isfinite(rn[i]):
                 rn[i] = float('inf')

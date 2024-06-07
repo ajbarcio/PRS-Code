@@ -7,3 +7,13 @@ Jinv = lin.pinv(np.atleast_2d(J).T)
 print(Jinv)
 print(Jinv*err)
 print(J+Jinv)
+
+import warnings
+
+def fxn():
+    warnings.warn("fuck you", DeprecationWarning)
+    print("called")
+    
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    fxn()
