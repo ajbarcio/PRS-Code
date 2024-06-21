@@ -217,18 +217,27 @@ class Spring:
 
     def tune_stiffness(self, targetStiffness, targetTorque, discludeVector):
         err = 1
+        errPrev = 1
         convergenceLimit = 0.01
+        successFlag = 1
         try:
             while err > convergenceLimit:
+                errPrev = err
                 # make a new spring from current parameter vector
                 self.redefine_spring_from_parameterVector()
                 # evaluate the stiffness of the spring
-                self.deform_by_torque_smartGuess(targetTorque, self.deform_ODE)
+                res, SF, divergeFlag, i = self.deform_by_torque_smartGuess(targetTorque, self.deform_ODE)
+                if divergeFlag:
+                    successFlag = 0
+                    break
                 stiffness = targetTorque/(self.dBeta/deg2rad)
                 print("guess stiffness:", stiffness)
                 # calcualte the distance from the target stiffness
                 err = (stiffness-targetStiffness)/targetStiffness
                 print("err:", err)
+                if err>errPrev:
+                    successFlag = 0
+                    break
                 # calcualte the jacobian
                 J = self.stiffness_jacobian(self.deform_ODE, targetStiffness, targetTorque, err)
                 for i in range(len(J)):
@@ -239,7 +248,8 @@ class Spring:
                 # print("before:", self.parameterVector)
                 self.parameterVector = (self.parameterVector - Jinv*err)[0]
                 # print("after:", self.parameterVector)
-            print("successful convergence to ",convergenceLimit*100,"%")
+            if successFlag:
+                print("successful convergence to ",convergenceLimit*100,"%")
             print("stiffness (lbf/deg)", stiffness)
             print("max stress:", self.maxStress)
             print("des stress:", self.designStress)
@@ -263,12 +273,13 @@ class Spring:
                 B = np.hstack((self.undeformedBSurface,np.atleast_2d(np.zeros(len(self.undeformedBSurface))).T))
                 np.savetxt("surfaces\\premature_A_surface.txt", A, delimiter=",", fmt='%f')
                 np.savetxt("surfaces\\premature_B_surface.txt", B, delimiter=",", fmt='%f')
+
     def stiffness_jacobian(self, ODE, targetStiffness, targetTorque, currErr):
         print("calculating J")
         initialParameterVector = dc(self.parameterVector)
         J = np.empty(len(self.parameterVector))
         for i in range(len(self.parameterVector)):
-            print("parameter derivative", i, "/15", end="\r")
+            # print("parameter derivative", i, "/15", end="\r")
             # Forward difference
             self.parameterVector[i] += self.finiteDifferenceVector[i]
             self.redefine_spring_from_parameterVector()
@@ -522,10 +533,12 @@ class Spring:
             # determine boundary condition compliance, estimate jacobian
             err, self.res = self.forward_integration(ODE,SF,torqueTarg)
             J = self.boundary_condition_jacobian(ODE,SF,torqueTarg)
+            # print(J)
             # freak out if it didnt work
             if lin.norm(err)>lin.norm(errPrev):
                 # print information on what is happening
                 print("torque deform diverging", i)
+                print(J)
                 print(err, errPrev)
                 print(SF)
                 divergeFlag = 1
@@ -537,7 +550,7 @@ class Spring:
             # make a new guess if it did work
             elif lin.norm(err,2) > 10e-10:
                 # (according to a newton's method)
-                SF = SF-lin.inv(J).dot(err)
+                SF = SF-lin.pinv(J).dot(err)
             # and if the error is small enough to converge, break out
             else:
                 break
@@ -722,7 +735,7 @@ class Spring:
         """
 
         # Generate neutral radius path and give it nicely formatted class variable
-        self.undeformedNeutralSurface = np.hstack((np.atleast_2d(PPoly_Eval(self.ximesh, self.XCoeffs)).T, 
+        self.undeformedNeutralSurface = np.hstack((np.atleast_2d(PPoly_Eval(self.ximesh, self.XCoeffs)).T,
                                                    np.atleast_2d(PPoly_Eval(self.ximesh, self.YCoeffs)).T))
 
         # prepare a whole bunch of output arrays
@@ -752,10 +765,10 @@ class Spring:
         self.alpha = alpha_xy(self.ximesh, self.XCoeffs, self.YCoeffs)
         # generate xy paths for surfaces
         self.undeformedBSurface = self.undeformedNeutralSurface + \
-                                  np.hstack((np.atleast_2d(-self.lb*np.sin(self.alpha)).T, 
+                                  np.hstack((np.atleast_2d(-self.lb*np.sin(self.alpha)).T,
                                              np.atleast_2d(self.lb*np.cos(self.alpha)).T))
         self.undeformedASurface = self.undeformedNeutralSurface - \
-                                np.hstack((np.atleast_2d(-self.la*np.sin(self.alpha)).T, 
+                                np.hstack((np.atleast_2d(-self.la*np.sin(self.alpha)).T,
                                            np.atleast_2d(self.la*np.cos(self.alpha)).T))
 
         # generate centroidal surface
@@ -773,11 +786,11 @@ class Spring:
         # calculate gamma derivative for stress calcs
         dgdxi = numerical_fixed_mesh_diff(self.res[0,:], self.ximesh)
         self.dgds = dgdxi*self.dxids
-        
+
         # prepare stress arrays
         self.innerSurfaceStress = np.empty(len(self.ximesh))
         self.outerSurfaceStress = np.empty(len(self.ximesh))
-        # calculate stress differently depending on whether or not beam is 
+        # calculate stress differently depending on whether or not beam is
         # locally straight
         for i in range(len(self.innerSurfaceStress)):
             if not np.isinf(self.rn[i]):
@@ -799,10 +812,10 @@ class Spring:
                 self.maxStresses[i] = self.normalizedInnerStress[i]
             else:
                 self.maxStresses[i] = self.normalizedOuterStress[i]
-        
+
         # record the maximum stress along whole beam
         self.maxStress = np.nanmax([self.innerSurfaceStress, self.outerSurfaceStress])
-        
+
         return self.maxStress, self.maxStresses
 
     def full_results(self, plotBool=1, deformBool=1):

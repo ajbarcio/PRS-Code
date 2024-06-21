@@ -1,0 +1,245 @@
+# -*- coding: mbcs -*-
+#
+# Abaqus/CAE Release 2023 replay file
+# Internal Version: 2022_09_28-13.11.55 183150
+# Run by ajbarcio on Mon Jun 17 14:27:03 2024
+#
+
+# from driverUtils import executeOnCaeGraphicsStartup
+# executeOnCaeGraphicsStartup()
+#: Executing "onCaeGraphicsStartup()" in the site directory ...
+from abaqus import *
+from abaqusConstants import *
+session.Viewport(name='Viewport: 1', origin=(0.0, 0.0), width=836.964050292969, 
+    height=146.766662597656)
+session.viewports['Viewport: 1'].makeCurrent()
+session.viewports['Viewport: 1'].maximize()
+from caeModules import *
+from driverUtils import executeOnCaeStartup
+executeOnCaeStartup()
+openMdb('2dTesting.cae')
+#: The model database "C:\Stuff\SMM\PRS-Code-Git\ODE-Python\ModelDBs\2dTesting.cae" has been opened.
+session.viewports['Viewport: 1'].setValues(displayedObject=None)
+session.viewports['Viewport: 1'].partDisplay.geometryOptions.setValues(
+    referenceRepresentation=ON)
+p = mdb.models['Model-1'].parts['Part-1']
+session.viewports['Viewport: 1'].setValues(displayedObject=p)
+a = mdb.models['Model-1'].rootAssembly
+session.viewports['Viewport: 1'].setValues(displayedObject=a)
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(
+    optimizationTasks=OFF, geometricRestrictions=OFF, stopConditions=OFF)
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(mesh=ON)
+session.viewports['Viewport: 1'].assemblyDisplay.meshOptions.setValues(
+    meshTechnique=ON)
+session.viewports['Viewport: 1'].view.setValues(nearPlane=16.1475, 
+    farPlane=19.2078, width=42.5372, height=5.92457, viewOffsetX=5.86642, 
+    viewOffsetY=0.272663)
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(mesh=OFF, 
+    interactions=ON, constraints=ON, connectors=ON, engineeringFeatures=ON)
+session.viewports['Viewport: 1'].assemblyDisplay.meshOptions.setValues(
+    meshTechnique=OFF)
+mdb.models['Model-1'].constraints['Constraint-1'].setValues(mpcType=LINK_MPC)
+a = mdb.models['Model-1'].rootAssembly
+e1 = a.instances['Part-5-1'].edges
+edges1 = e1.getSequenceFromMask(mask=('[#20000 ]', ), )
+region3=a.Set(edges=edges1, name='p_Set-25')
+a = mdb.models['Model-1'].rootAssembly
+r1 = a.referencePoints
+refPoints1=(r1[62], )
+region1=regionToolset.Region(referencePoints=refPoints1)
+mdb.models['Model-1'].RigidBody(name='Constraint-2', refPointRegion=region1, 
+    pinRegion=region3)
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(interactions=OFF, 
+    constraints=OFF, connectors=OFF, engineeringFeatures=OFF)
+mdb.jobs['Job-1'].submit(consistencyChecking=OFF)
+#: The job input file "Job-1.inp" has been submitted for analysis.
+#: Error in job Job-1: 102 nodes are missing degree of freedoms. The MPC/Equation/kinematic coupling constraints can not be formed. The nodes have been identified in node set ErrNodeMissingDofConstrDef.
+#: Job Job-1: Analysis Input File Processor aborted due to errors.
+#: Error in job Job-1: Analysis Input File Processor exited with an error - Please see the  Job-1.dat file for possible error messages if the file exists.
+#: Job Job-1 aborted due to errors.
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(interactions=ON, 
+    constraints=ON, connectors=ON, engineeringFeatures=ON)
+mdb.models['Model-1'].constraints['Constraint-2'].suppress()
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(interactions=OFF, 
+    constraints=OFF, connectors=OFF, engineeringFeatures=OFF)
+mdb.jobs['Job-1'].submit(consistencyChecking=OFF)
+#: The job input file "Job-1.inp" has been submitted for analysis.
+#: Error in job Job-1: 1 nodes have inactive dof on which boundary conditions are specified. The nodes have been identified in node set ErrNodeBCInactiveDof.
+#: Job Job-1: Analysis Input File Processor aborted due to errors.
+#: Error in job Job-1: Analysis Input File Processor exited with an error - Please see the  Job-1.dat file for possible error messages if the file exists.
+#: Job Job-1 aborted due to errors.
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(loads=ON, bcs=ON, 
+    predefinedFields=ON, connectors=ON)
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(mesh=ON, loads=OFF, 
+    bcs=OFF, predefinedFields=OFF, connectors=OFF)
+session.viewports['Viewport: 1'].assemblyDisplay.meshOptions.setValues(
+    meshTechnique=ON)
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(mesh=OFF)
+session.viewports['Viewport: 1'].assemblyDisplay.meshOptions.setValues(
+    meshTechnique=OFF)
+mdb.jobs['Job-1'].submit(consistencyChecking=OFF)
+#: The job input file "Job-1.inp" has been submitted for analysis.
+#: Error in job Job-1: 1 nodes have inactive dof on which boundary conditions are specified. The nodes have been identified in node set ErrNodeBCInactiveDof.
+#: Job Job-1: Analysis Input File Processor aborted due to errors.
+#: Error in job Job-1: Analysis Input File Processor exited with an error - Please see the  Job-1.dat file for possible error messages if the file exists.
+#: Job Job-1 aborted due to errors.
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(step='Step-1')
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(loads=ON, bcs=ON, 
+    predefinedFields=ON, connectors=ON)
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(mesh=ON)
+session.viewports['Viewport: 1'].view.setValues(nearPlane=15.7535, 
+    farPlane=19.6018, width=52.7483, height=7.46155, viewOffsetX=14.4088, 
+    viewOffsetY=1.45105)
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(loads=OFF, bcs=OFF, 
+    predefinedFields=OFF, interactions=ON, constraints=ON, 
+    engineeringFeatures=ON)
+session.viewports['Viewport: 1'].view.setValues(nearPlane=15.5595, 
+    farPlane=19.7959, width=58.1083, height=8.21976, viewOffsetX=16.8239, 
+    viewOffsetY=0.515135)
+mdb.models['Model-1'].constraints['Constraint-2'].resume()
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(interactions=OFF, 
+    constraints=OFF, connectors=OFF, engineeringFeatures=OFF)
+mdb.jobs['Job-1'].submit(consistencyChecking=OFF)
+#: The job input file "Job-1.inp" has been submitted for analysis.
+#: Error in job Job-1: 102 nodes are missing degree of freedoms. The MPC/Equation/kinematic coupling constraints can not be formed. The nodes have been identified in node set ErrNodeMissingDofConstrDef.
+#: Job Job-1: Analysis Input File Processor aborted due to errors.
+#: Error in job Job-1: Analysis Input File Processor exited with an error - Please see the  Job-1.dat file for possible error messages if the file exists.
+#: Job Job-1 aborted due to errors.
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(
+    adaptiveMeshConstraints=ON)
+o3 = session.openOdb(
+    name='C:/Stuff/SMM/PRS-Code-Git/ODE-Python/ModelDBs/Job-1.odb')
+#: Model: C:/Stuff/SMM/PRS-Code-Git/ODE-Python/ModelDBs/Job-1.odb
+#: Number of Assemblies:         1
+#: Number of Assembly instances: 0
+#: Number of Part instances:     1
+#: Number of Meshes:             2
+#: Number of Element Sets:       13
+#: Number of Node Sets:          16
+#: Number of Steps:              1
+session.viewports['Viewport: 1'].setValues(displayedObject=o3)
+session.viewports['Viewport: 1'].makeCurrent()
+a = mdb.models['Model-1'].rootAssembly
+session.viewports['Viewport: 1'].setValues(displayedObject=a)
+session.viewports['Viewport: 1'].setValues(
+    displayedObject=session.odbs['C:/Stuff/SMM/PRS-Code-Git/ODE-Python/ModelDBs/Job-1.odb'])
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(
+    adaptiveMeshConstraints=OFF)
+dg1= session.displayGroups['All']
+session.viewports['Viewport: 1'].odbDisplay.setValues(visibleDisplayGroups=(
+    dg1, ))
+session.viewports['Viewport: 1'].view.setValues(nearPlane=19.5873, 
+    farPlane=30.4033, width=27.0201, height=3.82215, viewOffsetX=0.153648, 
+    viewOffsetY=-0.0604834)
+a = mdb.models['Model-1'].rootAssembly
+session.viewports['Viewport: 1'].setValues(displayedObject=a)
+mdb.models['Model-1'].constraints['Constraint-2'].suppress()
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(interactions=ON, 
+    constraints=ON, connectors=ON, engineeringFeatures=ON)
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(interactions=OFF, 
+    constraints=OFF, connectors=OFF, engineeringFeatures=OFF)
+mdb.jobs['Job-1'].submit(consistencyChecking=OFF)
+#: The job input file "Job-1.inp" has been submitted for analysis.
+#: Error in job Job-1: 1 nodes have inactive dof on which boundary conditions are specified. The nodes have been identified in node set ErrNodeBCInactiveDof.
+#: Job Job-1: Analysis Input File Processor aborted due to errors.
+#: Error in job Job-1: Analysis Input File Processor exited with an error - Please see the  Job-1.dat file for possible error messages if the file exists.
+#: Job Job-1 aborted due to errors.
+session.viewports['Viewport: 1'].setValues(displayedObject=None)
+a = mdb.models['Model-1'].rootAssembly
+session.viewports['Viewport: 1'].setValues(displayedObject=a)
+a = mdb.models['Model-1'].rootAssembly
+session.viewports['Viewport: 1'].setValues(displayedObject=a)
+o3 = session.openOdb(
+    name='C:/Stuff/SMM/PRS-Code-Git/ODE-Python/ModelDBs/Job-1.odb')
+#: Model: C:/Stuff/SMM/PRS-Code-Git/ODE-Python/ModelDBs/Job-1.odb
+#: Number of Assemblies:         1
+#: Number of Assembly instances: 0
+#: Number of Part instances:     1
+#: Number of Meshes:             2
+#: Number of Element Sets:       13
+#: Number of Node Sets:          15
+#: Number of Steps:              1
+session.viewports['Viewport: 1'].setValues(displayedObject=o3)
+session.viewports['Viewport: 1'].makeCurrent()
+session.viewports['Viewport: 1'].view.setValues(nearPlane=20.1389, 
+    farPlane=29.8517, width=11.9366, height=1.6885, viewOffsetX=1.80808, 
+    viewOffsetY=0.133576)
+a = mdb.models['Model-1'].rootAssembly
+session.viewports['Viewport: 1'].setValues(displayedObject=a)
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(interactions=ON, 
+    constraints=ON, connectors=ON, engineeringFeatures=ON)
+session.viewports['Viewport: 1'].view.setValues(nearPlane=16.3945, 
+    farPlane=18.9609, width=39.379, height=5.57038, viewOffsetX=11.392, 
+    viewOffsetY=0.540311)
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(step='Initial')
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(loads=ON, bcs=ON, 
+    predefinedFields=ON, interactions=OFF, constraints=OFF, 
+    engineeringFeatures=OFF)
+mdb.models['Model-1'].boundaryConditions['BC-1'].setValues(localCsys=None)
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(loads=OFF, bcs=OFF, 
+    predefinedFields=OFF, connectors=OFF)
+mdb.jobs['Job-1'].submit(consistencyChecking=OFF)
+#: The job input file "Job-1.inp" has been submitted for analysis.
+#: Error in job Job-1: 1 nodes have inactive dof on which boundary conditions are specified. The nodes have been identified in node set ErrNodeBCInactiveDof.
+#: Job Job-1: Analysis Input File Processor aborted due to errors.
+o3 = session.openOdb(
+    name='C:/Stuff/SMM/PRS-Code-Git/ODE-Python/ModelDBs/Job-1.odb')
+#* OdbError: The .lck file for the output database 
+#* C:/Stuff/SMM/PRS-Code-Git/ODE-Python/ModelDBs/Job-1.odb indicates that the 
+#* Analysis Input File Processor is currently modifying the database.  The 
+#* database cannot be opened at this time.
+#: Error in job Job-1: Analysis Input File Processor exited with an error - Please see the  Job-1.dat file for possible error messages if the file exists.
+#: Job Job-1 aborted due to errors.
+a = mdb.models['Model-1'].rootAssembly
+session.viewports['Viewport: 1'].setValues(displayedObject=a)
+o3 = session.openOdb(
+    name='C:/Stuff/SMM/PRS-Code-Git/ODE-Python/ModelDBs/Job-1.odb')
+#: Model: C:/Stuff/SMM/PRS-Code-Git/ODE-Python/ModelDBs/Job-1.odb
+#: Number of Assemblies:         1
+#: Number of Assembly instances: 0
+#: Number of Part instances:     1
+#: Number of Meshes:             2
+#: Number of Element Sets:       13
+#: Number of Node Sets:          15
+#: Number of Steps:              1
+session.viewports['Viewport: 1'].setValues(displayedObject=o3)
+session.viewports['Viewport: 1'].makeCurrent()
+session.viewports['Viewport: 1'].view.setValues(nearPlane=19.5212, 
+    farPlane=30.4694, width=32.4217, height=4.58624, viewOffsetX=6.75222, 
+    viewOffsetY=0.880775)
+a = mdb.models['Model-1'].rootAssembly
+session.viewports['Viewport: 1'].setValues(displayedObject=a)
+mdb.models['Model-1'].constraints['Constraint-1'].suppress()
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(interactions=ON, 
+    constraints=ON, connectors=ON, engineeringFeatures=ON)
+session.viewports['Viewport: 1'].view.setValues(nearPlane=16.0694, 
+    farPlane=19.286, width=44.0409, height=6.22984, viewOffsetX=12.4193, 
+    viewOffsetY=0.732573)
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(interactions=OFF, 
+    constraints=OFF, connectors=OFF, engineeringFeatures=OFF)
+mdb.jobs['Job-1'].submit(consistencyChecking=OFF)
+#: The job input file "Job-1.inp" has been submitted for analysis.
+#: Error in job Job-1: NODE SET ASSEMBLY__PICKEDSET66 HAS NOT BEEN DEFINED
+#: Error in job Job-1: A CONCENTRATED LOAD HAS BEEN SPECIFIED ON NODE SET ASSEMBLY__PICKEDSET66.  THIS NODE SET IS NOT ACTIVE IN THE MODEL
+#: Job Job-1: Analysis Input File Processor aborted due to errors.
+#: Error in job Job-1: Analysis Input File Processor exited with an error - Please see the  Job-1.dat file for possible error messages if the file exists.
+#: Job Job-1 aborted due to errors.
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(step='Step-1')
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(loads=ON, bcs=ON, 
+    predefinedFields=ON, connectors=ON)
+a = mdb.models['Model-1'].rootAssembly
+r1 = a.referencePoints
+refPoints1=(r1[62], )
+region = regionToolset.Region(referencePoints=refPoints1)
+datum = mdb.models['Model-1'].rootAssembly.datums[1]
+mdb.models['Model-1'].loads['Load-1'].setValues(region=region, 
+    distributionType=UNIFORM, field='', localCsys=datum)
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(loads=OFF, bcs=OFF, 
+    predefinedFields=OFF, connectors=OFF)
+mdb.jobs['Job-1'].submit(consistencyChecking=OFF)
+#: The job input file "Job-1.inp" has been submitted for analysis.
+#: Error in job Job-1: NODE SET ASSEMBLY__PICKEDSET71 HAS NOT BEEN DEFINED
+#: Error in job Job-1: A CONCENTRATED LOAD HAS BEEN SPECIFIED ON NODE SET ASSEMBLY__PICKEDSET71.  THIS NODE SET IS NOT ACTIVE IN THE MODEL
+#: Job Job-1: Analysis Input File Processor aborted due to errors.
+#: Error in job Job-1: Analysis Input File Processor exited with an error - Please see the  Job-1.dat file for possible error messages if the file exists.
+#: Job Job-1 aborted due to errors.

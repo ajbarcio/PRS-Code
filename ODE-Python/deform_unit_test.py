@@ -45,7 +45,7 @@ curvedSpring = Spring(allSpringsMaterial, n = 2, radii=np.array([R0,R1,R2,R3]),
                              IcPts=Ics,
                              IcParamLens=np.array([0.6]), resolution=500)
 straightSpring = Spring(allSpringsMaterial, n = 1, fullParamLength = 6, radii = np.array([1,3,5,7]),
-                        betaAngles=np.array([0,0,0,0])*deg2rad,
+                        betaAngles=np.array([45,45,45,45])*deg2rad,
                         IcPts = np.array([0.03125, 0.03125, 0.03125]), resolution = 200)
 quasiStraightSpring = Spring(allSpringsMaterial, n = 1, fullParamLength = 6, radii = np.array([1,3,5,7]),
                         betaAngles=np.array([0,1,2,3])*deg2rad,
@@ -102,6 +102,51 @@ quasiStraightResDisp = np.sqrt((quasiStraightSpring.deformedNeutralSurface[-1,-1
                                (quasiStraightSpring.deformedNeutralSurface[0,-1]-quasiStraightSpring.undeformedNeutralSurface[0,-1])**2)
 print("tip displacement for quasi-straight beam:         ",quasiStraightResDisp)
 print("the above three values should be close to the same")
+
+print("#################### UNIT TEST 1.5: Deforming Straight Spring ####################")
+
+
+######################## Straight Beam Unit Test #######################
+# Test the deformation functions all together, and use either method #
+# to deform a straight beam under a target torque load.                       #
+######################################################################
+
+testTorque = 5000
+method = "smartGuess"
+if method=="smartGuess":
+    print("using smart guess method")
+    # get a ballpark initial guess
+    SFGuess = straightSpring.smart_initial_load_guess(testTorque,straightSpring.deform_ODE)
+    print("guess planar force vector:", SFGuess)
+    # use that initial guess to deform the beam
+    res, SF, divergeFlag, i = straightSpring.wrapped_torque_deform(testTorque,straightSpring.deform_ODE,SF=SFGuess)
+
+    straightSpring.generate_undeformed_surfaces()
+    straightSpring.calculate_stresses()
+
+    # compare the two guesses
+    print("solution planar force vector:", SF)
+    # print out results
+    print("torque:", testTorque)
+    print("angular deformation:", straightSpring.dBeta/deg2rad)
+    print("stiffness (lbf/deg)", testTorque/(straightSpring.dBeta/deg2rad))
+    print("max stress:", straightSpring.maxStress)
+    print("des stress:", straightSpring.designStress)
+    # if it didnt diverge consider the deform ation succesful
+    # deformBool = not(divergeFlag)
+    deformBool = True
+    # plot results
+    straightSpring.full_results(deformBool=deformBool, plotBool=True)
+elif method=="slowRamp":
+    print("using slow ramp method")
+    # starting at an unloaded condition, calculate solutions for progressively increasing torque conditions
+    res, SF, divergeFlag, i = straightSpring.deform_by_torque_slowRamp(testTorque,straightSpring.deform_ODE,torqueResolution=100)
+    deformBool = not(divergeFlag)
+    print("solution planar force vector:", SF)
+    print("angular deformation:", straightSpring.dBeta/deg2rad)
+    print("stiffness (lbf/deg)", testTorque/(straightSpring.dBeta/deg2rad))
+    # plot results
+    straightSpring.full_results(deformBool=deformBool, plotBool=True)
 
 ######################## Curved Beam Unit Test #######################
 # Test the deformation functions all together, and use either method #
