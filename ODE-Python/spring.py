@@ -557,6 +557,7 @@ class Spring:
             i+=1
         # store the final solution in the object
         self.solnSF = SF
+        self.solnerr = lin.norm(err)
         return self.res, self.solnSF, divergeFlag, i
 
     def forward_integration(self, ODE, SF, torqueTarg):
@@ -621,6 +622,44 @@ class Spring:
         return Jac
 
     def deform_ODE(self, xi, p, *args):
+
+        """
+        THIS FUNCTION:
+            Evaluates a single step of the ODE which governs the deformation of
+            a curved beam
+        """
+
+        # Deal with args in the most stupid way possible
+        Fx    = args[0][0][0][0]
+        Fy    = args[0][0][0][1]
+        dgds0 = args[0][0][0][2]
+        # prepare moment dimensionalizer
+        Mdim = self.E*PPoly_Eval(xi, self.IcCoeffs, ranges=self.domains)
+        # prepare xi->s space transform and all derivatives
+        dxdxi = PPoly_Eval(xi, self.XCoeffs, deriv=1)
+        dydxi = PPoly_Eval(xi, self.YCoeffs, deriv=1)
+
+        dxids = d_xi_d_s(xi, self.XCoeffs, self.YCoeffs)
+        # dxds and dyds are used in diffeq
+        dxds = dxids*dxdxi
+        dyds = dxids*dydxi
+
+        ### DO THE DIFFEQ ###
+
+        LHS = np.empty(3)
+
+        LHS[0] = (dgds0 + Fy/Mdim*(p[1]-self.x0) - Fx/Mdim*(p[2]-self.y0))
+        LHS[1] = np.cos(np.arctan2(dyds,dxds)+p[0])
+        LHS[2] = np.sin(np.arctan2(dyds,dxds)+p[0])
+        # check to make sure the math makes sense (I.C. satisfied)
+        if xi==0:
+            assert(np.isclose(LHS[0],dgds0,rtol=1e-5))
+
+        # transfer back from s space to xi space
+        LHS = LHS/dxids
+        return LHS
+
+    def deform_ODE_tension(self, xi, p, *args):
 
         """
         THIS FUNCTION:
@@ -761,6 +800,8 @@ class Spring:
         self.ecc = self.Ic/(self.t*self.h*self.rn)
         self.a = self.rn-self.la
         self.b = self.rn+self.la
+        # Area  = out of plane thickness * in plane thickness
+        self.A = self.h*self.t
         # meshed tangent angle
         self.alpha = alpha_xy(self.ximesh, self.XCoeffs, self.YCoeffs)
         # generate xy paths for surfaces
