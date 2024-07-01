@@ -30,8 +30,10 @@ testTorque=4556.4
 
 # Just forward integration
 straightSpring.generate_undeformed_surfaces()
+
 err, res0 = straightSpring.forward_integration(straightSpring.deform_ODE, np.array([0,0,0]), 0)
 err, res1 = straightSpring.forward_integration(straightSpring.deform_ODE, np.array([100,0,0]), 0)
+
 print(res0)
 print(res0[:,-1])
 print(res1[:,-1])

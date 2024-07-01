@@ -10,7 +10,7 @@ from copy import deepcopy as dc
 
 from utils import numerical_fixed_mesh_diff, fixed_rk4, rk4_step, colorline
 from polynomials import Ic_multiPoly, xy_poly, PPoly_Eval
-from spring_utils import alpha_xy, r_n, d_rn_d_s, d_xi_d_s
+from spring_utils import alpha_xy, r_n, d_rn, d_xi_d_s, d_alpha, d_2_alpha
 from materials import * # This module ONLY includes materials objects so I think this is safe
 
 deg2rad = np.pi/180
@@ -697,6 +697,49 @@ class Spring:
         LHS = LHS/dxids
         return LHS
 
+    def geo_ODE(self, xi, p, *args):
+        rn     = r_n(xi, self.XCoeffs, self.YCoeffs)
+        drnds  = d_rn(xi, self.XCoeffs, self.YCoeffs)
+        # drnds  = d_rn_d_s_numerical(s, geometryDef[0], geometryDef[1])
+        cI     = PPoly_Eval(xi, self.IcCoeffs, deriv=0)
+        dcIds  = PPoly_Eval(xi, self.IcCoeffs, deriv=1)
+        ## OOF
+        dads   = d_alpha(xi, self.XCoeffs, self.YCoeffs)
+        d2ads2 = d_2_alpha(xi, self.XCoeffs, self.YCoeffs)
+        geoFunc1 = (dcIds*dads+cI*d2ads2)/self.t
+        # geoFunc2 = rn*(-drnds*((p[0]+p[1])/rn**2+(-p[0]-p[1])/((rn+p[1])*(rn-p[0]))))
+        geoFunc2 = d2ads2*(p[0]+p[1])*(p[1]-p[0]-p[0]*p[1]*dads)
+        print(p[0], p[1])
+        print(dads, d2ads2)
+        print(geoFunc2)
+        geoFuncs = np.array([[geoFunc1], [geoFunc2]])
+        states   = np.array([[-p[0], p[1]], [p[0]*dads*(1+p[1]*dads), -p[1]*dads*(1-p[0]*dads)]])# [p[0]*p[1]*rn-p[0]*rn**2, p[0]*p[1]*rn-p[1]*rn**2]])
+        # print("states matrix:",states)
+        if np.all(np.isfinite(states)):
+            if lin.matrix_rank(states) < 2:
+                LHS = np.array([float("nan"), float("nan")])
+                return LHS
+            else:
+                LHS = lin.inv(states).dot(geoFuncs)
+        else:
+                LHS = lin.inv(states).dot(geoFuncs)
+        ########### I CANNOR REMEMBNER WHAT ANY OF THIS DOES
+        # fuckYou = False
+        # for i in [0,1]:
+        #     for j in [0,1]:
+        #         if np.isnan(states[i,j]):
+        #             fuckYou = True
+        # if not fuckYou:
+        #     if lin.matrix_rank(states) < 2:
+        #         LHS = np.array([float("nan"), float("nan")])
+        #         return LHS
+        #     else:
+        #         LHS = lin.inv(states).dot(geoFuncs)
+        # else:
+        #     LHS = lin.inv(states).dot(geoFuncs)
+        # print("state rate of change:", np.array([LHS[0][0], LHS[1][0]]))
+        return np.array([LHS[0][0], LHS[1][0]])
+
     def l_a_l_b_rootfinding(self, s, lABPrev, printBool=0):
 
         """
@@ -737,15 +780,15 @@ class Spring:
             x0 = [l, l]
         x = x0
 
-        iii = 0
+        self.iii = 0
         # solve the problem (do newtons method to rootfind)
-        while err > 10**-6 and iii <500:
+        while err > 10**-6 and self.iii <500:
             # newtons method
             xprev = x
             x = x - np.transpose(lin.inv(jac(x, rn, Ic)).dot(func(x, rn, Ic)))
             # error to track convergence
             err = lin.norm(x-xprev)
-            iii+=1
+            self.iii+=1
         # escape if convergence goes towards beam so uncurved that
         # its _basically_ straight (this results in very high thicknesses):
         # this threshold is arbitrary
@@ -759,7 +802,7 @@ class Spring:
         if(printBool):
             print(x0)
             print(x)
-            print(iii)
+            print(self.iii)
             print(rn)
             print(err)
         return x    # here x is [la, lb]
@@ -786,10 +829,12 @@ class Spring:
         # surface
         self.Ic = PPoly_Eval(self.ximesh, self.IcCoeffs, ranges=self.domains)
         self.rn = r_n(self.ximesh, self.XCoeffs, self.YCoeffs)
+        self.rootfindingSteps = 0
         # perform la/lb rootfinding for each step in the xi mesh
         for i in range(len(self.ximesh)):
             SSProfile("lAB rootfinding").tic()
             lAB = self.l_a_l_b_rootfinding(self.ximesh[i], lABPrev)
+            self.rootfindingSteps += self.iii
             SSProfile("lAB rootfinding").toc()
             self.la[i] = lAB[0]
             self.lb[i] = lAB[1]
@@ -950,3 +995,75 @@ class Spring:
         assert(self.smesh[0]==0)
         # return the overall length of the spring
         return self.smesh[-1]
+
+def generate_default_spring():
+    # Fit the Gen 2 actuator form factor
+    R0 = 2.0/2
+    R3 = 5.0/2
+
+    # All these radii, angles, and Ic come from a previous version of this code and
+    # can be considered as arbitrary starting points
+
+    R1 = (R0+R3)/2+.26+.125+.125
+    R2 = (R0+R3)/2-.25+.125
+
+    fullAngle = 165
+
+    beta1 = fullAngle/3*deg2rad*.5*1.2
+
+    beta2 = 2*fullAngle/3*deg2rad*0.9*.9
+    beta0 = fullAngle*deg2rad
+
+    # generate all the input arrays for adjustible parameters
+    # (treat material properties, fullParamLength guess, out of plane thickness,
+    #  and resolution as fixed)
+
+    inputRadii      = np.array([R0,R1,R2,R3])
+    inputBetaAngles = np.array([0,beta1,beta2,beta0])
+
+    Ics = np.array([0.008*.85, 0.00025*.85, 0.00025*1.15, 0.008*1.15])
+    IcLens=np.array([0.4*1.2, 0.667*0.8])
+
+    XYParamLens = np.array([0.333,0.667*1.02])
+
+    # Generate the spring:
+
+    curvedSpring = Spring(Maraging300Steel(), n = 2, radii=inputRadii,
+                                betaAngles=inputBetaAngles,
+                                IcPts=Ics,
+                                IcParamLens=IcLens, XYParamLens=XYParamLens,
+                                name="manual_spring")
+
+    return curvedSpring
+
+def generate_simple_spring():
+    # Fit the Gen 2 actuator form factor
+    R0 = 2.0/2
+    R3 = 5.0/2
+
+    # All these radii, angles, and Ic come from a previous version of this code and
+    # can be considered as arbitrary starting points
+
+    R1 =   (R0+R3)/2
+
+    # generate all the input arrays for adjustible parameters
+    # (treat material properties, fullParamLength guess, out of plane thickness,
+    #  and resolution as fixed)
+
+    inputRadii      = np.array([R0,R1,R3])
+    inputBetaAngles = np.array([0,10,15])*deg2rad
+
+    Ics = np.array([0.008*.85, 0.00025*1.15, 0.008*1.15])
+    IcLens=np.array([0.5])
+
+    XYParamLens = np.array([0.5])
+
+    # Generate the spring:
+
+    curvedSpring = Spring(Maraging300Steel(), n = 2, radii=inputRadii,
+                                betaAngles=inputBetaAngles,
+                                IcPts=Ics,
+                                IcParamLens=IcLens, XYParamLens=XYParamLens,
+                                name="simple_spring")
+
+    return curvedSpring

@@ -16,6 +16,20 @@ def alpha_xy(s, xCoeffs, yCoeffs):
             alpha=alpha+2*math.pi
         return alpha
 
+def d_alpha(s, xCoeffs, yCoeffs):
+    d2yds2 = PPoly_Eval(s, yCoeffs, deriv=2)
+    d2xds2 = PPoly_Eval(s, xCoeffs, deriv=2)
+    dyds   = PPoly_Eval(s, yCoeffs, deriv=1)
+    dxds   = PPoly_Eval(s, xCoeffs, deriv=1)
+    dads = ((d2yds2/dxds-d2xds2*dyds/dxds**2)/(1+dyds**2/dxds**2))
+    return dads
+
+def d_2_alpha(s, xCoeffs, yCoeffs):
+    d2ads2 = -d_alpha(s, xCoeffs, yCoeffs)**2*d_rn(s, xCoeffs, yCoeffs)
+    if np.isnan(d2ads2):
+        d2ads2 = 0
+    return d2ads2
+
 def r_n(s, xCoeffs, yCoeffs):
     d2yds2 = PPoly_Eval(s, yCoeffs, deriv=2)
     d2xds2 = PPoly_Eval(s, xCoeffs, deriv=2)
@@ -36,7 +50,7 @@ def r_n(s, xCoeffs, yCoeffs):
             rn = ((1+dyds**2/dxds**2)/(d2yds2/dxds-d2xds2*dyds/dxds**2))
     return rn
 
-def d_rn_d_s(s, xCoeffs, yCoeffs):
+def d_rn(s, xCoeffs, yCoeffs):
     d3yds3 = PPoly_Eval(s, yCoeffs, deriv=3)
     d3xds3 = PPoly_Eval(s, xCoeffs, deriv=3)
     d2yds2 = PPoly_Eval(s, yCoeffs, deriv=2)
