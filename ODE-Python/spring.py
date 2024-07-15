@@ -1051,9 +1051,9 @@ def generate_simple_spring():
     #  and resolution as fixed)
 
     inputRadii      = np.array([R0,R1,R3])
-    inputBetaAngles = np.array([0,10,15])*deg2rad
+    inputBetaAngles = np.array([15,15,15])*deg2rad
 
-    Ics = np.array([0.008*.85, 0.00025*1.15, 0.008*1.15])
+    Ics = np.array([0.0008*.85, 0.00025*1.15, 0.0008*1.15])
     IcLens=np.array([0.5])
 
     XYParamLens = np.array([0.5])
