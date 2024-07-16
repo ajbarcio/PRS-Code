@@ -34,10 +34,15 @@ Router = 2.5 # these are the form factor for the gen2 actuator
 # This is just a placeholder value
 Rintermediate = (Rinner+Router)/2
 
-Radii = [Rinner, Rintermediate, Rintermediate, Router]
+radii = [Rinner, Rintermediate, Rintermediate, Router]
 
 beta0 = 160*spring.deg2rad
 
 betaAngles = [0,beta0*1/3,beta0*2/3,beta0]
 
-radii = 
+# Leave these unchanged if you want to only extract the neutral radius path
+IcPts = [0.0025,0.0025]
+IcParamLens = []
+
+abaqusSpring = spring()
+
