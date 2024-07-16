@@ -1,0 +1,243 @@
+# -*- coding: mbcs -*-
+#
+# Abaqus/CAE Release 2023 replay file
+# Internal Version: 2022_09_28-13.11.55 183150
+# Run by ajbarcio on Tue Jul 16 09:29:06 2024
+#
+
+# from driverUtils import executeOnCaeGraphicsStartup
+# executeOnCaeGraphicsStartup()
+#: Executing "onCaeGraphicsStartup()" in the site directory ...
+from abaqus import *
+from abaqusConstants import *
+session.Viewport(name='Viewport: 1', origin=(0.0, 0.0), width=522.170471191406, 
+    height=154.0)
+session.viewports['Viewport: 1'].makeCurrent()
+session.viewports['Viewport: 1'].maximize()
+from caeModules import *
+from driverUtils import executeOnCaeStartup
+executeOnCaeStartup()
+session.viewports['Viewport: 1'].partDisplay.geometryOptions.setValues(
+    referenceRepresentation=ON)
+Mdb()
+#: A new model database has been created.
+#: The model "Model-1" has been created.
+session.viewports['Viewport: 1'].setValues(displayedObject=None)
+openMdb(pathName='C:/Stuff/SMM/PRS-Code-Git/ODE-Python/ModelDBs/3dTesting.cae')
+#: The model database "C:\Stuff\SMM\PRS-Code-Git\ODE-Python\ModelDBs\3dTesting.cae" has been opened.
+session.viewports['Viewport: 1'].setValues(displayedObject=None)
+p = mdb.models['Model-1'].parts['Cut-1']
+session.viewports['Viewport: 1'].setValues(displayedObject=p)
+a = mdb.models['Model-1'].rootAssembly
+session.viewports['Viewport: 1'].setValues(displayedObject=a)
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(
+    optimizationTasks=OFF, geometricRestrictions=OFF, stopConditions=OFF)
+session.viewports['Viewport: 1'].view.setValues(nearPlane=11.4725, 
+    farPlane=19.2111, width=9.19561, height=2.78405, viewOffsetX=-0.225669, 
+    viewOffsetY=0.0534038)
+a = mdb.models['Model-1'].rootAssembly
+a.RadialInstancePattern(instanceList=('Cut-1-1', ), point=(0.0, 0.0, 0.0), 
+    axis=(0.0, 0.0, 1.0), number=2, totalAngle=360.0)
+session.viewports['Viewport: 1'].view.setValues(nearPlane=11.3347, 
+    farPlane=19.3488, width=10.9384, height=3.31168, viewOffsetX=0.937171, 
+    viewOffsetY=0.166814)
+p1 = mdb.models['Model-1'].parts['Part-12']
+session.viewports['Viewport: 1'].setValues(displayedObject=p1)
+a = mdb.models['Model-1'].rootAssembly
+session.viewports['Viewport: 1'].setValues(displayedObject=a)
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(interactions=ON, 
+    constraints=ON, connectors=ON, engineeringFeatures=ON)
+a = mdb.models['Model-1'].rootAssembly
+del a.features['Cut-1-1-rad-2']
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(loads=ON, bcs=ON, 
+    predefinedFields=ON, interactions=OFF, constraints=OFF, 
+    engineeringFeatures=OFF)
+session.viewports['Viewport: 1'].view.setValues(nearPlane=11.2838, 
+    farPlane=19.3998, width=11.5842, height=3.50722, viewOffsetX=1.72676, 
+    viewOffsetY=0.2828)
+a = mdb.models['Model-1'].rootAssembly
+f1 = a.instances['Part-1-Rigid-Outer-1'].faces
+faces1 = f1.getSequenceFromMask(mask=('[#2 ]', ), )
+region = a.Set(faces=faces1, name='Set-36')
+datum = mdb.models['Model-1'].rootAssembly.datums[30]
+mdb.models['Model-1'].DisplacementBC(name='BC-3', createStepName='Initial', 
+    region=region, u1=SET, u2=UNSET, u3=UNSET, ur1=UNSET, ur2=UNSET, ur3=UNSET, 
+    amplitude=UNSET, distributionType=UNIFORM, fieldName='', localCsys=datum)
+session.viewports['Viewport: 1'].view.setValues(nearPlane=11.3767, 
+    farPlane=19.3068, width=11.6797, height=3.53612, viewOffsetX=1.29697, 
+    viewOffsetY=0.132488)
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(step='Step-1')
+mdb.models['Model-1'].loads['Load-1'].resume()
+mdb.models['Model-1'].loads['Load-1'].setValues(cm3=4550.0, 
+    distributionType=UNIFORM, field='')
+mdb.models['Model-1'].loads['Load-2'].suppress()
+session.viewports['Viewport: 1'].view.setValues(nearPlane=11.4725, 
+    farPlane=19.2111, width=9.19561, height=2.78405, viewOffsetX=0.867265, 
+    viewOffsetY=0.0945487)
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(loads=OFF, bcs=OFF, 
+    predefinedFields=OFF, connectors=OFF)
+session.viewports['Viewport: 1'].view.setValues(nearPlane=11.3276, 
+    farPlane=19.356, width=10.9315, height=3.30959, viewOffsetX=1.31793, 
+    viewOffsetY=0.219224)
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(step='Initial')
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(loads=ON, bcs=ON, 
+    predefinedFields=ON, connectors=ON)
+session.viewports['Viewport: 1'].view.setValues(nearPlane=11.5486, 
+    farPlane=19.135, width=9.25662, height=2.80252, viewOffsetX=0.558408, 
+    viewOffsetY=0.65142)
+mdb.save()
+#: The model database has been saved to "C:\Stuff\SMM\PRS-Code-Git\ODE-Python\ModelDBs\3dTesting.cae".
+mdb.models['Model-1'].boundaryConditions['BC-2'].suppress()
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(loads=OFF, bcs=OFF, 
+    predefinedFields=OFF, connectors=OFF)
+mdb.jobs['Job-1'].submit(consistencyChecking=OFF)
+#: The job input file "Job-1.inp" has been submitted for analysis.
+#: Job Job-1: Analysis Input File Processor completed successfully.
+#: Error in job Job-1: Too many attempts made for this increment
+#: Job Job-1: Abaqus/Standard aborted due to errors.
+#: Error in job Job-1: Abaqus/Standard Analysis exited with an error - Please see the  message file for possible error messages if the file exists.
+#: Job Job-1 aborted due to errors.
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(step='Step-1')
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(loads=ON, bcs=ON, 
+    predefinedFields=ON, connectors=ON)
+mdb.models['Model-1'].loads['Load-1'].setValues(cm3=500.0, 
+    distributionType=UNIFORM, field='')
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(loads=OFF, bcs=OFF, 
+    predefinedFields=OFF, connectors=OFF)
+mdb.jobs['Job-1'].submit(consistencyChecking=OFF)
+#: The job input file "Job-1.inp" has been submitted for analysis.
+#: Job Job-1: Analysis Input File Processor completed successfully.
+#: Error in job Job-1: Too many attempts made for this increment
+#: Job Job-1: Abaqus/Standard aborted due to errors.
+#: Error in job Job-1: Abaqus/Standard Analysis exited with an error - Please see the  message file for possible error messages if the file exists.
+#: Job Job-1 aborted due to errors.
+session.viewports['Viewport: 1'].view.setValues(nearPlane=11.1575, 
+    farPlane=19.526, width=13.1846, height=3.99175, viewOffsetX=1.1173, 
+    viewOffsetY=0.760855)
+p1 = mdb.models['Model-1'].parts['Cut-2']
+session.viewports['Viewport: 1'].setValues(displayedObject=p1)
+p1 = mdb.models['Model-1'].parts['Part-1']
+session.viewports['Viewport: 1'].setValues(displayedObject=p1)
+p1 = mdb.models['Model-1'].parts['Part-1-Rigid-Inner']
+session.viewports['Viewport: 1'].setValues(displayedObject=p1)
+p1 = mdb.models['Model-1'].parts['Part-1-Rigid-Outer']
+session.viewports['Viewport: 1'].setValues(displayedObject=p1)
+p1 = mdb.models['Model-1'].parts['Part-2']
+session.viewports['Viewport: 1'].setValues(displayedObject=p1)
+p1 = mdb.models['Model-1'].parts['Part-3']
+session.viewports['Viewport: 1'].setValues(displayedObject=p1)
+a = mdb.models['Model-1'].rootAssembly
+session.viewports['Viewport: 1'].setValues(displayedObject=a)
+mdb.models['Model-1'].loads['Load-1'].suppress()
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(loads=ON, bcs=ON, 
+    predefinedFields=ON, connectors=ON)
+mdb.models['Model-1'].loads['Load-2'].resume()
+mdb.models['Model-1'].loads['Load-2'].suppress()
+mdb.models['Model-1'].loads['Load-1'].resume()
+mdb.models['Model-1'].loads['Load-1'].setValues(cm3=50.0, 
+    distributionType=UNIFORM, field='')
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(loads=OFF, bcs=OFF, 
+    predefinedFields=OFF, connectors=OFF)
+mdb.jobs['Job-1'].submit(consistencyChecking=OFF)
+#: The job input file "Job-1.inp" has been submitted for analysis.
+#: Job Job-1: Analysis Input File Processor completed successfully.
+#: Error in job Job-1: Too many attempts made for this increment
+#: Job Job-1: Abaqus/Standard aborted due to errors.
+#: Error in job Job-1: Abaqus/Standard Analysis exited with an error - Please see the  message file for possible error messages if the file exists.
+#: Job Job-1 aborted due to errors.
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(loads=ON, bcs=ON, 
+    predefinedFields=ON, connectors=ON)
+mdb.models['Model-1'].loads['Load-1'].setValues(cm3=1.0, 
+    distributionType=UNIFORM, field='')
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(loads=OFF, bcs=OFF, 
+    predefinedFields=OFF, connectors=OFF)
+mdb.jobs['Job-1'].submit(consistencyChecking=OFF)
+#: The job input file "Job-1.inp" has been submitted for analysis.
+#: Job Job-1: Analysis Input File Processor completed successfully.
+#: Error in job Job-1: Too many attempts made for this increment
+#: Job Job-1: Abaqus/Standard aborted due to errors.
+#: Error in job Job-1: Abaqus/Standard Analysis exited with an error - Please see the  message file for possible error messages if the file exists.
+#: Job Job-1 aborted due to errors.
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(interactions=ON, 
+    constraints=ON, connectors=ON, engineeringFeatures=ON)
+session.viewports['Viewport: 1'].view.setValues(nearPlane=11.9953, 
+    farPlane=18.6882, width=2.60196, height=0.787766, viewOffsetX=-0.336081, 
+    viewOffsetY=0.437093)
+session.viewports['Viewport: 1'].partDisplay.setValues(sectionAssignments=ON, 
+    engineeringFeatures=ON)
+session.viewports['Viewport: 1'].partDisplay.geometryOptions.setValues(
+    referenceRepresentation=OFF)
+p1 = mdb.models['Model-1'].parts['Part-3']
+session.viewports['Viewport: 1'].setValues(displayedObject=p1)
+session.viewports['Viewport: 1'].view.setValues(nearPlane=11.1725, 
+    farPlane=19.5111, width=12.9809, height=3.93009, viewOffsetX=-0.113826, 
+    viewOffsetY=0.0739752)
+p1 = mdb.models['Model-1'].parts['Part-12']
+session.viewports['Viewport: 1'].setValues(displayedObject=p1)
+p1 = mdb.models['Model-1'].parts['Part-11']
+session.viewports['Viewport: 1'].setValues(displayedObject=p1)
+p1 = mdb.models['Model-1'].parts['Part-10']
+session.viewports['Viewport: 1'].setValues(displayedObject=p1)
+p1 = mdb.models['Model-1'].parts['Part-9']
+session.viewports['Viewport: 1'].setValues(displayedObject=p1)
+p1 = mdb.models['Model-1'].parts['Part-8']
+session.viewports['Viewport: 1'].setValues(displayedObject=p1)
+p1 = mdb.models['Model-1'].parts['Part-7']
+session.viewports['Viewport: 1'].setValues(displayedObject=p1)
+p1 = mdb.models['Model-1'].parts['Part-6']
+session.viewports['Viewport: 1'].setValues(displayedObject=p1)
+p1 = mdb.models['Model-1'].parts['Part-5']
+session.viewports['Viewport: 1'].setValues(displayedObject=p1)
+p1 = mdb.models['Model-1'].parts['Part-4']
+session.viewports['Viewport: 1'].setValues(displayedObject=p1)
+p1 = mdb.models['Model-1'].parts['Part-3']
+session.viewports['Viewport: 1'].setValues(displayedObject=p1)
+p1 = mdb.models['Model-1'].parts['Part-2']
+session.viewports['Viewport: 1'].setValues(displayedObject=p1)
+p1 = mdb.models['Model-1'].parts['Part-3']
+session.viewports['Viewport: 1'].setValues(displayedObject=p1)
+p1 = mdb.models['Model-1'].parts['Part-5']
+session.viewports['Viewport: 1'].setValues(displayedObject=p1)
+p1 = mdb.models['Model-1'].parts['Part-6']
+session.viewports['Viewport: 1'].setValues(displayedObject=p1)
+p1 = mdb.models['Model-1'].parts['Part-12']
+session.viewports['Viewport: 1'].setValues(displayedObject=p1)
+a = mdb.models['Model-1'].rootAssembly
+session.viewports['Viewport: 1'].setValues(displayedObject=a)
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(interactions=OFF, 
+    constraints=OFF, connectors=OFF, engineeringFeatures=OFF)
+session.viewports['Viewport: 1'].view.setValues(nearPlane=11.163, 
+    farPlane=19.5205, width=14.6862, height=4.44638, viewOffsetX=3.23894, 
+    viewOffsetY=0.59024)
+session.viewports['Viewport: 1'].partDisplay.setValues(sectionAssignments=OFF, 
+    engineeringFeatures=OFF)
+session.viewports['Viewport: 1'].partDisplay.geometryOptions.setValues(
+    referenceRepresentation=ON)
+p1 = mdb.models['Model-1'].parts['Cut-1']
+session.viewports['Viewport: 1'].setValues(displayedObject=p1)
+session.viewports['Viewport: 1'].view.setValues(nearPlane=2.63795, 
+    farPlane=4.7708, width=4.82877, height=1.46195, viewOffsetX=0.275826, 
+    viewOffsetY=0.0238451)
+a = mdb.models['Model-1'].rootAssembly
+session.viewports['Viewport: 1'].setValues(displayedObject=a)
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(mesh=ON)
+session.viewports['Viewport: 1'].assemblyDisplay.meshOptions.setValues(
+    meshTechnique=ON)
+session.viewports['Viewport: 1'].view.setValues(nearPlane=11.0373, 
+    farPlane=19.6462, width=14.6832, height=4.45364, viewOffsetX=2.74163, 
+    viewOffsetY=0.856674)
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(step='Initial')
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(mesh=OFF, loads=ON, 
+    bcs=ON, predefinedFields=ON, connectors=ON)
+session.viewports['Viewport: 1'].assemblyDisplay.meshOptions.setValues(
+    meshTechnique=OFF)
+mdb.models['Model-1'].boundaryConditions['BC-3'].setValues(u3=SET)
+session.viewports['Viewport: 1'].assemblyDisplay.setValues(loads=OFF, bcs=OFF, 
+    predefinedFields=OFF, connectors=OFF)
+mdb.jobs['Job-1'].submit(consistencyChecking=OFF)
+#: The job input file "Job-1.inp" has been submitted for analysis.
+#: Job Job-1: Analysis Input File Processor completed successfully.
+#: Error in job Job-1: Too many attempts made for this increment
+#: Job Job-1: Abaqus/Standard aborted due to errors.
+#: Error in job Job-1: Abaqus/Standard Analysis exited with an error - Please see the  message file for possible error messages if the file exists.
+#: Job Job-1 aborted due to errors.

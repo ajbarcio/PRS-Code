@@ -5201,3 +5201,33 @@ mdb.models['Model-1'].parts['Part-1-Rigid-Inner'].projectReferencesOntoSketch(
     mdb.models['Model-1'].parts['Part-1-Rigid-Inner'].features['Solid extrude-1'])
 del mdb.models['Model-1'].sketches['__edit__']
 # Save by ajbarcio on 2024_06_20-17.16.14; build 2023 2022_09_28-13.11.55 183150
+from part import *
+from material import *
+from section import *
+from assembly import *
+from step import *
+from interaction import *
+from load import *
+from mesh import *
+from optimization import *
+from job import *
+from sketch import *
+from visualization import *
+from connectorBehavior import *
+mdb.models['Model-1'].rootAssembly.RadialInstancePattern(axis=(0.0, 0.0, 1.0), 
+    instanceList=('Cut-1-1', ), number=2, point=(0.0, 0.0, 0.0), totalAngle=
+    360.0)
+del mdb.models['Model-1'].rootAssembly.features['Cut-1-1-rad-2']
+mdb.models['Model-1'].rootAssembly.Set(faces=
+    mdb.models['Model-1'].rootAssembly.instances['Part-1-Rigid-Outer-1'].faces.getSequenceFromMask(
+    ('[#2 ]', ), ), name='Set-36')
+mdb.models['Model-1'].DisplacementBC(amplitude=UNSET, createStepName='Initial', 
+    distributionType=UNIFORM, fieldName='', localCsys=
+    mdb.models['Model-1'].rootAssembly.datums[30], name='BC-3', region=
+    mdb.models['Model-1'].rootAssembly.sets['Set-36'], u1=SET, u2=UNSET, u3=
+    UNSET, ur1=UNSET, ur2=UNSET, ur3=UNSET)
+mdb.models['Model-1'].loads['Load-1'].resume()
+mdb.models['Model-1'].loads['Load-1'].setValues(cm3=4550.0, distributionType=
+    UNIFORM, field='')
+mdb.models['Model-1'].loads['Load-2'].suppress()
+# Save by ajbarcio on 2024_07_16-09.37.58; build 2023 2022_09_28-13.11.55 183150
