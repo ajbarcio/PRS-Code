@@ -1,0 +1,468 @@
+# -*- coding: mbcs -*-
+from part import *
+from material import *
+from section import *
+from assembly import *
+from step import *
+from interaction import *
+from load import *
+from mesh import *
+from optimization import *
+from job import *
+from sketch import *
+from visualization import *
+from connectorBehavior import *
+mdb.models['Model-1'].ConstrainedSketch(name='__profile__', sheetSize=8.0)
+mdb.models['Model-1'].sketches['__profile__'].CircleByCenterPerimeter(center=(
+    0.0, 0.0), point1=(1.0407705811080556, 0.0))
+mdb.models['Model-1'].Part(dimensionality=THREE_D, name='Inner-Boolean', type=
+    DEFORMABLE_BODY)
+mdb.models['Model-1'].parts['Inner-Boolean'].BaseSolidExtrude(depth=0.375, 
+    sketch=mdb.models['Model-1'].sketches['__profile__'])
+mdb.models['Model-1'].Part(dimensionality=THREE_D, name='Inner-Surface', type=
+    DISCRETE_RIGID_SURFACE)
+mdb.models['Model-1'].parts['Inner-Surface'].BaseShellExtrude(depth=0.375, 
+    sketch=mdb.models['Model-1'].sketches['__profile__'])
+mdb.models['Model-1'].ConstrainedSketch(name='__profile__', sheetSize=8.0)
+mdb.models['Model-1'].sketches['__profile__'].CircleByCenterPerimeter(center=(
+    0.0, 0.0), point1=(2.50000003674285, 0.0))
+mdb.models['Model-1'].Part(dimensionality=THREE_D, name='Outer-Surface', type=
+    DISCRETE_RIGID_SURFACE)
+mdb.models['Model-1'].parts['Outer-Surface'].BaseShellExtrude(depth=0.375, 
+    sketch=mdb.models['Model-1'].sketches['__profile__'])
+mdb.models['Model-1'].ConstrainedSketch(name='__profile__', sheetSize=8.0)
+mdb.models['Model-1'].sketches['__profile__'].CircleByCenterPerimeter(center=(
+    0.0, 0.0), point1=(2.50000003674285, 0.0))
+mdb.models['Model-1'].sketches['__profile__'].CircleByCenterPerimeter(center=(
+    0.0, 0.0), point1=(2.75000003674285, 0.0))
+mdb.models['Model-1'].Part(dimensionality=THREE_D, name='Outer-Boolean', type=
+    DEFORMABLE_BODY)
+mdb.models['Model-1'].parts['Outer-Boolean'].BaseSolidExtrude(depth=0.375, 
+    sketch=mdb.models['Model-1'].sketches['__profile__'])
+mdb.models['Model-1'].ConstrainedSketch(name='__profile__', sheetSize=8.0)
+mdb.models['Model-1'].sketches['__profile__'].Spline(points=[(1.0, -0.28845), (
+    1.03297, -0.287295), (1.066266, -0.286083), (1.099828, -0.284761), (
+    1.133601, -0.283278), (1.167534, -0.281583), (1.201578, -0.279625), (
+    1.235687, -0.277356), (1.26982, -0.274727), (1.303937, -0.271688), (1.338, 
+    -0.26819), (1.371973, -0.264187), (1.405822, -0.259629), (1.439515, 
+    -0.254469), (1.473019, -0.248659), (1.506304, -0.242149), (1.539337, 
+    -0.234894), (1.572086, -0.226844), (1.60452, -0.217952), (1.636602, 
+    -0.208172), (1.668296, -0.197459), (1.699563, -0.185769), (1.730358, 
+    -0.17306), (1.760636, -0.159295), (1.790344, -0.14444), (1.819426, 
+    -0.128468), (1.847822, -0.111357), (1.875467, -0.093092), (1.902292, 
+    -0.07367), (1.928224, -0.053094), (1.95319, -0.031379), (1.977113, 
+    -0.008549), (1.999918, 0.01536), (2.02153, 0.040305), (2.041878, 0.066232), 
+    (2.060894, 0.09308), (2.078516, 0.12078), (2.094689, 0.149259), (2.109366, 
+    0.178439), (2.122509, 0.208241), (2.13409, 0.238583), (2.144091, 0.269384), 
+    (2.152506, 0.300569), (2.159336, 0.332061), (2.164594, 0.363794), (
+    2.168298, 0.395703), (2.170473, 0.427731), (2.171147, 0.459828), (2.170353, 
+    0.491948), (2.168178, 0.524053), (2.164715, 0.556117), (2.160009, 
+    0.588121), (2.154102, 0.620049), (2.147036, 0.651889), (2.138849, 
+    0.683628), (2.129577, 0.715258), (2.119254, 0.746767), (2.107913, 
+    0.778146), (2.095582, 0.809385), (2.08229, 0.840474), (2.068061, 0.871401), 
+    (2.052922, 0.902153), (2.036894, 0.932716), (2.02, 0.963077), (2.00226, 
+    0.993218), (1.983695, 1.023123), (1.964325, 1.052774), (1.944167, 
+    1.082152), (1.923243, 1.111236), (1.901569, 1.140005), (1.879164, 
+    1.168439), (1.856047, 1.196514), (1.832236, 1.224208), (1.807751, 
+    1.251498), (1.782609, 1.27836), (1.756832, 1.304773), (1.730437, 1.330711), 
+    (1.703445, 1.356154), (1.675878, 1.381078), (1.647756, 1.405464), (
+    1.619101, 1.429289), (1.589937, 1.452537), (1.560285, 1.47519), (1.530169, 
+    1.497233), (1.499616, 1.518654), (1.468648, 1.539444), (1.437291, 
+    1.559596), (1.40557, 1.579108), (1.373511, 1.59798), (1.341137, 1.616218), 
+    (1.308471, 1.633828), (1.275532, 1.650822), (1.242338, 1.667212), (
+    1.208901, 1.68301), (1.175231, 1.698228), (1.141329, 1.712871), (1.107195, 
+    1.726943), (1.072823, 1.740444), (1.038204, 1.753367), (1.003324, 
+    1.765691), (0.968167, 1.777385), (0.932717, 1.788415), (0.896932, 
+    1.798613), (0.860729, 1.807505), (0.824152, 1.81506), (0.787251, 1.821283), 
+    (0.750074, 1.826174), (0.712669, 1.829761), (0.675105, 1.832575), (
+    0.637386, 1.834802), (0.599491, 1.836422), (0.561407, 1.8374), (0.523122, 
+    1.837699), (0.48463, 1.837278), (0.445933, 1.836094), (0.407033, 1.834112), 
+    (0.367941, 1.831297), (0.328667, 1.827622), (0.289228, 1.823067), (
+    0.249641, 1.817617), (0.209924, 1.811263), (0.170097, 1.804003), (0.13018, 
+    1.795839), (0.090193, 1.786779), (0.050156, 1.776834), (0.010089, 1.76602), 
+    (-0.029989, 1.754356), (-0.07006, 1.741864), (-0.110107, 1.728569), (
+    -0.150113, 1.714499), (-0.190061, 1.699684), (-0.229936, 1.684155), (
+    -0.269726, 1.667946), (-0.309414, 1.651094), (-0.34899, 1.633636), (
+    -0.388441, 1.615611), (-0.427755, 1.597058), (-0.466922, 1.578021), (
+    -0.505931, 1.558541), (-0.544772, 1.538663), (-0.583438, 1.518433), (
+    -0.621917, 1.497896), (-0.660202, 1.477101), (-0.698285, 1.456096), (
+    -0.736156, 1.434929), (-0.773808, 1.413652), (-0.811234, 1.392315), (
+    -0.848423, 1.370971), (-0.885369, 1.34967), (-0.922062, 1.328468), (
+    -0.958494, 1.307416), (-0.994655, 1.28657), (-1.030535, 1.265983), (
+    -1.066124, 1.24571), (-1.101391, 1.225781), (-1.136263, 1.206161), (
+    -1.170726, 1.186903), (-1.204773, 1.168065), (-1.238394, 1.149704), (
+    -1.271578, 1.131873), (-1.304312, 1.114625), (-1.336583, 1.098009), (
+    -1.368376, 1.082072), (-1.399673, 1.066858), (-1.430456, 1.052404), (
+    -1.460708, 1.038747), (-1.490407, 1.025917), (-1.519534, 1.013937), (
+    -1.548068, 1.002825), (-1.575991, 0.992594), (-1.603284, 0.983245), (
+    -1.629932, 0.974775), (-1.655924, 0.967169), (-1.681256, 0.960407), (
+    -1.705928, 0.954457), (-1.72995, 0.94928), (-1.753342, 0.944832), (
+    -1.776137, 0.94106), (-1.798378, 0.937908), (-1.820123, 0.935321), (
+    -1.841443, 0.933241), (-1.862423, 0.931615), (-1.883159, 0.930397), (
+    -1.903755, 0.929548), (-1.924324, 0.929039), (-1.944982, 0.928852), (
+    -1.965846, 0.92898), (-1.987029, 0.929424), (-2.00864, 0.930196), (
+    -2.030779, 0.931313), (-2.053538, 0.932794), (-2.076997, 0.93466), (
+    -2.101228, 0.936926), (-2.12629, 0.939605), (-2.152236, 0.942696), (
+    -2.179111, 0.946192), (-2.206955, 0.950067), (-2.235803, 0.954285), (
+    -2.265691, 0.958788), (-2.296653, 0.963503), (-2.328726, 0.968335)])
+mdb.models['Model-1'].sketches['__profile__'].Spline(points=[(1.0, 0.28845), (
+    1.032584, 0.289566), (1.064733, 0.29066), (1.096403, 0.291781), (1.127549, 
+    0.292972), (1.158124, 0.294274), (1.188081, 0.295723), (1.217373, 
+    0.297353), (1.245952, 0.299194), (1.27377, 0.301273), (1.30078, 0.303612), 
+    (1.326933, 0.306228), (1.352181, 0.309136), (1.376477, 0.312344), (
+    1.399773, 0.315855), (1.422023, 0.319666), (1.443184, 0.323768), (1.463214, 
+    0.328146), (1.482075, 0.332776), (1.499733, 0.337627), (1.516161, 0.34266), 
+    (1.53134, 0.347828), (1.545261, 0.353075), (1.557927, 0.358341), (1.569355, 
+    0.363556), (1.579583, 0.368651), (1.588664, 0.373554), (1.596676, 
+    0.378197), (1.603716, 0.382522), (1.609906, 0.386484), (1.615383, 
+    0.390059), (1.620302, 0.393249), (1.624823, 0.396084), (1.629108, 
+    0.398629), (1.633309, 0.40098), (1.637561, 0.403266), (1.641972, 0.405635), 
+    (1.646619, 0.408255), (1.651544, 0.411301), (1.656754, 0.414942), (
+    1.662224, 0.419339), (1.667902, 0.424634), (1.673714, 0.430943), (1.679575, 
+    0.43836), (1.68539, 0.44695), (1.691063, 0.456756), (1.696504, 0.467797), (
+    1.701627, 0.480073), (1.706355, 0.493569), (1.710546, 0.508257), (1.714066, 
+    0.524086), (1.716862, 0.540998), (1.71889, 0.55893), (1.720118, 0.57782), (
+    1.720519, 0.597601), (1.720074, 0.618209), (1.718768, 0.639581), (1.716595, 
+    0.661654), (1.713549, 0.684367), (1.709629, 0.707662), (1.704837, 
+    0.731481), (1.699178, 0.75577), (1.692658, 0.780474), (1.685285, 0.805542), 
+    (1.677068, 0.830925), (1.668017, 0.856573), (1.658145, 0.88244), (1.647461, 
+    0.908479), (1.63598, 0.934647), (1.623712, 0.960899), (1.610671, 0.987194), 
+    (1.59687, 1.013489), (1.582322, 1.039745), (1.567039, 1.06592), (1.551034, 
+    1.091977), (1.534319, 1.117875), (1.516905, 1.143576), (1.498805, 
+    1.169042), (1.480029, 1.194234), (1.460588, 1.219114), (1.440491, 
+    1.243642), (1.419748, 1.26778), (1.398366, 1.291486), (1.376353, 1.314718), 
+    (1.353717, 1.337434), (1.330463, 1.359587), (1.306598, 1.381131), (
+    1.282127, 1.402016), (1.257058, 1.422189), (1.231397, 1.441595), (1.205152, 
+    1.460178), (1.178335, 1.477879), (1.15096, 1.49464), (1.123046, 1.510405), 
+    (1.094615, 1.525119), (1.065696, 1.538737), (1.036323, 1.551218), (
+    1.006533, 1.562526), (0.976367, 1.572634), (0.945872, 1.581534), (0.915097, 
+    1.589229), (0.884088, 1.595732), (0.852923, 1.601205), (0.821726, 
+    1.606158), (0.790478, 1.610614), (0.759152, 1.614551), (0.727723, 
+    1.617959), (0.696165, 1.620797), (0.664426, 1.622458), (0.632531, 
+    1.622726), (0.600528, 1.621624), (0.568458, 1.619189), (0.536361, 
+    1.615468), (0.504265, 1.610513), (0.472197, 1.60438), (0.440174, 1.597123), 
+    (0.408209, 1.588797), (0.37631, 1.57945), (0.344483, 1.569128), (0.312726, 
+    1.557873), (0.28104, 1.545722), (0.249421, 1.532709), (0.217865, 1.518866), 
+    (0.186366, 1.504221), (0.154919, 1.4888), (0.123518, 1.472627), (0.092157, 
+    1.455726), (0.060831, 1.438119), (0.029532, 1.419829), (-0.001743, 
+    1.400877), (-0.033, 1.381285), (-0.064243, 1.361074), (-0.095477, 
+    1.340268), (-0.126707, 1.31889), (-0.157936, 1.296963), (-0.189167, 
+    1.274511), (-0.220406, 1.251561), (-0.251655, 1.228137), (-0.282919, 
+    1.204268), (-0.314201, 1.179982), (-0.345506, 1.155307), (-0.376837, 
+    1.130273), (-0.408201, 1.104912), (-0.439601, 1.079256), (-0.471044, 
+    1.053336), (-0.502535, 1.027187), (-0.534081, 1.000843), (-0.565691, 
+    0.974338), (-0.597371, 0.94771), (-0.62913, 0.920993), (-0.66098, 
+    0.894227), (-0.692929, 0.867447), (-0.724989, 0.840692), (-0.757173, 
+    0.814002), (-0.789512, 0.787441), (-0.822079, 0.761131), (-0.854886, 
+    0.735112), (-0.88794, 0.709417), (-0.92125, 0.68408), (-0.954825, 
+    0.659136), (-0.988676, 0.634623), (-1.022814, 0.610578), (-1.05725, 
+    0.587041), (-1.091995, 0.564052), (-1.127062, 0.541651), (-1.162462, 
+    0.519878), (-1.198204, 0.498777), (-1.234298, 0.478389), (-1.270752, 
+    0.458756), (-1.307571, 0.43992), (-1.344759, 0.421922), (-1.382317, 
+    0.404803), (-1.42024, 0.388603), (-1.458521, 0.373357), (-1.49715, 
+    0.359103), (-1.53611, 0.345871), (-1.575382, 0.33369), (-1.614938, 
+    0.322585), (-1.65475, 0.312576), (-1.694783, 0.303676), (-1.734999, 
+    0.295897), (-1.775354, 0.289239), (-1.815804, 0.283699), (-1.8563, 
+    0.279269), (-1.896792, 0.275929), (-1.937228, 0.273656), (-1.977555, 
+    0.272418), (-2.017719, 0.272175), (-2.057668, 0.272879), (-2.097348, 
+    0.274475), (-2.136706, 0.276898), (-2.17569, 0.280074), (-2.21425, 
+    0.283921), (-2.252332, 0.288346), (-2.289887, 0.29325), (-2.326861, 
+    0.298519), (-2.363198, 0.304033), (-2.39884, 0.309661), (-2.433722, 
+    0.31526), (-2.467771, 0.320681), (-2.500903, 0.325761)])
+mdb.models['Model-1'].sketches['__profile__'].Line(point1=(1.0, -0.28845), 
+    point2=(1.0, 0.28845))
+mdb.models['Model-1'].sketches['__profile__'].Line(point1=(-2.328726, 0.968335)
+    , point2=(-2.500903, 0.325761))
+mdb.models['Model-1'].Part(dimensionality=THREE_D, name='Elastic_Portion', 
+    type=DEFORMABLE_BODY)
+mdb.models['Model-1'].parts['Elastic_Portion'].BaseSolidExtrude(depth=0.375, 
+    sketch=mdb.models['Model-1'].sketches['__profile__'])
+mdb.models['Model-1'].rootAssembly.DatumCsysByDefault(CARTESIAN)
+mdb.models['Model-1'].rootAssembly.Instance(dependent=OFF, name='Base Flexure', 
+    part=mdb.models['Model-1'].parts['Elastic_Portion'])
+mdb.models['Model-1'].rootAssembly.RadialInstancePattern(axis=(0.0, 0.0, 1.0), 
+    instanceList=('Base Flexure', ), number=2, point=(0.0, 0.0, 0.0), 
+    totalAngle=360.0)
+mdb.models['Model-1'].rootAssembly.Instance(dependent=OFF, name='Inner Boolean'
+    , part=mdb.models['Model-1'].parts['Inner-Boolean'])
+mdb.models['Model-1'].rootAssembly.Instance(dependent=OFF, name='Inner Surface'
+    , part=mdb.models['Model-1'].parts['Inner-Surface'])
+mdb.models['Model-1'].rootAssembly.Instance(dependent=OFF, name='Outer Boolean'
+    , part=mdb.models['Model-1'].parts['Outer-Boolean'])
+mdb.models['Model-1'].rootAssembly.Instance(dependent=OFF, name='Outer Surface'
+    , part=mdb.models['Model-1'].parts['Outer-Surface'])
+mdb.models['Model-1'].rootAssembly.InstanceFromBooleanMerge(domain=GEOMETRY, 
+    instances=(mdb.models['Model-1'].rootAssembly.instances['Base Flexure'], 
+    mdb.models['Model-1'].rootAssembly.instances['Base Flexure-rad-2']), name=
+    'Flexure-Combine', originalInstances=SUPPRESS)
+mdb.models['Model-1'].rootAssembly.InstanceFromBooleanCut(cuttingInstances=(
+    mdb.models['Model-1'].rootAssembly.instances['Inner Boolean'], ), 
+    instanceToBeCut=
+    mdb.models['Model-1'].rootAssembly.instances['Flexure-Combine-1'], name=
+    'Flexure-Inner-Cut', originalInstances=SUPPRESS)
+mdb.models['Model-1'].rootAssembly.InstanceFromBooleanCut(cuttingInstances=(
+    mdb.models['Model-1'].rootAssembly.instances['Outer Boolean'], ), 
+    instanceToBeCut=
+    mdb.models['Model-1'].rootAssembly.instances['Flexure-Inner-Cut-1'], name=
+    'Flexure-Outer-Cut', originalInstances=SUPPRESS)
+mdb.models['Model-1'].rootAssembly.PartitionFaceByIntersectFace(cuttingFaces=
+    mdb.models['Model-1'].rootAssembly.instances['Flexure-Outer-Cut-1'].faces.findAt(
+    ((1.04077058110806, 0, 0.1875), )), faces=
+    mdb.models['Model-1'].rootAssembly.instances['Inner Surface'].faces.findAt(
+    (0.0, 1.040771, 0.0), ))
+mdb.models['Model-1'].rootAssembly.features.changeKey(fromName=
+    'Partition face-1', toName='Inner-Right')
+mdb.models['Model-1'].rootAssembly.PartitionFaceByIntersectFace(cuttingFaces=
+    mdb.models['Model-1'].rootAssembly.instances['Flexure-Outer-Cut-1'].faces.findAt(
+    ((-2.41481442923425, 0.647048264101156, 0.1875), )), faces=
+    mdb.models['Model-1'].rootAssembly.instances['Outer Surface'].faces.findAt(
+    (2.5, 0.0, 0.0), ))
+mdb.models['Model-1'].rootAssembly.features.changeKey(fromName=
+    'Partition face-1', toName='Outer-Left')
+mdb.models['Model-1'].rootAssembly.PartitionFaceByIntersectFace(cuttingFaces=
+    mdb.models['Model-1'].rootAssembly.instances['Flexure-Outer-Cut-1'].faces.findAt(
+    ((-1.04077058110806, 0, 0.1875), )), faces=
+    mdb.models['Model-1'].rootAssembly.instances['Inner Surface'].faces.findAt(
+    (0.0, 1.040771, 0.0), ))
+mdb.models['Model-1'].rootAssembly.features.changeKey(fromName=
+    'Partition face-1', toName='Inner-Left')
+mdb.models['Model-1'].rootAssembly.PartitionFaceByIntersectFace(cuttingFaces=
+    mdb.models['Model-1'].rootAssembly.instances['Flexure-Outer-Cut-1'].faces.findAt(
+    ((2.41481442923425, -0.647048264101156, 0.1875), )), faces=
+    mdb.models['Model-1'].rootAssembly.instances['Outer Surface'].faces.findAt(
+    (2.5, 0.0, 0.0), ))
+mdb.models['Model-1'].rootAssembly.features.changeKey(fromName=
+    'Partition face-1', toName='Outer-Right')
+mdb.models['Model-1'].rootAssembly.Surface(name='innerRightSurfaceD', 
+    side1Faces=
+    mdb.models['Model-1'].rootAssembly.instances['Flexure-Outer-Cut-1'].faces.findAt(
+    ((1.04077058110806, 0, 0.1875), )))
+mdb.models['Model-1'].rootAssembly.Surface(name='innerLeftSurfaceD', 
+    side1Faces=
+    mdb.models['Model-1'].rootAssembly.instances['Flexure-Outer-Cut-1'].faces.findAt(
+    ((-1.04077058110806, 0, 0.1875), )))
+mdb.models['Model-1'].rootAssembly.Surface(name='outerRightSurfaceD', 
+    side1Faces=
+    mdb.models['Model-1'].rootAssembly.instances['Flexure-Outer-Cut-1'].faces.findAt(
+    ((2.41481442923425, -0.647048264101156, 0.1875), )))
+mdb.models['Model-1'].rootAssembly.Surface(name='outerLeftSurfaceD', 
+    side1Faces=
+    mdb.models['Model-1'].rootAssembly.instances['Flexure-Outer-Cut-1'].faces.findAt(
+    ((-2.41481442923425, 0.647048264101156, 0.1875), )))
+mdb.models['Model-1'].rootAssembly.Surface(name='innerRightSurface', 
+    side1Faces=
+    mdb.models['Model-1'].rootAssembly.instances['Inner Surface'].faces.findAt(
+    ((1.04077058110806, 0, 0.1875), )))
+mdb.models['Model-1'].rootAssembly.Surface(name='innerLeftSurface', side1Faces=
+    mdb.models['Model-1'].rootAssembly.instances['Inner Surface'].faces.findAt(
+    ((-1.04077058110806, 0, 0.1875), )))
+mdb.models['Model-1'].rootAssembly.Surface(name='outerRightSurface', 
+    side1Faces=
+    mdb.models['Model-1'].rootAssembly.instances['Outer Surface'].faces.findAt(
+    ((2.41481442923425, -0.647048264101156, 0.1875), )))
+mdb.models['Model-1'].rootAssembly.Surface(name='outerLeftSurface', side1Faces=
+    mdb.models['Model-1'].rootAssembly.instances['Outer Surface'].faces.findAt(
+    ((-2.41481442923425, 0.647048264101156, 0.1875), )))
+mdb.models['Model-1'].Tie(adjust=ON, main=
+    mdb.models['Model-1'].rootAssembly.surfaces['innerRightSurface'], name=
+    'innerRightTie', positionToleranceMethod=COMPUTED, secondary=
+    mdb.models['Model-1'].rootAssembly.surfaces['innerRightSurfaceD'], 
+    thickness=ON, tieRotations=ON)
+mdb.models['Model-1'].Tie(adjust=ON, main=
+    mdb.models['Model-1'].rootAssembly.surfaces['innerRightSurface'], name=
+    'innerLeftTie', positionToleranceMethod=COMPUTED, secondary=
+    mdb.models['Model-1'].rootAssembly.surfaces['innerRightSurfaceD'], 
+    thickness=ON, tieRotations=ON)
+mdb.models['Model-1'].Tie(adjust=ON, main=
+    mdb.models['Model-1'].rootAssembly.surfaces['innerRightSurface'], name=
+    'outerRightTie', positionToleranceMethod=COMPUTED, secondary=
+    mdb.models['Model-1'].rootAssembly.surfaces['innerRightSurfaceD'], 
+    thickness=ON, tieRotations=ON)
+mdb.models['Model-1'].Tie(adjust=ON, main=
+    mdb.models['Model-1'].rootAssembly.surfaces['innerRightSurface'], name=
+    'outerLeftTie', positionToleranceMethod=COMPUTED, secondary=
+    mdb.models['Model-1'].rootAssembly.surfaces['innerRightSurfaceD'], 
+    thickness=ON, tieRotations=ON)
+mdb.models['Model-1'].rootAssembly.ReferencePoint(point=(0.0, 0.0, 0.0))
+mdb.models['Model-1'].rootAssembly.features.changeKey(fromName='RP-1', toName=
+    'Moment-Pt')
+mdb.models['Model-1'].rootAssembly.Set(faces=
+    mdb.models['Model-1'].rootAssembly.instances['Outer Surface'].faces.findAt(
+    ((0, 2.50000003674285, 0.1875), ), ((0, -2.50000003674285, 0.1875), ), ), 
+    name='b_Set-1')
+mdb.models['Model-1'].RigidBody(bodyRegion=
+    mdb.models['Model-1'].rootAssembly.sets['b_Set-1'], name='Constraint-5', 
+    refPointRegion=Region(referencePoints=(
+    mdb.models['Model-1'].rootAssembly.referencePoints[32], )))
+mdb.models['Model-1'].constraints['Constraint-5'].setValues(tieRegion=
+    mdb.models['Model-1'].rootAssembly.sets['b_Set-1'])
+mdb.models['Model-1'].constraints.changeKey(fromName='Constraint-5', toName=
+    'Moment-Tie')
+mdb.models['Model-1'].rootAssembly.Set(faces=
+    mdb.models['Model-1'].rootAssembly.instances['Inner Surface'].faces.findAt(
+    ((-0.978779, -0.353828, 0.125), ), ((-0.978779, 0.353828, 0.25), ), ), 
+    name='Set-3')
+mdb.models['Model-1'].EncastreBC(createStepName='Initial', localCsys=None, 
+    name='BC-1', region=mdb.models['Model-1'].rootAssembly.sets['Set-3'])
+mdb.models['Model-1'].StaticStep(name='Step-1', previous='Initial')
+mdb.models['Model-1'].rootAssembly.Set(name='Set-4', referencePoints=(
+    mdb.models['Model-1'].rootAssembly.referencePoints[32], ))
+mdb.models['Model-1'].Moment(cm3=514.0, createStepName='Step-1', 
+    distributionType=UNIFORM, field='', localCsys=None, name='Load-1', region=
+    mdb.models['Model-1'].rootAssembly.sets['Set-4'])
+mdb.Job(atTime=None, contactPrint=OFF, description='', echoPrint=OFF, 
+    explicitPrecision=SINGLE, getMemoryFromAnalysis=True, historyPrint=OFF, 
+    memory=90, memoryUnits=PERCENTAGE, model='Model-1', modelPrint=OFF, 
+    multiprocessingMode=DEFAULT, name='Job-1', nodalOutputPrecision=SINGLE, 
+    numCpus=1, numGPUs=0, numThreadsPerMpiProcess=1, queue=None, resultsFormat=
+    ODB, scratch='', type=ANALYSIS, userSubroutine='', waitHours=0, 
+    waitMinutes=0)
+mdb.models['Model-1'].parts['Inner-Surface'].ReferencePoint(point=
+    mdb.models['Model-1'].parts['Inner-Surface'].InterestingPoint(
+    mdb.models['Model-1'].parts['Inner-Surface'].edges.findAt((0.0, 1.040771, 
+    0.0), ), CENTER))
+mdb.models['Model-1'].rootAssembly.regenerate()
+mdb.models['Model-1'].Material(name='Material-1')
+mdb.models['Model-1'].materials['Material-1'].Elastic(table=((27500000.0, 0.0), 
+    ))
+mdb.models['Model-1'].HomogeneousSolidSection(material='Material-1', name=
+    'Section-1', thickness=None)
+mdb.models['Model-1'].parts['Flexure-Outer-Cut'].Set(cells=
+    mdb.models['Model-1'].parts['Flexure-Outer-Cut'].cells.findAt(((-2.091549, 
+    0.935981, 0.1875), ), ((2.355218, -0.302799, 0.125), ), ), name='Set-1')
+mdb.models['Model-1'].parts['Flexure-Outer-Cut'].SectionAssignment(offset=0.0, 
+    offsetField='', offsetType=MIDDLE_SURFACE, region=
+    mdb.models['Model-1'].parts['Flexure-Outer-Cut'].sets['Set-1'], 
+    sectionName='Section-1', thicknessAssignment=FROM_SECTION)
+mdb.models['Model-1'].rootAssembly.regenerate()
+mdb.models['Model-1'].rootAssembly.makeIndependent(instances=(
+    mdb.models['Model-1'].rootAssembly.instances['Flexure-Outer-Cut-1'], ))
+mdb.models['Model-1'].rootAssembly.seedPartInstance(deviationFactor=0.1, 
+    minSizeFactor=0.1, regions=(
+    mdb.models['Model-1'].rootAssembly.instances['Flexure-Outer-Cut-1'], ), 
+    size=0.33)
+mdb.models['Model-1'].rootAssembly.generateMesh(regions=(
+    mdb.models['Model-1'].rootAssembly.instances['Flexure-Outer-Cut-1'], ))
+mdb.models['Model-1'].rootAssembly.seedPartInstance(deviationFactor=0.1, 
+    minSizeFactor=0.1, regions=(
+    mdb.models['Model-1'].rootAssembly.instances['Inner Surface'], ), size=
+    0.21)
+mdb.models['Model-1'].rootAssembly.generateMesh(regions=(
+    mdb.models['Model-1'].rootAssembly.instances['Inner Surface'], ))
+mdb.models['Model-1'].rootAssembly.seedPartInstance(deviationFactor=0.1, 
+    minSizeFactor=0.1, regions=(
+    mdb.models['Model-1'].rootAssembly.instances['Outer Surface'], ), size=
+    0.32)
+mdb.models['Model-1'].rootAssembly.generateMesh(regions=(
+    mdb.models['Model-1'].rootAssembly.instances['Outer Surface'], ))
+mdb.jobs['Job-1'].submit(consistencyChecking=OFF)
+mdb.jobs['Job-1']._Message(STARTED, {'phase': BATCHPRE_PHASE, 
+    'clientHost': 'BCDC-HCLQCX3', 'handle': 0, 'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(ERROR, {'phase': BATCHPRE_PHASE, 
+    'message': 'THE PAIR OF SURFACES (ASSEMBLY_INNERRIGHTSURFACED, ASSEMBLY_INNERRIGHTSURFACE) IS USED MORE THAN ONCE TO DEFINE *TIE. THIS IS NOT ALLOWED. PLEASE REMOVE DUPLICATES.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(ERROR, {'phase': BATCHPRE_PHASE, 
+    'message': 'THE PAIR OF SURFACES (ASSEMBLY_INNERRIGHTSURFACED, ASSEMBLY_INNERRIGHTSURFACE) IS USED MORE THAN ONCE TO DEFINE *TIE. THIS IS NOT ALLOWED. PLEASE REMOVE DUPLICATES.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(ERROR, {'phase': BATCHPRE_PHASE, 
+    'message': 'THE PAIR OF SURFACES (ASSEMBLY_INNERRIGHTSURFACED, ASSEMBLY_INNERRIGHTSURFACE) IS USED MORE THAN ONCE TO DEFINE *TIE. THIS IS NOT ALLOWED. PLEASE REMOVE DUPLICATES.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(ERROR, {'phase': BATCHPRE_PHASE, 
+    'message': 'THERE ARE NO RIGID REFERENCE NODE ASSOCIATED WITH SURFACE ASSEMBLY_OUTERLEFTSURFACE', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(ERROR, {'phase': BATCHPRE_PHASE, 
+    'message': 'THERE ARE NO RIGID REFERENCE NODE ASSOCIATED WITH SURFACE ASSEMBLY_OUTERRIGHTSURFACE', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': '6 nodes have been adjusted. The nodes have been identified in node set WarnNodeAdjust.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'FOR *TIE PAIR (ASSEMBLY_INNERRIGHTSURFACED-ASSEMBLY_INNERRIGHTSURFACE), ADJUSTMENT WAS SPECIFIED BUT NO NODE WAS ADJUSTED MORE THAN THE ADJUSTMENT DISTANCE = 2.22000E-16.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'FOR *TIE PAIR (ASSEMBLY_INNERRIGHTSURFACED-ASSEMBLY_INNERRIGHTSURFACE), ADJUSTMENT WAS SPECIFIED BUT NO NODE WAS ADJUSTED MORE THAN THE ADJUSTMENT DISTANCE = 2.22000E-16.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'FOR *TIE PAIR (ASSEMBLY_INNERRIGHTSURFACED-ASSEMBLY_INNERRIGHTSURFACE), ADJUSTMENT WAS SPECIFIED BUT NO NODE WAS ADJUSTED MORE THAN THE ADJUSTMENT DISTANCE = 2.22000E-16.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'OVERCONSTRAINT CHECKS: NODE 4 INSTANCE FLEXURE-OUTER-CUT-1 IS USED MORE THAN ONCE AS A SECONDARY NODE IN THE *TIE KEYWORD.  THE CONSTRAINT BETWEEN THIS NODE AND THE MAIN SURFACE WITH NODE 100 INSTANCE Inner Surface IS REMOVED.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'OVERCONSTRAINT CHECKS: NODE 4 INSTANCE FLEXURE-OUTER-CUT-1 IS USED MORE THAN ONCE AS A SECONDARY NODE IN THE *TIE KEYWORD.  THE CONSTRAINT BETWEEN THIS NODE AND THE MAIN SURFACE WITH NODE 100 INSTANCE Inner Surface IS REMOVED.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'OVERCONSTRAINT CHECKS: NODE 4 INSTANCE FLEXURE-OUTER-CUT-1 IS USED MORE THAN ONCE AS A SECONDARY NODE IN THE *TIE KEYWORD.  THE CONSTRAINT BETWEEN THIS NODE AND THE MAIN SURFACE WITH NODE 100 INSTANCE Inner Surface IS REMOVED.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'OVERCONSTRAINT CHECKS: NODE 5 INSTANCE FLEXURE-OUTER-CUT-1 IS USED MORE THAN ONCE AS A SECONDARY NODE IN THE *TIE KEYWORD.  THE CONSTRAINT BETWEEN THIS NODE AND THE MAIN SURFACE WITH NODE 100 INSTANCE Inner Surface IS REMOVED.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'OVERCONSTRAINT CHECKS: NODE 5 INSTANCE FLEXURE-OUTER-CUT-1 IS USED MORE THAN ONCE AS A SECONDARY NODE IN THE *TIE KEYWORD.  THE CONSTRAINT BETWEEN THIS NODE AND THE MAIN SURFACE WITH NODE 100 INSTANCE Inner Surface IS REMOVED.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'OVERCONSTRAINT CHECKS: NODE 5 INSTANCE FLEXURE-OUTER-CUT-1 IS USED MORE THAN ONCE AS A SECONDARY NODE IN THE *TIE KEYWORD.  THE CONSTRAINT BETWEEN THIS NODE AND THE MAIN SURFACE WITH NODE 100 INSTANCE Inner Surface IS REMOVED.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'OVERCONSTRAINT CHECKS: NODE 8 INSTANCE FLEXURE-OUTER-CUT-1 IS USED MORE THAN ONCE AS A SECONDARY NODE IN THE *TIE KEYWORD.  THE CONSTRAINT BETWEEN THIS NODE AND THE MAIN SURFACE WITH NODE 100 INSTANCE Inner Surface IS REMOVED.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'OVERCONSTRAINT CHECKS: NODE 8 INSTANCE FLEXURE-OUTER-CUT-1 IS USED MORE THAN ONCE AS A SECONDARY NODE IN THE *TIE KEYWORD.  THE CONSTRAINT BETWEEN THIS NODE AND THE MAIN SURFACE WITH NODE 100 INSTANCE Inner Surface IS REMOVED.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'OVERCONSTRAINT CHECKS: NODE 8 INSTANCE FLEXURE-OUTER-CUT-1 IS USED MORE THAN ONCE AS A SECONDARY NODE IN THE *TIE KEYWORD.  THE CONSTRAINT BETWEEN THIS NODE AND THE MAIN SURFACE WITH NODE 100 INSTANCE Inner Surface IS REMOVED.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'OVERCONSTRAINT CHECKS: NODE 9 INSTANCE FLEXURE-OUTER-CUT-1 IS USED MORE THAN ONCE AS A SECONDARY NODE IN THE *TIE KEYWORD.  THE CONSTRAINT BETWEEN THIS NODE AND THE MAIN SURFACE WITH NODE 100 INSTANCE Inner Surface IS REMOVED.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'OVERCONSTRAINT CHECKS: NODE 9 INSTANCE FLEXURE-OUTER-CUT-1 IS USED MORE THAN ONCE AS A SECONDARY NODE IN THE *TIE KEYWORD.  THE CONSTRAINT BETWEEN THIS NODE AND THE MAIN SURFACE WITH NODE 100 INSTANCE Inner Surface IS REMOVED.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'OVERCONSTRAINT CHECKS: NODE 9 INSTANCE FLEXURE-OUTER-CUT-1 IS USED MORE THAN ONCE AS A SECONDARY NODE IN THE *TIE KEYWORD.  THE CONSTRAINT BETWEEN THIS NODE AND THE MAIN SURFACE WITH NODE 100 INSTANCE Inner Surface IS REMOVED.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'OVERCONSTRAINT CHECKS: NODE 40 INSTANCE FLEXURE-OUTER-CUT-1 IS USED MORE THAN ONCE AS A SECONDARY NODE IN THE *TIE KEYWORD.  THE CONSTRAINT BETWEEN THIS NODE AND THE MAIN SURFACE WITH NODE 100 INSTANCE Inner Surface IS REMOVED.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'OVERCONSTRAINT CHECKS: NODE 40 INSTANCE FLEXURE-OUTER-CUT-1 IS USED MORE THAN ONCE AS A SECONDARY NODE IN THE *TIE KEYWORD.  THE CONSTRAINT BETWEEN THIS NODE AND THE MAIN SURFACE WITH NODE 100 INSTANCE Inner Surface IS REMOVED.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'OVERCONSTRAINT CHECKS: NODE 40 INSTANCE FLEXURE-OUTER-CUT-1 IS USED MORE THAN ONCE AS A SECONDARY NODE IN THE *TIE KEYWORD.  THE CONSTRAINT BETWEEN THIS NODE AND THE MAIN SURFACE WITH NODE 100 INSTANCE Inner Surface IS REMOVED.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'OVERCONSTRAINT CHECKS: NODE 83 INSTANCE FLEXURE-OUTER-CUT-1 IS USED MORE THAN ONCE AS A SECONDARY NODE IN THE *TIE KEYWORD.  THE CONSTRAINT BETWEEN THIS NODE AND THE MAIN SURFACE WITH NODE 100 INSTANCE Inner Surface IS REMOVED.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'OVERCONSTRAINT CHECKS: NODE 83 INSTANCE FLEXURE-OUTER-CUT-1 IS USED MORE THAN ONCE AS A SECONDARY NODE IN THE *TIE KEYWORD.  THE CONSTRAINT BETWEEN THIS NODE AND THE MAIN SURFACE WITH NODE 100 INSTANCE Inner Surface IS REMOVED.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'OVERCONSTRAINT CHECKS: NODE 83 INSTANCE FLEXURE-OUTER-CUT-1 IS USED MORE THAN ONCE AS A SECONDARY NODE IN THE *TIE KEYWORD.  THE CONSTRAINT BETWEEN THIS NODE AND THE MAIN SURFACE WITH NODE 100 INSTANCE Inner Surface IS REMOVED.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': '6 nodes are used more than once as a secondary node in *TIE keyword. One of the *TIE constraints at each of these nodes have been removed. The nodes have been identified in node set WarnNodeOverconTieSecondary.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(ERROR, {'phase': BATCHPRE_PHASE, 
+    'message': '4 elements have missing property definitions. The elements have been identified in element set ErrElemMissingSection.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': '1 elements are distorted. Either the isoparametric angles are out of the suggested limits or the triangular or tetrahedral quality measure is bad. The elements have been identified in element set WarnElemDistorted.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': '2 nodes associated with rigid bodies have boundary conditions prescribed at nodes other than the reference node. These boundary conditions will be transferred to the associated rigid body reference node.The reference nodes and the dependent nodes have been identified in node set WarnNodeOverconBoundRB.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': '84 nodes have dof on which incorrect boundary conditions may have been specified. The nodes have been identified in node set WarnNodeBCIncorrectDof.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(ODB_FILE, {'phase': BATCHPRE_PHASE, 
+    'file': 'C:\\Stuff\\SMM\\PRS-Code-Git\\ODE-Python\\ModelDBs\\Job-1.odb', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(ABORTED, {'phase': BATCHPRE_PHASE, 
+    'message': 'Analysis phase failed due to errors', 'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(ERROR, {
+    'message': 'Analysis Input File Processor exited with an error - Please see the  Job-1.dat file for possible error messages if the file exists.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(JOB_ABORTED, {
+    'message': 'Analysis Input File Processor exited with an error - Please see the  Job-1.dat file for possible error messages if the file exists.', 
+    'jobName': 'Job-1'})
+# Save by ajbarcio on 2024_07_16-19.43.36; build 2023 2022_09_28-13.11.55 183150

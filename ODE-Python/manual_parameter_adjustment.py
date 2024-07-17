@@ -46,6 +46,16 @@ curvedSpring = Spring(Maraging300Steel(), n = 2, radii=inputRadii,
                              IcPts=Ics,
                              IcParamLens=IcLens, XYParamLens=XYParamLens,
                              name="manual_spring")
+
+curvedSpring.full_results(deformBool=False)
+## output curves for use in solidworks
+# add a "zero" column for z-values (needed by solidworks) and save as .txt files
+A = np.hstack((curvedSpring.undeformedASurface,np.atleast_2d(np.zeros(len(curvedSpring.undeformedASurface))).T))
+B = np.hstack((curvedSpring.undeformedBSurface,np.atleast_2d(np.zeros(len(curvedSpring.undeformedBSurface))).T))
+np.savetxt("surfaces\\A_surface.txt", A, delimiter=",", fmt='%f')
+np.savetxt("surfaces\\B_surface.txt", B, delimiter=",", fmt='%f')
+
+
 R1 = R3/3
 R2 = R3/3*2
 inputRadii      = np.array([R0,R1,R2,R3])
@@ -62,6 +72,13 @@ straightSpring = Spring(Maraging300Steel(), n=6, radii=inputRadii,
                                         XYParamLens=np.array([1/3.0,2/3.0]),
                                         name="testStraightSpring")
 
+straightSpring.full_results(deformBool=False)
+## output curves for use in solidworks
+# add a "zero" column for z-values (needed by solidworks) and save as .txt files
+A = np.hstack((straightSpring.undeformedASurface,np.atleast_2d(np.zeros(len(straightSpring.undeformedASurface))).T))
+B = np.hstack((straightSpring.undeformedBSurface,np.atleast_2d(np.zeros(len(straightSpring.undeformedBSurface))).T))
+np.savetxt("surfaces\\adjusted_A_surface.txt", A, delimiter=",", fmt='%f')
+np.savetxt("surfaces\\adjusted_B_surface.txt", B, delimiter=",", fmt='%f')
 # testTorque = 4554.6
 # # select method
 # method = "smartGuess"
@@ -149,12 +166,5 @@ elif method=="slowRamp":
     # plot results
     straightSpring.full_results(deformBool=deformBool, plotBool=True)
 
-straightSpring.full_results(deformBool=False)
-## output curves for use in solidworks
-# add a "zero" column for z-values (needed by solidworks) and save as .txt files
-A = np.hstack((straightSpring.undeformedASurface,np.atleast_2d(np.zeros(len(straightSpring.undeformedASurface))).T))
-B = np.hstack((straightSpring.undeformedBSurface,np.atleast_2d(np.zeros(len(straightSpring.undeformedBSurface))).T))
-np.savetxt("surfaces\\adjusted_A_surface.txt", A, delimiter=",", fmt='%f')
-np.savetxt("surfaces\\adjusted_B_surface.txt", B, delimiter=",", fmt='%f')
 
 plt.show()

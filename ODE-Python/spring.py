@@ -1004,14 +1004,14 @@ def generate_default_spring():
     # All these radii, angles, and Ic come from a previous version of this code and
     # can be considered as arbitrary starting points
 
-    R1 = (R0+R3)/2+.26+.125+.125
-    R2 = (R0+R3)/2-.25+.125
+    R1 = (R0+R3)/2+.26+.05
+    R2 = (R0+R3)/2-.25
 
     fullAngle = 165
 
-    beta1 = fullAngle/3*deg2rad*.5*1.2
+    beta1 = fullAngle/3*deg2rad*.5+.02
 
-    beta2 = 2*fullAngle/3*deg2rad*0.9*.9
+    beta2 = 2*fullAngle/3*deg2rad*0.9
     beta0 = fullAngle*deg2rad
 
     # generate all the input arrays for adjustible parameters
@@ -1021,10 +1021,10 @@ def generate_default_spring():
     inputRadii      = np.array([R0,R1,R2,R3])
     inputBetaAngles = np.array([0,beta1,beta2,beta0])
 
-    Ics = np.array([0.008*.85, 0.00025*.85, 0.00025*1.15, 0.008*1.15])
+    Ics = np.array([0.008*.75, 0.00025*.85, 0.00025*1.15, 0.008*1.15])
     IcLens=np.array([0.4*1.2, 0.667*0.8])
 
-    XYParamLens = np.array([0.333,0.667*1.02])
+    XYParamLens = np.array([0.333,0.667])
 
     # Generate the spring:
 
@@ -1032,7 +1032,7 @@ def generate_default_spring():
                                 betaAngles=inputBetaAngles,
                                 IcPts=Ics,
                                 IcParamLens=IcLens, XYParamLens=XYParamLens,
-                                name="manual_spring")
+                                name="default_spring")
 
     return curvedSpring
 

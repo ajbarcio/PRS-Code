@@ -1,0 +1,43 @@
+# -*- coding: mbcs -*-
+from part import *
+from material import *
+from section import *
+from assembly import *
+from step import *
+from interaction import *
+from load import *
+from mesh import *
+from optimization import *
+from job import *
+from sketch import *
+from visualization import *
+from connectorBehavior import *
+mdb.models['Model-1'].Material(name='Material-1')
+mdb.models['Model-1'].materials['Material-1'].Elastic(table=((27500000.0, 
+    0.33), ))
+mdb.models['Model-1'].ConstrainedSketch(name='__profile__', sheetSize=8.0)
+mdb.models['Model-1'].sketches['__profile__'].CircleByCenterPerimeter(center=(
+    0.0, 0.0), point1=(-1.0, 0.0))
+mdb.models['Model-1'].Part(dimensionality=THREE_D, name='Part-1', type=
+    DISCRETE_RIGID_SURFACE)
+mdb.models['Model-1'].parts['Part-1'].BaseSolidExtrude(depth=0.375, sketch=
+    mdb.models['Model-1'].sketches['__profile__'])
+del mdb.models['Model-1'].sketches['__profile__']
+del mdb.models['Model-1'].parts['Part-1']
+mdb.models['Model-1'].ConstrainedSketch(name='__profile__', sheetSize=8.0)
+mdb.models['Model-1'].sketches['__profile__'].CircleByCenterPerimeter(center=(
+    0.0, 0.0), point1=(-1.0, 0.0))
+mdb.models['Model-1'].Part(dimensionality=THREE_D, name='Part-1', type=
+    DISCRETE_RIGID_SURFACE)
+mdb.models['Model-1'].parts['Part-1'].BaseShellExtrude(depth=0.375, sketch=
+    mdb.models['Model-1'].sketches['__profile__'])
+del mdb.models['Model-1'].sketches['__profile__']
+mdb.models['Model-1'].ConstrainedSketch(name='__profile__', sheetSize=8.0)
+mdb.models['Model-1'].sketches['__profile__'].CircleByCenterPerimeter(center=(
+    0.0, 0.0), point1=(-2.35, 0.0))
+mdb.models['Model-1'].Part(dimensionality=THREE_D, name='Part-2', type=
+    DISCRETE_RIGID_SURFACE)
+mdb.models['Model-1'].parts['Part-2'].BaseShellExtrude(depth=0.375, sketch=
+    mdb.models['Model-1'].sketches['__profile__'])
+del mdb.models['Model-1'].sketches['__profile__']
+# Save by ajbarcio on 2024_07_16-15.25.35; build 2023 2022_09_28-13.11.55 183150

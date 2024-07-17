@@ -1,6 +1,6 @@
 1
 
-   Abaqus 2023                                  Date 17-Jun-2024   Time 16:02:45
+   Abaqus 2023                                  Date 17-Jul-2024   Time 09:18:55
    For use by TEXAS A_M UNIVERSITY SYSTEM under license from Dassault Systemes or its subsidiary.
 
 
@@ -79,85 +79,268 @@
 
   *Heading
   *Node
-  *Element, type=CPS4R
-  *Nset, nset=ASSEMBLY_PART-5-1_SET-1
-  *Elset, elset=ASSEMBLY_PART-5-1_SET-1
+  *Element, type=R3D4
+  *Nset, nset="ASSEMBLY_Inner Surface_Inner Surface-RefPt_"
+  *Elset, elset="ASSEMBLY_Inner Surface_Inner Surface"
   *Node
-  *Nset, nset="ASSEMBLY_Edge Seeds-1"
-  *Nset, nset="ASSEMBLY_Edge Seeds-2"
-  *Nset, nset="ASSEMBLY__T-Datum csys-1"
-  *Nset, nset=ASSEMBLY_M_SET-21
-  *Nset, nset=ASSEMBLY_P_SET-17
-  *Nset, nset=ASSEMBLY_P_SET-18
-  *Nset, nset=ASSEMBLY_SET-15
-  *Nset, nset=ASSEMBLY_SET-16
-  *Nset, nset=ASSEMBLY_SET-17
-  *Nset, nset=ASSEMBLY_SET-18
-  *Nset, nset=ASSEMBLY_SET-29
-  *Nset, nset=ASSEMBLY_SET-30
-  *Nset, nset=ASSEMBLY_SET-31
-  *Nset, nset=ASSEMBLY_SET-32
-  *Nset, nset=ASSEMBLY_S_SET-20
-  *Nset, nset=ASSEMBLY__PICKEDSET67
-  *Nset, nset=ASSEMBLY__PICKEDSET68
-  *Nset, nset=ASSEMBLY__PICKEDSET69
-  *Nset, nset=ASSEMBLY__PICKEDSET71
-  *Nset, nset=ASSEMBLY__PICKEDSET73
-  *Nset, nset=ASSEMBLY__PICKEDSET78
-  *Nset, nset=ASSEMBLY__T-CYLINDRICAL
-  *Elset, elset="ASSEMBLY_Edge Seeds-1"
-  *Elset, elset="ASSEMBLY_Edge Seeds-2"
-  *Elset, elset=ASSEMBLY_P_SET-17
-  *Elset, elset=ASSEMBLY_P_SET-18
-  *Elset, elset=ASSEMBLY_SET-15
-  *Elset, elset=ASSEMBLY_SET-16
-  *Elset, elset=ASSEMBLY_SET-17
-  *Elset, elset=ASSEMBLY_SET-18
-  *Elset, elset=ASSEMBLY_S_SET-20
-  *Elset, elset=ASSEMBLY__PICKEDSET67
-  *Elset, elset=ASSEMBLY__PICKEDSET71
-  *Elset, elset=ASSEMBLY__PICKEDSET78
-  *Elset, elset=ASSEMBLY__S_SURF-1_S1
-  *Elset, elset=ASSEMBLY__S_SURF-1_S2
-  *Elset, elset=ASSEMBLY__S_SURF-1_S4
-  *Elset, elset=ASSEMBLY___PICKEDSURF74_S1
-  *Elset, elset=ASSEMBLY___PICKEDSURF74_S2
-  *Elset, elset=ASSEMBLY___PICKEDSURF74_S4
-  *material, name=MARGING300STEEL
+  *Element, type=R3D4
+  *Nset, nset="ASSEMBLY_Outer Surface_Outer Surface-RefPt_"
+  *Elset, elset="ASSEMBLY_Outer Surface_Outer Surface"
+  *Node
+  *Element, type=C3D8R
+  *Nset, nset=ASSEMBLY_FLEXURE-OUTER-CUT-1_SET-1
+  *Elset, elset=ASSEMBLY_FLEXURE-OUTER-CUT-1_SET-1
+  *Nset, nset=ASSEMBLY_BOUNDARY-FIX
+  *Nset, nset=ASSEMBLY_MOMENT-NODE
+  *Nset, nset=ASSEMBLY_SET-3
+  *Elset, elset=ASSEMBLY_BOUNDARY-FIX
+  *Elset, elset=ASSEMBLY_SET-3
+  *Elset, elset=ASSEMBLY__INNERLEFTSURFACED_S5
+  *Elset, elset=ASSEMBLY__INNERLEFTSURFACED_S6
+  *Elset, elset=ASSEMBLY__INNERLEFTSURFACE_SPOS
+  *Elset, elset=ASSEMBLY__INNERRIGHTSURFACED_S5
+  *Elset, elset=ASSEMBLY__INNERRIGHTSURFACE_SPOS
+  *Elset, elset=ASSEMBLY__OUTERLEFTSURFACED_S5
+  *Elset, elset=ASSEMBLY__OUTERLEFTSURFACE_SPOS
+  *Elset, elset=ASSEMBLY__OUTERRIGHTSURFACED_S4
+  *Elset, elset=ASSEMBLY__OUTERRIGHTSURFACED_S6
+  *Elset, elset=ASSEMBLY__OUTERRIGHTSURFACE_SPOS
+  *material, name=MATERIAL-1
   *elastic
-  *solidsection, elset=ASSEMBLY_PART-5-1_SET-1, material=MARGING300STEEL
-  *solidsection, elset=ASSEMBLY_PART-5-1_SET-1, material=MARGING300STEEL
+  *plastic
+  *solidsection, elset=ASSEMBLY_FLEXURE-OUTER-CUT-1_SET-1, material=MATERIAL-1
+  *solidsection, elset=ASSEMBLY_FLEXURE-OUTER-CUT-1_SET-1, material=MATERIAL-1
+  *rigidbody, refnode="ASSEMBLY_Inner Surface_Inner Surface-RefPt_", elset="ASSEMBLY_Inner Surface_Inner Surface"
+  *rigidbody, refnode="ASSEMBLY_Outer Surface_Outer Surface-RefPt_", elset="ASSEMBLY_Outer Surface_Outer Surface"
+  *tie, name=ASSEMBLY_INNERLEFTTIE, adjust=YES
+  *tie, name=ASSEMBLY_INNERRIGHTTIE, adjust=YES
+  *tie, name=ASSEMBLY_OUTERLEFTTIE, adjust=YES
+  *tie, name=ASSEMBLY_OUTERRIGHTTIE, adjust=YES
 
- ***WARNING: FOR TWO-DIMENSIONAL MODELS, IF A NON-UNITY THICKNESS IS SPECIFIED 
-             FOR TWO-DIMENSIONAL SOLID ELEMENTS AND THESE ELEMENTS ARE INVOLVED 
-             IN AN INTERACTION SUCH AS CONTACT, THE SAME THICKNESS SHOULD BE 
-             SPECIFIED FOR THE OUT-OF-PLANE THICKNESS OF THE CORRESPONDING 
-             SURFACE UNDER *SURFACE INTERACTION.
-  *surface, type=ELEMENT, name=ASSEMBLY_S_SURF-1
-  *surface, type=ELEMENT, name=ASSEMBLY__PICKEDSURF74
-  *surface, type=ELEMENT, name=ASSEMBLY_S_SURF-1
-  *surface, type=ELEMENT, name=ASSEMBLY__PICKEDSURF74
-  *transform, nset="ASSEMBLY__T-Datum csys-1"
-  *transform, nset=ASSEMBLY__T-CYLINDRICAL, type=C
+ ***ERROR: THE PAIR OF SURFACES (ASSEMBLY_INNERRIGHTSURFACED, 
+           ASSEMBLY_INNERRIGHTSURFACE) IS USED MORE THAN ONCE TO DEFINE *TIE. 
+           THIS IS NOT ALLOWED. PLEASE REMOVE DUPLICATES.
+ ***NOTE: DUE TO AN INPUT ERROR THE ANALYSIS PRE-PROCESSOR HAS BEEN UNABLE TO 
+          INTERPRET SOME DATA.  SUBSEQUENT ERRORS MAY BE CAUSED BY THIS OMISSION
+
+ ***ERROR: THE PAIR OF SURFACES (ASSEMBLY_INNERRIGHTSURFACED, 
+           ASSEMBLY_INNERRIGHTSURFACE) IS USED MORE THAN ONCE TO DEFINE *TIE. 
+           THIS IS NOT ALLOWED. PLEASE REMOVE DUPLICATES.
+
+ ***ERROR: THE PAIR OF SURFACES (ASSEMBLY_INNERRIGHTSURFACED, 
+           ASSEMBLY_INNERRIGHTSURFACE) IS USED MORE THAN ONCE TO DEFINE *TIE. 
+           THIS IS NOT ALLOWED. PLEASE REMOVE DUPLICATES.
+  *surface, type=ELEMENT, name=ASSEMBLY_INNERLEFTSURFACE
+  *surface, type=ELEMENT, name=ASSEMBLY_INNERLEFTSURFACED
+  *surface, type=ELEMENT, name=ASSEMBLY_INNERRIGHTSURFACE
+  *surface, type=ELEMENT, name=ASSEMBLY_INNERRIGHTSURFACED
+  *surface, type=ELEMENT, name=ASSEMBLY_OUTERLEFTSURFACE
+  *surface, type=ELEMENT, name=ASSEMBLY_OUTERLEFTSURFACED
+  *surface, type=ELEMENT, name=ASSEMBLY_OUTERRIGHTSURFACE
+  *surface, type=ELEMENT, name=ASSEMBLY_OUTERRIGHTSURFACED
+  *rigidbody, refnode="ASSEMBLY_Inner Surface_Inner Surface-RefPt_", elset="ASSEMBLY_Inner Surface_Inner Surface"
+  *rigidbody, refnode="ASSEMBLY_Outer Surface_Outer Surface-RefPt_", elset="ASSEMBLY_Outer Surface_Outer Surface"
+  *rigidbody, refnode="ASSEMBLY_Inner Surface_Inner Surface-RefPt_", elset="ASSEMBLY_Inner Surface_Inner Surface"
+  *rigidbody, refnode="ASSEMBLY_Outer Surface_Outer Surface-RefPt_", elset="ASSEMBLY_Outer Surface_Outer Surface"
+  *rigidbody, refnode="ASSEMBLY_Inner Surface_Inner Surface-RefPt_", elset="ASSEMBLY_Inner Surface_Inner Surface"
+  *rigidbody, refnode="ASSEMBLY_Outer Surface_Outer Surface-RefPt_", elset="ASSEMBLY_Outer Surface_Outer Surface"
+  *tie, name=ASSEMBLY_INNERLEFTTIE, adjust=YES
+  *tie, name=ASSEMBLY_INNERRIGHTTIE, adjust=YES
+  *tie, name=ASSEMBLY_OUTERLEFTTIE, adjust=YES
+  *tie, name=ASSEMBLY_OUTERRIGHTTIE, adjust=YES
+  *surface, type=ELEMENT, name=ASSEMBLY_INNERLEFTSURFACE
+  *surface, type=ELEMENT, name=ASSEMBLY_INNERLEFTSURFACED
+  *surface, type=ELEMENT, name=ASSEMBLY_INNERRIGHTSURFACE
+  *surface, type=ELEMENT, name=ASSEMBLY_INNERRIGHTSURFACED
+  *surface, type=ELEMENT, name=ASSEMBLY_OUTERLEFTSURFACE
+  *surface, type=ELEMENT, name=ASSEMBLY_OUTERLEFTSURFACED
+  *surface, type=ELEMENT, name=ASSEMBLY_OUTERRIGHTSURFACE
+  *surface, type=ELEMENT, name=ASSEMBLY_OUTERRIGHTSURFACED
+  *surface, type=ELEMENT, name=ASSEMBLY_INNERLEFTSURFACE
+  *surface, type=ELEMENT, name=ASSEMBLY_INNERLEFTSURFACED
+  *surface, type=ELEMENT, name=ASSEMBLY_INNERRIGHTSURFACE
+  *surface, type=ELEMENT, name=ASSEMBLY_INNERRIGHTSURFACED
+  *surface, type=ELEMENT, name=ASSEMBLY_OUTERLEFTSURFACE
+  *surface, type=ELEMENT, name=ASSEMBLY_OUTERLEFTSURFACED
+  *surface, type=ELEMENT, name=ASSEMBLY_OUTERRIGHTSURFACE
+  *surface, type=ELEMENT, name=ASSEMBLY_OUTERRIGHTSURFACED
+  *tie, name=ASSEMBLY_INNERLEFTTIE, adjust=YES
+  *tie, name=ASSEMBLY_INNERRIGHTTIE, adjust=YES
+  *tie, name=ASSEMBLY_OUTERLEFTTIE, adjust=YES
+  *tie, name=ASSEMBLY_OUTERRIGHTTIE, adjust=YES
+  *rigidbody, refnode="ASSEMBLY_Inner Surface_Inner Surface-RefPt_", elset="ASSEMBLY_Inner Surface_Inner Surface"
+  *rigidbody, refnode="ASSEMBLY_Outer Surface_Outer Surface-RefPt_", elset="ASSEMBLY_Outer Surface_Outer Surface"
+  *tie, name=ASSEMBLY_INNERLEFTTIE, adjust=YES
+  *tie, name=ASSEMBLY_INNERRIGHTTIE, adjust=YES
+  *tie, name=ASSEMBLY_OUTERLEFTTIE, adjust=YES
+  *tie, name=ASSEMBLY_OUTERRIGHTTIE, adjust=YES
+  *rigidbody, refnode="ASSEMBLY_Inner Surface_Inner Surface-RefPt_", elset="ASSEMBLY_Inner Surface_Inner Surface"
+  *rigidbody, refnode="ASSEMBLY_Outer Surface_Outer Surface-RefPt_", elset="ASSEMBLY_Outer Surface_Outer Surface"
+  *rigidbody, refnode="ASSEMBLY_Inner Surface_Inner Surface-RefPt_", elset="ASSEMBLY_Inner Surface_Inner Surface"
+  *rigidbody, refnode="ASSEMBLY_Outer Surface_Outer Surface-RefPt_", elset="ASSEMBLY_Outer Surface_Outer Surface"
   *boundary
   *boundary
-  *boundary, op=NEW
-  *boundary, op=NEW
-  *boundary
-  *boundary
-  *boundary, op=NEW
-  *boundary, op=NEW
-  *surface, type=ELEMENT, name=ASSEMBLY_S_SURF-1
-  *surface, type=ELEMENT, name=ASSEMBLY__PICKEDSURF74
-  *output, field
+  *tie, name=ASSEMBLY_INNERLEFTTIE, adjust=YES
+
+
+  SECONDARY: ASSEMBLY_INNERRIGHTSURFACED                                                     
+  MAIN :     ASSEMBLY_INNERRIGHTSURFACE                                                      
+              DISTANCE
+   NODE       ADJUSTED    REMARKS/WARNINGS
+
+       201   5.19530E-03  ADJUSTED TO (  1.0051    , 0.28918    , 0.37500    ).
+       202   5.19530E-03  ADJUSTED TO (  1.0051    ,-0.28918    , 0.37500    ).
+       205   5.19530E-03  ADJUSTED TO (  1.0051    ,-0.28918    ,-9.71445E-17).
+       206   5.19530E-03  ADJUSTED TO (  1.0051    , 0.28918    ,-1.00614E-16).
+       237   5.17053E-03  ADJUSTED TO (  1.0459    , 1.90820E-17, 0.37500    ).
+       280   5.17053E-03  ADJUSTED TO (  1.0459    ,-1.59595E-16,-6.41848E-17).
+
+
+
+  *tie, name=ASSEMBLY_INNERRIGHTTIE, adjust=YES
+
+ ***WARNING: 6 nodes have been adjusted. The nodes have been identified in node 
+             set WarnNodeAdjust.
+
+ ***WARNING: FOR *TIE PAIR 
+             (ASSEMBLY_INNERRIGHTSURFACED-ASSEMBLY_INNERRIGHTSURFACE), 
+             ADJUSTMENT WAS SPECIFIED BUT NO NODE WAS ADJUSTED MORE THAN THE 
+             ADJUSTMENT DISTANCE = 2.22000E-16.
+  *tie, name=ASSEMBLY_OUTERLEFTTIE, adjust=YES
+
+ ***WARNING: FOR *TIE PAIR 
+             (ASSEMBLY_INNERRIGHTSURFACED-ASSEMBLY_INNERRIGHTSURFACE), 
+             ADJUSTMENT WAS SPECIFIED BUT NO NODE WAS ADJUSTED MORE THAN THE 
+             ADJUSTMENT DISTANCE = 2.22000E-16.
+  *tie, name=ASSEMBLY_OUTERRIGHTTIE, adjust=YES
+
+ ***WARNING: FOR *TIE PAIR 
+             (ASSEMBLY_INNERRIGHTSURFACED-ASSEMBLY_INNERRIGHTSURFACE), 
+             ADJUSTMENT WAS SPECIFIED BUT NO NODE WAS ADJUSTED MORE THAN THE 
+             ADJUSTMENT DISTANCE = 2.22000E-16.
+  *tie, name=ASSEMBLY_INNERLEFTTIE, adjust=YES
+  *tie, name=ASSEMBLY_INNERRIGHTTIE, adjust=YES
+  *tie, name=ASSEMBLY_OUTERLEFTTIE, adjust=YES
+  *tie, name=ASSEMBLY_OUTERRIGHTTIE, adjust=YES
+  *tie, name=ASSEMBLY_INNERLEFTTIE, adjust=YES
+  *tie, name=ASSEMBLY_INNERRIGHTTIE, adjust=YES
+  *tie, name=ASSEMBLY_OUTERLEFTTIE, adjust=YES
+  *tie, name=ASSEMBLY_OUTERRIGHTTIE, adjust=YES
+
+ ***WARNING: OVERCONSTRAINT CHECKS: NODE 4 INSTANCE FLEXURE-OUTER-CUT-1 IS USED 
+             MORE THAN ONCE AS A SECONDARY NODE IN THE *TIE KEYWORD.  THE 
+             CONSTRAINT BETWEEN THIS NODE AND THE MAIN SURFACE WITH NODE 100 
+             INSTANCE Inner Surface IS REMOVED.
+
+ ***WARNING: OVERCONSTRAINT CHECKS: NODE 4 INSTANCE FLEXURE-OUTER-CUT-1 IS USED 
+             MORE THAN ONCE AS A SECONDARY NODE IN THE *TIE KEYWORD.  THE 
+             CONSTRAINT BETWEEN THIS NODE AND THE MAIN SURFACE WITH NODE 100 
+             INSTANCE Inner Surface IS REMOVED.
+
+ ***WARNING: OVERCONSTRAINT CHECKS: NODE 4 INSTANCE FLEXURE-OUTER-CUT-1 IS USED 
+             MORE THAN ONCE AS A SECONDARY NODE IN THE *TIE KEYWORD.  THE 
+             CONSTRAINT BETWEEN THIS NODE AND THE MAIN SURFACE WITH NODE 100 
+             INSTANCE Inner Surface IS REMOVED.
+
+ ***WARNING: OVERCONSTRAINT CHECKS: NODE 5 INSTANCE FLEXURE-OUTER-CUT-1 IS USED 
+             MORE THAN ONCE AS A SECONDARY NODE IN THE *TIE KEYWORD.  THE 
+             CONSTRAINT BETWEEN THIS NODE AND THE MAIN SURFACE WITH NODE 100 
+             INSTANCE Inner Surface IS REMOVED.
+
+ ***WARNING: OVERCONSTRAINT CHECKS: NODE 5 INSTANCE FLEXURE-OUTER-CUT-1 IS USED 
+             MORE THAN ONCE AS A SECONDARY NODE IN THE *TIE KEYWORD.  THE 
+             CONSTRAINT BETWEEN THIS NODE AND THE MAIN SURFACE WITH NODE 100 
+             INSTANCE Inner Surface IS REMOVED.
+
+ ***WARNING: OVERCONSTRAINT CHECKS: NODE 5 INSTANCE FLEXURE-OUTER-CUT-1 IS USED 
+             MORE THAN ONCE AS A SECONDARY NODE IN THE *TIE KEYWORD.  THE 
+             CONSTRAINT BETWEEN THIS NODE AND THE MAIN SURFACE WITH NODE 100 
+             INSTANCE Inner Surface IS REMOVED.
+
+ ***WARNING: OVERCONSTRAINT CHECKS: NODE 8 INSTANCE FLEXURE-OUTER-CUT-1 IS USED 
+             MORE THAN ONCE AS A SECONDARY NODE IN THE *TIE KEYWORD.  THE 
+             CONSTRAINT BETWEEN THIS NODE AND THE MAIN SURFACE WITH NODE 100 
+             INSTANCE Inner Surface IS REMOVED.
+
+ ***WARNING: OVERCONSTRAINT CHECKS: NODE 8 INSTANCE FLEXURE-OUTER-CUT-1 IS USED 
+             MORE THAN ONCE AS A SECONDARY NODE IN THE *TIE KEYWORD.  THE 
+             CONSTRAINT BETWEEN THIS NODE AND THE MAIN SURFACE WITH NODE 100 
+             INSTANCE Inner Surface IS REMOVED.
+
+ ***WARNING: OVERCONSTRAINT CHECKS: NODE 8 INSTANCE FLEXURE-OUTER-CUT-1 IS USED 
+             MORE THAN ONCE AS A SECONDARY NODE IN THE *TIE KEYWORD.  THE 
+             CONSTRAINT BETWEEN THIS NODE AND THE MAIN SURFACE WITH NODE 100 
+             INSTANCE Inner Surface IS REMOVED.
+
+ ***WARNING: OVERCONSTRAINT CHECKS: NODE 9 INSTANCE FLEXURE-OUTER-CUT-1 IS USED 
+             MORE THAN ONCE AS A SECONDARY NODE IN THE *TIE KEYWORD.  THE 
+             CONSTRAINT BETWEEN THIS NODE AND THE MAIN SURFACE WITH NODE 100 
+             INSTANCE Inner Surface IS REMOVED.
+
+ ***WARNING: OVERCONSTRAINT CHECKS: NODE 9 INSTANCE FLEXURE-OUTER-CUT-1 IS USED 
+             MORE THAN ONCE AS A SECONDARY NODE IN THE *TIE KEYWORD.  THE 
+             CONSTRAINT BETWEEN THIS NODE AND THE MAIN SURFACE WITH NODE 100 
+             INSTANCE Inner Surface IS REMOVED.
+
+ ***WARNING: OVERCONSTRAINT CHECKS: NODE 9 INSTANCE FLEXURE-OUTER-CUT-1 IS USED 
+             MORE THAN ONCE AS A SECONDARY NODE IN THE *TIE KEYWORD.  THE 
+             CONSTRAINT BETWEEN THIS NODE AND THE MAIN SURFACE WITH NODE 100 
+             INSTANCE Inner Surface IS REMOVED.
+
+ ***WARNING: OVERCONSTRAINT CHECKS: NODE 40 INSTANCE FLEXURE-OUTER-CUT-1 IS 
+             USED MORE THAN ONCE AS A SECONDARY NODE IN THE *TIE KEYWORD.  THE 
+             CONSTRAINT BETWEEN THIS NODE AND THE MAIN SURFACE WITH NODE 100 
+             INSTANCE Inner Surface IS REMOVED.
+
+ ***WARNING: OVERCONSTRAINT CHECKS: NODE 40 INSTANCE FLEXURE-OUTER-CUT-1 IS 
+             USED MORE THAN ONCE AS A SECONDARY NODE IN THE *TIE KEYWORD.  THE 
+             CONSTRAINT BETWEEN THIS NODE AND THE MAIN SURFACE WITH NODE 100 
+             INSTANCE Inner Surface IS REMOVED.
+
+ ***WARNING: OVERCONSTRAINT CHECKS: NODE 40 INSTANCE FLEXURE-OUTER-CUT-1 IS 
+             USED MORE THAN ONCE AS A SECONDARY NODE IN THE *TIE KEYWORD.  THE 
+             CONSTRAINT BETWEEN THIS NODE AND THE MAIN SURFACE WITH NODE 100 
+             INSTANCE Inner Surface IS REMOVED.
+
+ ***WARNING: OVERCONSTRAINT CHECKS: NODE 83 INSTANCE FLEXURE-OUTER-CUT-1 IS 
+             USED MORE THAN ONCE AS A SECONDARY NODE IN THE *TIE KEYWORD.  THE 
+             CONSTRAINT BETWEEN THIS NODE AND THE MAIN SURFACE WITH NODE 100 
+             INSTANCE Inner Surface IS REMOVED.
+
+ ***WARNING: OVERCONSTRAINT CHECKS: NODE 83 INSTANCE FLEXURE-OUTER-CUT-1 IS 
+             USED MORE THAN ONCE AS A SECONDARY NODE IN THE *TIE KEYWORD.  THE 
+             CONSTRAINT BETWEEN THIS NODE AND THE MAIN SURFACE WITH NODE 100 
+             INSTANCE Inner Surface IS REMOVED.
+
+ ***WARNING: OVERCONSTRAINT CHECKS: NODE 83 INSTANCE FLEXURE-OUTER-CUT-1 IS 
+             USED MORE THAN ONCE AS A SECONDARY NODE IN THE *TIE KEYWORD.  THE 
+             CONSTRAINT BETWEEN THIS NODE AND THE MAIN SURFACE WITH NODE 100 
+             INSTANCE Inner Surface IS REMOVED.
+  *rigidbody, refnode="ASSEMBLY_Inner Surface_Inner Surface-RefPt_", elset="ASSEMBLY_Inner Surface_Inner Surface"
+  *rigidbody, refnode="ASSEMBLY_Outer Surface_Outer Surface-RefPt_", elset="ASSEMBLY_Outer Surface_Outer Surface"
+  *surface, type=ELEMENT, name=ASSEMBLY_INNERLEFTSURFACE
+  *surface, type=ELEMENT, name=ASSEMBLY_INNERLEFTSURFACED
+  *surface, type=ELEMENT, name=ASSEMBLY_INNERRIGHTSURFACE
+  *surface, type=ELEMENT, name=ASSEMBLY_INNERRIGHTSURFACED
+  *surface, type=ELEMENT, name=ASSEMBLY_OUTERLEFTSURFACE
+  *surface, type=ELEMENT, name=ASSEMBLY_OUTERLEFTSURFACED
+  *surface, type=ELEMENT, name=ASSEMBLY_OUTERRIGHTSURFACE
+  *surface, type=ELEMENT, name=ASSEMBLY_OUTERRIGHTSURFACED
+  *tie, name=ASSEMBLY_INNERLEFTTIE, adjust=YES
+  *tie, name=ASSEMBLY_INNERRIGHTTIE, adjust=YES
+  *tie, name=ASSEMBLY_OUTERLEFTTIE, adjust=YES
+  *tie, name=ASSEMBLY_OUTERRIGHTTIE, adjust=YES
+  *output, field, variable=PRESELECT
   *output, history, variable=PRESELECT
-  *elementoutput, directions=YES
-  *output, field
+  *output, field, variable=PRESELECT
   *output, history, variable=PRESELECT
-  *elementoutput, directions=YES
-  *output, field
+
+ ***WARNING: 6 nodes are used more than once as a secondary node in *TIE 
+             keyword. One of the *TIE constraints at each of these nodes have 
+             been removed. The nodes have been identified in node set 
+             WarnNodeOverconTieSecondary.
+  *output, field, variable=PRESELECT
   *output, history, variable=PRESELECT
-  *elementoutput, directions=YES
   
                                E L E M E N T   Q U A L I T Y  C H E C K S        
   
@@ -188,676 +371,1069 @@
            CONSTRAINTS CAN CAUSE SEVERE ELEMENT DISTORTION. IT MAY BE NECESSARY 
            TO REMESH IN ORDER TO REDUCE THE AMOUNT OF ADJUSTMENT. 
 
- ***WARNING: 571 elements are distorted. Either the isoparametric angles are 
-             out of the suggested limits or the triangular or tetrahedral 
-             quality measure is bad. The elements have been identified in 
-             element set WarnElemDistorted.
+ ***WARNING: 1 elements are distorted. Either the isoparametric angles are out 
+             of the suggested limits or the triangular or tetrahedral quality 
+             measure is bad. The elements have been identified in element set 
+             WarnElemDistorted.
   
  --------------------------------------------------------------------------------
  Distorted isoparametric elements
   
-      Element        Min/max angle   Adjusted nodes 
- ------------------ ---------------- -------------- 
-      PART-5-1.4378          44.9344       NO       
-      PART-5-1.4379          44.1351       NO       
-      PART-5-1.4380          43.5302       NO       
-      PART-5-1.4381          43.0484       NO       
-      PART-5-1.4382          42.6804       NO       
-      PART-5-1.4383          42.7127       NO       
-      PART-5-1.4388          42.2056       NO       
-      PART-5-1.4391          44.0666       NO       
-      PART-5-1.4392          42.9092       NO       
-      PART-5-1.4393          42.0406       NO       
-      PART-5-1.4394          41.3968       NO       
-      PART-5-1.4395           40.923       NO       
-      PART-5-1.4396          40.5622       NO       
-      PART-5-1.4397          40.3149       NO       
-      PART-5-1.4398          40.4693       NO       
-      PART-5-1.4403          36.6876       NO       
-      PART-5-1.4404          42.0647       NO       
-      PART-5-1.4406          40.7146       NO       
-      PART-5-1.4407          39.9043       NO       
-      PART-5-1.4408          39.2802       NO       
-      PART-5-1.4409          38.8249       NO       
-      PART-5-1.4410          38.5087       NO       
-      PART-5-1.4411          38.2944       NO       
-      PART-5-1.4412           38.191       NO       
-      PART-5-1.4413          38.4843       NO       
-      PART-5-1.4418           31.817       NO       
-      PART-5-1.4419          37.6821       NO       
-      PART-5-1.4420          41.2467       NO       
-      PART-5-1.4421          37.4542       NO       
-      PART-5-1.4422          37.0647       NO       
-      PART-5-1.4423           36.736       NO       
-      PART-5-1.4424          36.5044       NO       
-      PART-5-1.4425           36.374       NO       
-      PART-5-1.4426          36.3289       NO       
-      PART-5-1.4427          36.3904       NO       
-      PART-5-1.4428          36.8371       NO       
-      PART-5-1.4433          28.1555       NO       
-      PART-5-1.4434          31.6494       NO       
-      PART-5-1.4435          36.3733       NO       
-      PART-5-1.4436          34.3594       NO       
-      PART-5-1.4437           34.495       NO       
-      PART-5-1.4438          34.5092       NO       
-      PART-5-1.4439          34.5292       NO       
-      PART-5-1.4440          34.6063       NO       
-      PART-5-1.4441           34.747       NO       
-      PART-5-1.4442          34.9898       NO       
-      PART-5-1.4443          35.6018       NO       
-      PART-5-1.4444          43.4055       NO       
-      PART-5-1.4448          24.4731       NO       
-      PART-5-1.4449           29.559       NO       
-      PART-5-1.4450          31.7995       NO       
-      PART-5-1.4451          31.7751       NO       
-      PART-5-1.4452           32.367       NO       
-      PART-5-1.4453          32.7139       NO       
-      PART-5-1.4454          32.9912       NO       
-      PART-5-1.4455          33.2834       NO       
-      PART-5-1.4456          33.6193       NO       
-      PART-5-1.4457          34.0508       NO       
-      PART-5-1.4458          34.8332       NO       
-      PART-5-1.4459          42.1428       NO       
-      PART-5-1.4463          22.6885       NO       
-      PART-5-1.4464          28.4854       NO       
-      PART-5-1.4465          28.3511       NO       
-      PART-5-1.4466          29.8734       NO       
-      PART-5-1.4467           30.805       NO       
-      PART-5-1.4468          31.4373       NO       
-      PART-5-1.4469          31.9542       NO       
-      PART-5-1.4470          32.4554       NO       
-      PART-5-1.4471          32.9855       NO       
-      PART-5-1.4472          33.6064       NO       
-      PART-5-1.4473          34.5635       NO       
-      PART-5-1.4474          42.6271       NO       
-      PART-5-1.4478          24.6591       NO       
-      PART-5-1.4479          25.8994       NO       
-      PART-5-1.4480          27.2733       NO       
-      PART-5-1.4481          28.6694       NO       
-      PART-5-1.4482          29.8473       NO       
-      PART-5-1.4483          30.7103       NO       
-      PART-5-1.4484           31.438       NO       
-      PART-5-1.4485          32.1329       NO       
-      PART-5-1.4486           32.849       NO       
-      PART-5-1.4487          33.6539       NO       
-      PART-5-1.4488          34.7883       NO       
-      PART-5-1.4489          44.5884       NO       
-      PART-5-1.4493          27.8805       NO       
-      PART-5-1.4494          24.8172       NO       
-      PART-5-1.4495          26.7999       NO       
-      PART-5-1.4496          28.1468       NO       
-      PART-5-1.4497          29.4731       NO       
-      PART-5-1.4498          30.5097       NO       
-      PART-5-1.4499          31.4129       NO       
-      PART-5-1.4500          32.2815       NO       
-      PART-5-1.4501          33.1703       NO       
-      PART-5-1.4502          34.1489       NO       
-      PART-5-1.4503          35.4727       NO       
-      PART-5-1.4508          31.0282       NO       
-      PART-5-1.4509          25.7003       NO       
-      PART-5-1.4510          26.3957       NO       
-      PART-5-1.4511          28.1962       NO       
-      PART-5-1.4512           29.601       NO       
-      PART-5-1.4513          30.7621       NO       
-      PART-5-1.4514           31.808       NO       
-      PART-5-1.4515          32.8268       NO       
-      PART-5-1.4516          33.8703       NO       
-      PART-5-1.4517          35.0124       NO       
-      PART-5-1.4518          37.6792       NO       
-      PART-5-1.4523           35.935       NO       
-      PART-5-1.4524          28.1479       NO       
-      PART-5-1.4525          26.9175       NO       
-      PART-5-1.4526          28.6701       NO       
-      PART-5-1.4527          30.1143       NO       
-      PART-5-1.4528          31.3645       NO       
-      PART-5-1.4529           32.525       NO       
-      PART-5-1.4530          33.6699       NO       
-      PART-5-1.4531          34.8484       NO       
-      PART-5-1.4532          36.1393       NO       
-      PART-5-1.4533          41.6157       NO       
-      PART-5-1.4538          40.9733       NO       
-      PART-5-1.4539          31.1142       NO       
-      PART-5-1.4540          28.2967       NO       
-      PART-5-1.4541           29.428       NO       
-      PART-5-1.4542          30.8917       NO       
-      PART-5-1.4543          32.2069       NO       
-      PART-5-1.4544          33.4567       NO       
-      PART-5-1.4545          34.7042       NO       
-      PART-5-1.4546          35.9955       NO       
-      PART-5-1.4547          37.4131       NO       
-      PART-5-1.4554          34.3834       NO       
-      PART-5-1.4555          30.3188       NO       
-      PART-5-1.4556          30.3516       NO       
-      PART-5-1.4557          31.8251       NO       
-      PART-5-1.4558          33.1862       NO       
-      PART-5-1.4559          34.5038       NO       
-      PART-5-1.4560          35.8317       NO       
-      PART-5-1.4561          37.2113       NO       
-      PART-5-1.4562          38.7293       NO       
-      PART-5-1.4569          37.1708       NO       
-      PART-5-1.4570          32.6494       NO       
-      PART-5-1.4571          31.3545       NO       
-      PART-5-1.4572           32.828       NO       
-      PART-5-1.4573          34.2198       NO       
-      PART-5-1.4574          35.5863       NO       
-      PART-5-1.4575          36.9736       NO       
-      PART-5-1.4576          38.4182       NO       
-      PART-5-1.4577           40.009       NO       
-      PART-5-1.4584          38.1583       NO       
-      PART-5-1.4585          35.4346       NO       
-      PART-5-1.4586          32.3676       NO       
-      PART-5-1.4587          33.8364       NO       
-      PART-5-1.4588          35.2463       NO       
-      PART-5-1.4589          36.6457       NO       
-      PART-5-1.4590          38.0742       NO       
-      PART-5-1.4591          39.5634       NO       
-      PART-5-1.4592          41.2017       NO       
-      PART-5-1.4599          38.3454       NO       
-      PART-5-1.4600          37.7643       NO       
-      PART-5-1.4601          33.3486       NO       
-      PART-5-1.4602          34.8087       NO       
-      PART-5-1.4603          36.2273       NO       
-      PART-5-1.4604          37.6467       NO       
-      PART-5-1.4605          39.1002       NO       
-      PART-5-1.4606          40.6158       NO       
-      PART-5-1.4607          42.2806       NO       
-      PART-5-1.4614          38.5485       NO       
-      PART-5-1.4615          38.9042       NO       
-      PART-5-1.4616          34.4428       NO       
-      PART-5-1.4617          35.7218       NO       
-      PART-5-1.4618          37.1407       NO       
-      PART-5-1.4619          38.5682       NO       
-      PART-5-1.4620          40.0342       NO       
-      PART-5-1.4621          41.5632       NO       
-      PART-5-1.4622          43.2383       NO       
-      PART-5-1.4629          38.8614       NO       
-      PART-5-1.4630          39.5276       NO       
-      PART-5-1.4631           35.313       NO       
-      PART-5-1.4632          36.5653       NO       
-      PART-5-1.4633          37.9776       NO       
-      PART-5-1.4634          39.4054       NO       
-      PART-5-1.4635          40.8741       NO       
-      PART-5-1.4636          42.4052       NO       
-      PART-5-1.4637          44.0776       NO       
-      PART-5-1.4644          39.0293       NO       
-      PART-5-1.4645          39.7518       NO       
-      PART-5-1.4646          36.1027       NO       
-      PART-5-1.4647          37.3359       NO       
-      PART-5-1.4648          38.7368       NO       
-      PART-5-1.4649          40.1579       NO       
-      PART-5-1.4650          41.6215       NO       
-      PART-5-1.4651          43.1467       NO       
-      PART-5-1.4652          44.8092       NO       
-      PART-5-1.4659          39.0642       NO       
-      PART-5-1.4660          39.8306       NO       
-      PART-5-1.4661          36.8219       NO       
-      PART-5-1.4662          38.0365       NO       
-      PART-5-1.4663          39.4225       NO       
-      PART-5-1.4664          40.8321       NO       
-      PART-5-1.4665          42.2856       NO       
-      PART-5-1.4666          43.7997       NO       
-      PART-5-1.4673           44.348       NO       
-      PART-5-1.4674          38.9626       NO       
-      PART-5-1.4675          39.6406       NO       
-      PART-5-1.4676          37.6062       NO       
-      PART-5-1.4677          38.6726       NO       
-      PART-5-1.4678          40.0401       NO       
-      PART-5-1.4679          41.4346       NO       
-      PART-5-1.4680          42.8743       NO       
-      PART-5-1.4681          44.3735       NO       
-      PART-5-1.4688          43.6248       NO       
-      PART-5-1.4689          38.7784       NO       
-      PART-5-1.4690          38.9067       NO       
-      PART-5-1.4691          38.5451       NO       
-      PART-5-1.4692          39.4332       NO       
-      PART-5-1.4693          40.5973       NO       
-      PART-5-1.4694          41.9745       NO       
-      PART-5-1.4695          43.3978       NO       
-      PART-5-1.4696          44.8797       NO       
-      PART-5-1.4703          42.6926       NO       
-      PART-5-1.4704          38.5373       NO       
-      PART-5-1.4705          38.5855       NO       
-      PART-5-1.4706          39.1705       NO       
-      PART-5-1.4707          39.9189       NO       
-      PART-5-1.4708          41.1007       NO       
-      PART-5-1.4709          42.4591       NO       
-      PART-5-1.4710          43.8649       NO       
-      PART-5-1.4718          41.4469       NO       
-      PART-5-1.4719          38.2762       NO       
-      PART-5-1.4720          38.9731       NO       
-      PART-5-1.4721          39.3342       NO       
-      PART-5-1.4722           40.252       NO       
-      PART-5-1.4723          41.5573       NO       
-      PART-5-1.4724          42.8959       NO       
-      PART-5-1.4725          44.2828       NO       
-      PART-5-1.4733          40.0076       NO       
-      PART-5-1.4734          38.0546       NO       
-      PART-5-1.4735          39.2722       NO       
-      PART-5-1.4736          39.4178       NO       
-      PART-5-1.4737          40.6897       NO       
-      PART-5-1.4738          41.9727       NO       
-      PART-5-1.4739          43.2912       NO       
-      PART-5-1.4740          44.6586       NO       
-      PART-5-1.4748          38.1454       NO       
-      PART-5-1.4749          38.2348       NO       
-      PART-5-1.4750          38.9938       NO       
-      PART-5-1.4751          39.8442       NO       
-      PART-5-1.4752          41.0912       NO       
-      PART-5-1.4753          42.3523       NO       
-      PART-5-1.4754          43.6505       NO       
-      PART-5-1.4755          44.9981       NO       
-      PART-5-1.4763          37.7296       NO       
-      PART-5-1.4764          38.2234       NO       
-      PART-5-1.4765          39.0047       NO       
-      PART-5-1.4766          40.2396       NO       
-      PART-5-1.4767          41.4623       NO       
-      PART-5-1.4768          42.7014       NO       
-      PART-5-1.4769          43.9787       NO       
-      PART-5-1.4778          38.5283       NO       
-      PART-5-1.4779          38.1571       NO       
-      PART-5-1.4780          39.3997       NO       
-      PART-5-1.4781          40.6078       NO       
-      PART-5-1.4782          41.8065       NO       
-      PART-5-1.4783          43.0234       NO       
-      PART-5-1.4784          44.2807       NO       
-      PART-5-1.4793          38.8618       NO       
-      PART-5-1.4794          38.5579       NO       
-      PART-5-1.4795          39.7714       NO       
-      PART-5-1.4796          40.9532       NO       
-      PART-5-1.4797          42.1274       NO       
-      PART-5-1.4798          43.3226       NO       
-      PART-5-1.4799          44.5592       NO       
-      PART-5-1.4808          39.1857       NO       
-      PART-5-1.4809          38.9382       NO       
-      PART-5-1.4810          40.1225       NO       
-      PART-5-1.4811          41.2782       NO       
-      PART-5-1.4812          42.4286       NO       
-      PART-5-1.4813          43.6024       NO       
-      PART-5-1.4814          44.8184       NO       
-      PART-5-1.4823          39.4973       NO       
-      PART-5-1.4824          39.3001       NO       
-      PART-5-1.4825          40.4565       NO       
-      PART-5-1.4826          41.5863       NO       
-      PART-5-1.4827          42.7136       NO       
-      PART-5-1.4828          43.8656       NO       
-      PART-5-1.4838          39.8035       NO       
-      PART-5-1.4839          39.6478       NO       
-      PART-5-1.4840           40.776       NO       
-      PART-5-1.4841          41.8803       NO       
-      PART-5-1.4842          42.9844       NO       
-      PART-5-1.4843          44.1145       NO       
-      PART-5-1.4853          40.1038       NO       
-      PART-5-1.4854          39.9836       NO       
-      PART-5-1.4855          41.0838       NO       
-      PART-5-1.4856          42.1629       NO       
-      PART-5-1.4857          43.2441       NO       
-      PART-5-1.4858          44.3528       NO       
-      PART-5-1.4868          40.3985       NO       
-      PART-5-1.4869          40.3089       NO       
-      PART-5-1.4870          41.3817       NO       
-      PART-5-1.4871          42.4358       NO       
-      PART-5-1.4872          43.4936       NO       
-      PART-5-1.4873          44.5806       NO       
-      PART-5-1.4883          40.6933       NO       
-      PART-5-1.4884          40.6268       NO       
-      PART-5-1.4885          41.6725       NO       
-      PART-5-1.4886          42.7019       NO       
-      PART-5-1.4887          43.7366       NO       
-      PART-5-1.4888           44.802       NO       
-      PART-5-1.4898          40.9845       NO       
-      PART-5-1.4899          40.9394       NO       
-      PART-5-1.4900          41.9581       NO       
-      PART-5-1.4901          42.9623       NO       
-      PART-5-1.4902          43.9738       NO       
-      PART-5-1.4913          41.2696       NO       
-      PART-5-1.4914          41.2506       NO       
-      PART-5-1.4915          42.2439       NO       
-      PART-5-1.4916          43.2227       NO       
-      PART-5-1.4917          44.2095       NO       
-      PART-5-1.4928           41.526       NO       
-      PART-5-1.4929          41.5711       NO       
-      PART-5-1.4930          42.5449       NO       
-      PART-5-1.4931          43.4925       NO       
-      PART-5-1.4932          44.4495       NO       
-      PART-5-1.4943          41.6898       NO       
-      PART-5-1.4944          41.9321       NO       
-      PART-5-1.4945          42.8863       NO       
-      PART-5-1.4946          43.7844       NO       
-      PART-5-1.4947          44.6996       NO       
-      PART-5-1.4958           41.572       NO       
-      PART-5-1.4959           42.741       NO       
-      PART-5-1.4960          43.3489       NO       
-      PART-5-1.4961          44.1218       NO       
-      PART-5-1.4962          44.9682       NO       
-      PART-5-1.4973          42.5553       NO       
-      PART-5-1.4974          43.6232       NO       
-      PART-5-1.4975          44.1726       NO       
-      PART-5-1.4976          44.7861       NO       
-      PART-5-1.4988          44.7426       NO       
-      PART-5-1.4989          44.4649       NO       
-      PART-5-1.6207          44.7271       NO       
-      PART-5-1.6208          44.1833       NO       
-      PART-5-1.6209          43.9865       NO       
-      PART-5-1.6214          43.3411       NO       
-      PART-5-1.6217          42.3557       NO       
-      PART-5-1.6218          42.3291       NO       
-      PART-5-1.6219          42.6105       NO       
-      PART-5-1.6220          42.5643       NO       
-      PART-5-1.6221          42.2635       NO       
-      PART-5-1.6222          41.8589       NO       
-      PART-5-1.6223          41.7906       NO       
-      PART-5-1.6228          38.3865       NO       
-      PART-5-1.6230          44.4978       NO       
-      PART-5-1.6231          38.5612       NO       
-      PART-5-1.6232          39.4843       NO       
-      PART-5-1.6233          39.9905       NO       
-      PART-5-1.6234          40.1383       NO       
-      PART-5-1.6235          40.0124       NO       
-      PART-5-1.6236          39.7701       NO       
-      PART-5-1.6237          39.8498       NO       
-      PART-5-1.6242           32.637       NO       
-      PART-5-1.6243          39.9085       NO       
-      PART-5-1.6244          39.9567       NO       
-      PART-5-1.6245          35.9763       NO       
-      PART-5-1.6246          36.8598       NO       
-      PART-5-1.6247          37.6143       NO       
-      PART-5-1.6248          37.9774       NO       
-      PART-5-1.6249          38.0488       NO       
-      PART-5-1.6250          37.9869       NO       
-      PART-5-1.6251          38.2315       NO       
-      PART-5-1.6256          26.3991       NO       
-      PART-5-1.6257          34.8005       NO       
-      PART-5-1.6258            36.85       NO       
-      PART-5-1.6259          33.6458       NO       
-      PART-5-1.6260          34.5469       NO       
-      PART-5-1.6261           35.567       NO       
-      PART-5-1.6262          36.1608       NO       
-      PART-5-1.6263          36.4419       NO       
-      PART-5-1.6264          36.5726       NO       
-      PART-5-1.6265           36.994       NO       
-      PART-5-1.6270          22.0725       NO       
-      PART-5-1.6271            29.39       NO       
-      PART-5-1.6272          32.7918       NO       
-      PART-5-1.6273          31.0813       NO       
-      PART-5-1.6274          32.6569       NO       
-      PART-5-1.6275          33.9354       NO       
-      PART-5-1.6276          34.7569       NO       
-      PART-5-1.6277          35.2483       NO       
-      PART-5-1.6278          35.5761       NO       
-      PART-5-1.6279          38.1154       NO       
-      PART-5-1.6284          21.7782       NO       
-      PART-5-1.6285           25.162       NO       
-      PART-5-1.6286          29.4915       NO       
-      PART-5-1.6287            29.75       NO       
-      PART-5-1.6288          31.2951       NO       
-      PART-5-1.6289          32.7862       NO       
-      PART-5-1.6290          33.8114       NO       
-      PART-5-1.6291          34.5023       NO       
-      PART-5-1.6292          35.0226       NO       
-      PART-5-1.6293          41.3146       NO       
-      PART-5-1.6298          22.4001       NO       
-      PART-5-1.6299            23.11       NO       
-      PART-5-1.6300           27.275       NO       
-      PART-5-1.6301           28.296       NO       
-      PART-5-1.6302          30.5106       NO       
-      PART-5-1.6303          32.1444       NO       
-      PART-5-1.6304          33.3355       NO       
-      PART-5-1.6305          34.2055       NO       
-      PART-5-1.6306          34.9098       NO       
-      PART-5-1.6307          43.8289       NO       
-      PART-5-1.6312          23.5224       NO       
-      PART-5-1.6313          22.4864       NO       
-      PART-5-1.6314          26.3004       NO       
-      PART-5-1.6315          28.0612       NO       
-      PART-5-1.6316           30.273       NO       
-      PART-5-1.6317          31.9847       NO       
-      PART-5-1.6318           33.302       NO       
-      PART-5-1.6319          34.3279       NO       
-      PART-5-1.6320          35.2062       NO       
-      PART-5-1.6326          23.9826       NO       
-      PART-5-1.6327          23.2856       NO       
-      PART-5-1.6328          26.1892       NO       
-      PART-5-1.6329          28.3395       NO       
-      PART-5-1.6330          30.4919       NO       
-      PART-5-1.6331           32.237       NO       
-      PART-5-1.6332          33.6473       NO       
-      PART-5-1.6333          34.8073       NO       
-      PART-5-1.6334           35.851       NO       
-      PART-5-1.6340          25.2203       NO       
-      PART-5-1.6341          24.1664       NO       
-      PART-5-1.6342           26.557       NO       
-      PART-5-1.6343          28.9782       NO       
-      PART-5-1.6344          31.0547       NO       
-      PART-5-1.6345          32.8091       NO       
-      PART-5-1.6346          34.2885       NO       
-      PART-5-1.6347          35.5627       NO       
-      PART-5-1.6348          36.7601       NO       
-      PART-5-1.6354          27.0586       NO       
-      PART-5-1.6355          25.0866       NO       
-      PART-5-1.6356          27.5789       NO       
-      PART-5-1.6357          29.8427       NO       
-      PART-5-1.6358          31.8493       NO       
-      PART-5-1.6359           33.602       NO       
-      PART-5-1.6360          35.1343       NO       
-      PART-5-1.6361          36.5026       NO       
-      PART-5-1.6362          37.8355       NO       
-      PART-5-1.6368            28.38       NO       
-      PART-5-1.6369          26.3734       NO       
-      PART-5-1.6370          28.6831       NO       
-      PART-5-1.6371           30.829       NO       
-      PART-5-1.6372          32.7791       NO       
-      PART-5-1.6373          34.5266       NO       
-      PART-5-1.6374          36.0979       NO       
-      PART-5-1.6375          37.5412       NO       
-      PART-5-1.6376          38.9856       NO       
-      PART-5-1.6382          29.5332       NO       
-      PART-5-1.6383           27.617       NO       
-      PART-5-1.6384          29.8019       NO       
-      PART-5-1.6385          31.8627       NO       
-      PART-5-1.6386          33.7681       NO       
-      PART-5-1.6387          35.5097       NO       
-      PART-5-1.6388           37.108       NO       
-      PART-5-1.6389          38.6075       NO       
-      PART-5-1.6390          40.1365       NO       
-      PART-5-1.6396          30.5594       NO       
-      PART-5-1.6397          28.7968       NO       
-      PART-5-1.6398          30.8935       NO       
-      PART-5-1.6399          32.8915       NO       
-      PART-5-1.6400          34.7617       NO       
-      PART-5-1.6401          36.4955       NO       
-      PART-5-1.6402          38.1093       NO       
-      PART-5-1.6403          39.6477       NO       
-      PART-5-1.6404          41.2353       NO       
-      PART-5-1.6410          31.4783       NO       
-      PART-5-1.6411          29.9016       NO       
-      PART-5-1.6412          31.9327       NO       
-      PART-5-1.6413          33.8824       NO       
-      PART-5-1.6414          35.7227       NO       
-      PART-5-1.6415          37.4456       NO       
-      PART-5-1.6416          39.0666       NO       
-      PART-5-1.6417          40.6278       NO       
-      PART-5-1.6418          44.7411       NO       
-      PART-5-1.6424           32.306       NO       
-      PART-5-1.6425          30.9279       NO       
-      PART-5-1.6426          32.9063       NO       
-      PART-5-1.6427           34.815       NO       
-      PART-5-1.6428           36.628       NO       
-      PART-5-1.6429          38.3369       NO       
-      PART-5-1.6430          39.9571       NO       
-      PART-5-1.6431           42.221       NO       
-      PART-5-1.6438          33.0552       NO       
-      PART-5-1.6439          31.8733       NO       
-      PART-5-1.6440          33.8081       NO       
-      PART-5-1.6441          35.6809       NO       
-      PART-5-1.6442          37.4678       NO       
-      PART-5-1.6443          39.1595       NO       
-      PART-5-1.6444          40.7719       NO       
-      PART-5-1.6445          44.1189       NO       
-      PART-5-1.6452          33.7389       NO       
-      PART-5-1.6453          32.7425       NO       
-      PART-5-1.6454          34.6371       NO       
-      PART-5-1.6455          36.4758       NO       
-      PART-5-1.6456          38.2362       NO       
-      PART-5-1.6457          39.9088       NO       
-      PART-5-1.6458          41.5083       NO       
-      PART-5-1.6466          34.3597       NO       
-      PART-5-1.6467          33.5391       NO       
-      PART-5-1.6468          35.3968       NO       
-      PART-5-1.6469          37.2036       NO       
-      PART-5-1.6470          38.9369       NO       
-      PART-5-1.6471          40.5879       NO       
-      PART-5-1.6472          42.1705       NO       
-      PART-5-1.6480          34.9173       NO       
-      PART-5-1.6481           34.271       NO       
-      PART-5-1.6482          35.9793       NO       
-      PART-5-1.6483          37.6263       NO       
-      PART-5-1.6484          39.4647       NO       
-      PART-5-1.6485          41.2026       NO       
-      PART-5-1.6486          42.7644       NO       
-      PART-5-1.6494           35.396       NO       
-      PART-5-1.6495          34.9515       NO       
-      PART-5-1.6496          36.6942       NO       
-      PART-5-1.6497           38.398       NO       
-      PART-5-1.6498          40.1637       NO       
-      PART-5-1.6499          41.7605       NO       
-      PART-5-1.6500           43.298       NO       
-      PART-5-1.6508          35.7419       NO       
-      PART-5-1.6509          35.6201       NO       
-      PART-5-1.6510          37.3517       NO       
-      PART-5-1.6511          39.0396       NO       
-      PART-5-1.6512          40.7496       NO       
-      PART-5-1.6513          42.2717       NO       
-      PART-5-1.6514            43.78       NO       
-      PART-5-1.6522          35.5938       NO       
-      PART-5-1.6523          36.6196       NO       
-      PART-5-1.6524          38.0374       NO       
-      PART-5-1.6525          39.6473       NO       
-      PART-5-1.6526          41.2948       NO       
-      PART-5-1.6527          42.7448       NO       
-      PART-5-1.6528          44.3921       NO       
-      PART-5-1.6536          36.7415       NO       
-      PART-5-1.6537          37.9352       NO       
-      PART-5-1.6538          38.7041       NO       
-      PART-5-1.6539          40.2475       NO       
-      PART-5-1.6540          41.8367       NO       
-      PART-5-1.6541          43.1905       NO       
-      PART-5-1.6542          44.9956       NO       
-      PART-5-1.6550          40.0681       NO       
-      PART-5-1.6551          38.9034       NO       
-      PART-5-1.6552          39.8637       NO       
-      PART-5-1.6553          40.9107       NO       
-      PART-5-1.6554          42.3995       NO       
-      PART-5-1.6555          43.6197       NO       
-      PART-5-1.6564          43.1554       NO       
-      PART-5-1.6565          40.0103       NO       
-      PART-5-1.6566          41.2728       NO       
-      PART-5-1.6567          41.7498       NO       
-      PART-5-1.6568          42.9791       NO       
-      PART-5-1.6569          44.0387       NO       
-      PART-5-1.6578          44.8808       NO       
-      PART-5-1.6579          42.9548       NO       
-      PART-5-1.6580           42.311       NO       
-      PART-5-1.6581           42.808       NO       
-      PART-5-1.6582          43.4532       NO       
-      PART-5-1.6583          44.4429       NO       
-      PART-5-1.6593          44.4523       NO       
-      PART-5-1.6594           42.861       NO       
-      PART-5-1.6595          43.7314       NO       
-      PART-5-1.6596          44.0311       NO       
-      PART-5-1.6597          44.8177       NO       
-      PART-5-1.6608          43.9219       NO       
-      PART-5-1.6609          44.9637       NO       
-      PART-5-1.6610          44.8308       NO       
-      PART-5-1.6622          44.8463       NO       
+            Element             Min/max angle   Adjusted nodes 
+ ----------------------------- ---------------- -------------- 
+        FLEXURE-OUTER-CUT-1.50          42.3608       NO       
   
   
   *Step, name=Step-1, nlgeom=NO
-  *output, field
+  *output, field, variable=PRESELECT
   *output, history, variable=PRESELECT
   *Step, name=Step-1, nlgeom=NO
-
- ***WARNING: NODE SET ASSEMBLY_M_SET-21 HAS NO MEMBERS AND WILL BE IGNORED.  
-             NODES DEFINED IN THIS SET MAY HAVE BEEN DELETED BECAUSE THEY WERE 
-             NOT CONNECTED TO ANY ELEMENTS.
-
- ***WARNING: NODE SET ASSEMBLY_SET-29 HAS NO MEMBERS AND WILL BE IGNORED.  
-             NODES DEFINED IN THIS SET MAY HAVE BEEN DELETED BECAUSE THEY WERE 
-             NOT CONNECTED TO ANY ELEMENTS.
-
- ***WARNING: NODE SET ASSEMBLY_SET-30 HAS NO MEMBERS AND WILL BE IGNORED.  
-             NODES DEFINED IN THIS SET MAY HAVE BEEN DELETED BECAUSE THEY WERE 
-             NOT CONNECTED TO ANY ELEMENTS.
-
- ***WARNING: NODE SET ASSEMBLY_SET-32 HAS NO MEMBERS AND WILL BE IGNORED.  
-             NODES DEFINED IN THIS SET MAY HAVE BEEN DELETED BECAUSE THEY WERE 
-             NOT CONNECTED TO ANY ELEMENTS.
-
- ***WARNING: NODE SET ASSEMBLY__PICKEDSET68 HAS NO MEMBERS AND WILL BE IGNORED. 
-              NODES DEFINED IN THIS SET MAY HAVE BEEN DELETED BECAUSE THEY WERE 
-             NOT CONNECTED TO ANY ELEMENTS.
-
- ***WARNING: NODE SET ASSEMBLY__PICKEDSET69 HAS NO MEMBERS AND WILL BE IGNORED. 
-              NODES DEFINED IN THIS SET MAY HAVE BEEN DELETED BECAUSE THEY WERE 
-             NOT CONNECTED TO ANY ELEMENTS.
-
- ***WARNING: NODE SET ASSEMBLY__PICKEDSET73 HAS NO MEMBERS AND WILL BE IGNORED. 
-              NODES DEFINED IN THIS SET MAY HAVE BEEN DELETED BECAUSE THEY WERE 
-             NOT CONNECTED TO ANY ELEMENTS.
   *Step, name=Step-1, nlgeom=NO
-  Positive Torque                                                                 
   *static
-  *boundary, op=NEW
-  *boundary, op=NEW
-  *output, field
-  *nodeoutput
-  *elementoutput, directions=YES
+  *output, field, variable=PRESELECT
   *output, history, variable=PRESELECT
   *endstep
-
- ***WARNING: THE REQUEST FOR MISES OUTPUT WILL BE REPLACED BY A REQUEST FOR S 
-             OUTPUT
-
- ***WARNING: STRAIN OUTPUT REQUEST LE IS NOT VALID FOR SOME ELEMENTS IN THIS 
-             ANALYSIS. THIS REQUEST IS SWITCHED TO THE STRAIN MEASURE, E.
-
- ***WARNING: OUTPUT REQUEST YIELDPOT IS NOT AVAILABLE FOR THIS TYPE OF ANALYSIS
-
- ***NOTE: OUTPUT REQUEST PE IS NOT AVAILABLE FOR THE MATERIAL FOR ELEMENT TYPE 
-          CPS4R
-
- ***NOTE: OUTPUT REQUEST PEEQ IS NOT AVAILABLE FOR THE MATERIAL FOR ELEMENT 
-          TYPE CPS4R
-
- ***NOTE: OUTPUT REQUEST PEMAG IS NOT AVAILABLE FOR THE MATERIAL FOR ELEMENT 
-          TYPE CPS4R
-  *boundary
   *boundary
   *Step, name=Step-1, nlgeom=NO
   *static
-  *boundary, op=NEW
-  *boundary, op=NEW
   *cload
-
- ***ERROR: NODE SET ASSEMBLY_SET-32 HAS NOT BEEN DEFINED
- ***NOTE: DUE TO AN INPUT ERROR THE ANALYSIS PRE-PROCESSOR HAS BEEN UNABLE TO 
-          INTERPRET SOME DATA.  SUBSEQUENT ERRORS MAY BE CAUSED BY THIS OMISSION
-
- ***ERROR: A CONCENTRATED LOAD HAS BEEN SPECIFIED ON NODE SET ASSEMBLY_SET-32.  
-           THIS NODE SET IS NOT ACTIVE IN THE MODEL
   *endstep
 
- ***NOTE: Boundary conditions are specified on inactive dof of 54 nodes. The 
-          nodes have been identified in node set WarnNodeBCInactiveDof.
+ ***WARNING: OVERCONSTRAINT CHECKS: NODE 1 INSTANCE Inner Surface IS A 
+             DEPENDENT NODE IN A *RIGID BODY OPTION AND HAS A SPECIFIED 
+             BOUNDARY CONDITION. THE BOUNDARY CONDITIONS AT THIS NODE WILL BE 
+             TRANSFERRED TO THE RIGID BODY REFERENCE  NODE 100 INSTANCE Inner 
+             Surface. THE BOUNDARY CONDITIONS AT NODE 1 INSTANCE Inner Surface 
+             WILL BE IGNORED.
+
+ ***WARNING: 2 nodes associated with rigid bodies have boundary conditions 
+             prescribed at nodes other than the reference node. These boundary 
+             conditions will be transferred to the associated rigid body 
+             reference node.The reference nodes and the dependent nodes have 
+             been identified in node set WarnNodeOverconBoundRB.
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 1 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 1 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 1 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 2 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 2 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 2 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 3 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 3 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 3 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 4 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 4 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 4 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 5 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 5 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 5 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 6 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 6 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 6 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 7 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 7 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 7 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 8 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 8 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 8 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 11 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 11 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 11 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 12 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 12 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 12 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 13 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 13 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 13 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 14 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 14 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 14 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 15 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 15 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 15 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 16 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 16 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 16 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 17 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 17 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 17 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 18 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 18 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 18 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 19 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 19 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 19 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 20 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 20 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 20 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 21 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 21 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 21 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 22 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 22 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 22 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 23 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 23 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 23 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 24 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 24 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 24 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 25 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 25 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 25 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 26 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 26 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 26 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 27 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 27 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 27 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 28 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 28 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 28 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 29 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 29 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 29 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 30 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 30 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 30 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 31 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 31 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 31 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 32 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 32 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 32 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 33 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 33 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 33 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 34 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 34 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 34 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 35 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 35 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 35 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 36 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 36 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 36 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 37 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 37 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 37 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 38 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 38 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 38 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 39 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 39 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 39 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 40 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 40 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 40 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 41 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 41 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 41 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 42 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 42 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 42 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 43 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 43 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 43 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 44 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 44 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 44 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 45 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 45 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 45 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 46 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 46 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 46 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 47 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 47 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 47 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 48 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 48 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 48 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 49 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 49 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 49 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 50 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 50 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 50 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 51 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 51 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 51 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 52 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 52 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 52 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 53 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 53 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 53 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 54 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 54 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 54 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 55 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 55 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 55 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 56 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 56 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 56 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 57 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 57 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 57 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 58 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 58 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 58 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 59 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 59 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 59 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 60 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 60 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 60 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 61 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 61 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 61 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 62 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 62 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 62 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 71 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 71 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 71 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 72 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 72 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 72 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 73 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 73 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 73 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 74 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 74 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 74 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 75 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 75 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 75 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 76 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 76 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 76 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 77 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 77 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 77 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 78 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 78 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 78 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 79 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 79 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 79 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 80 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 80 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 80 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 81 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 81 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 81 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 82 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 82 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 82 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 83 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 83 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 83 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 84 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 84 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 84 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 85 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 85 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 85 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 86 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 86 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 86 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 87 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 87 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 87 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 88 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 88 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 88 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 89 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 89 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 89 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 90 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 90 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 90 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 91 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 91 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 91 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 92 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 92 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 92 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 93 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 93 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 93 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 1 HAS BEEN ELIMINATED AT NODE 94 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 2 HAS BEEN ELIMINATED AT NODE 94 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: DEGREE OF FREEDOM 3 HAS BEEN ELIMINATED AT NODE 94 INSTANCE Inner 
+             Surface BOUNDARY CONDITION TYPE ENCASTRE MAY NOT BE APPLIED AT 
+             THIS NODE
+
+ ***WARNING: 84 nodes have dof on which incorrect boundary conditions may have 
+             been specified. The nodes have been identified in node set 
+             WarnNodeBCIncorrectDof.
 
 
 
                             P R O B L E M   S I Z E
 
 
-          NUMBER OF ELEMENTS IS                                  8035
-          NUMBER OF NODES IS                                     8641
-          NUMBER OF NODES DEFINED BY THE USER                    8641
-          TOTAL NUMBER OF VARIABLES IN THE MODEL                17282
+          NUMBER OF ELEMENTS IS                                   207
+          NUMBER OF ELEMENTS DEFINED BY THE USER AND *TIE         205
+          NUMBER OF NODES IS                                      475
+          NUMBER OF NODES DEFINED BY THE USER                     475
+          TOTAL NUMBER OF VARIABLES IN THE MODEL                 1431
           (DEGREES OF FREEDOM PLUS MAX NO. OF ANY LAGRANGE MULTIPLIER
            VARIABLES. INCLUDE *PRINT,SOLVE=YES TO GET THE ACTUAL NUMBER.)
 
@@ -865,7 +1441,7 @@
 
 
 
-          THE PROGRAM HAS DISCOVERED     2 FATAL ERRORS
+          THE PROGRAM HAS DISCOVERED     3 FATAL ERRORS
 
                ** EXECUTION IS TERMINATED **
 
@@ -876,7 +1452,7 @@
 
 
      JOB TIME SUMMARY
-       USER TIME (SEC)      =     0.20    
+       USER TIME (SEC)      =     0.10    
        SYSTEM TIME (SEC)    =     0.10    
-       TOTAL CPU TIME (SEC) =     0.30    
-       WALLCLOCK TIME (SEC) =            0
+       TOTAL CPU TIME (SEC) =     0.20    
+       WALLCLOCK TIME (SEC) =            1
