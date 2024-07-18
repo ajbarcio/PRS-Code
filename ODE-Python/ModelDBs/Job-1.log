@@ -3,16 +3,20 @@ Abaqus JOB Job-1
 Abaqus 2023
 Abaqus License Manager checked out the following licenses:
 Abaqus/Standard checked out 5 tokens from Flexnet server hprc-license.tamu.edu.
-<296 out of 443 licenses remain available>.
+<270 out of 443 licenses remain available>.
 Begin Analysis Input File Processor
-7/17/2024 9:18:46 AM
+7/18/2024 11:33:30 AM
 Run pre.exe
-7/17/2024 9:19:01 AM
-Abaqus Error: Analysis Input File Processor exited with an error - Please see the 
-Job-1.dat file for possible error messages if the file exists.
+7/18/2024 11:33:39 AM
+End Analysis Input File Processor
+Begin Abaqus/Standard Analysis
+7/18/2024 11:33:39 AM
+Run standard.exe
+7/18/2024 11:34:04 AM
+End Abaqus/Standard Analysis
 Begin SIM Wrap-up
-7/17/2024 9:19:02 AM
+7/18/2024 11:34:05 AM
 Run SMASimUtility.exe
-7/17/2024 9:19:02 AM
+7/18/2024 11:34:05 AM
 End SIM Wrap-up
-Abaqus/Analysis exited with errors
+Abaqus JOB Job-1 COMPLETED

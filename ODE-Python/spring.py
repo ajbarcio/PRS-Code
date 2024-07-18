@@ -75,12 +75,30 @@ class Spring:
         # if the spring was given a name, save its input parameters in a filej
         self.name = name
         if not name==None:
-            saveVariables = np.hstack([n,correctedFullLength,outPlaneThickness,
-                                       radii,betaAngles,IcPts,IcParamLens,
-                                       XYParamLens])
-            filepath = "springs\\"+name
-            np.savetxt(filepath, saveVariables, "%f", ",")
+            self.generate_param_file()
         # np.savetxt("springs/")
+
+    def generate_param_file(self):
+
+        labels = np.array(["n", "full_length", "Out_Plane_Thk"])
+        for i in range(len(self.radii)):
+            labels = np.append(labels, "radius_"+str(i))
+        for i in range(len(self.betaAngles)):
+            labels = np.append(labels, "beta_ang_"+str(i))
+        for i in range(len(self.IcPts)):
+            labels = np.append(labels, "ctrl_Ic_"+str(i))
+        for i in range(len(self.IcFactors)):
+            labels = np.append(labels, "ctrl_Ic_factor_"+str(i))
+        for i in range(len(self.XYFactors)):
+            labels = np.append(labels, "ctrl_XY_factor_"+str(i))
+
+        saveVariables = np.hstack([self.n, self.fullParamLength, self.t,
+                                   self.radii,self.betaAngles,self.IcPts,
+                                   self.IcFactors,self.XYFactors])
+        out = np.hstack([np.atleast_2d(labels).T, np.atleast_2d(saveVariables).T])
+        filepath = "springs\\"+self.name
+        print(out)
+        np.savetxt(filepath, out, "%s", ",")
 
     def init(self,
              # whole bunch of default values:
@@ -996,7 +1014,7 @@ class Spring:
         # return the overall length of the spring
         return self.smesh[-1]
 
-def generate_default_spring():
+def generate_default_spring(name="default_spring"):
     # Fit the Gen 2 actuator form factor
     R0 = 2.0/2
     R3 = 5.0/2
@@ -1028,13 +1046,18 @@ def generate_default_spring():
 
     # Generate the spring:
 
-    curvedSpring = Spring(Maraging300Steel(), n = 2, radii=inputRadii,
+    defaultSpring = Spring(Maraging300Steel(), n = 2, radii=inputRadii,
                                 betaAngles=inputBetaAngles,
                                 IcPts=Ics,
                                 IcParamLens=IcLens, XYParamLens=XYParamLens,
-                                name="default_spring")
+                                name=name)
 
-    return curvedSpring
+    A = np.hstack((defaultSpring.undeformedASurface,np.atleast_2d(np.zeros(len(defaultSpring.undeformedASurface))).T))
+    B = np.hstack((defaultSpring.undeformedBSurface,np.atleast_2d(np.zeros(len(defaultSpring.undeformedBSurface))).T))
+    np.savetxt("surfaces\\"+defaultSpring.name+"_A_surface.txt", A, delimiter=",", fmt='%f')
+    np.savetxt("surfaces\\"+defaultSpring.name+"_B_surface.txt", B, delimiter=",", fmt='%f')
+
+    return defaultSpring
 
 def generate_simple_spring():
     # Fit the Gen 2 actuator form factor

@@ -1,6 +1,7 @@
 import numpy as np
 import numpy.linalg as lin
-
+import spring
+from spring import Spring
 # err = 0.25
 # J = np.array([0,1,2,3])
 # Jinv = lin.pinv(np.atleast_2d(J).T)
@@ -8,16 +9,18 @@ import numpy.linalg as lin
 # print(Jinv*err)
 # print(J+Jinv)
 
-Aname = "A_surface.txt"
-Bname = "B_surface.txt"
+# Aname = "A_surface.txt"
+# Bname = "B_surface.txt"
 
-A = np.genfromtxt("surfaces\\"+Aname, delimiter=',')
-B = np.genfromtxt("surfaces\\"+Bname, delimiter=',')
-springName = "manual_spring"
+# A = np.genfromtxt("surfaces\\"+Aname, delimiter=',')
+# B = np.genfromtxt("surfaces\\"+Bname, delimiter=',')
+# springName = "manual_spring"
 
-A = A[:,0:2]
-A = list(map(tuple,A))
-print(A)
+# A = A[:,0:2]
+# A = list(map(tuple,A))
+# print(A)
 
-params = np.genfromtxt("springs\\"+springName, delimiter=',')
-print(params)
+# params = np.genfromtxt("springs\\"+springName, delimiter=',')
+# print(params)
+
+bullshitSpring = spring.generate_default_spring(name="bullshit")

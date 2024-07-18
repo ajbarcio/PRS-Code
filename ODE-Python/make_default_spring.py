@@ -13,7 +13,9 @@ defaultSpring.full_results(deformBool=False)
 
 A = np.hstack((defaultSpring.undeformedASurface,np.atleast_2d(np.zeros(len(defaultSpring.undeformedASurface))).T))
 B = np.hstack((defaultSpring.undeformedBSurface,np.atleast_2d(np.zeros(len(defaultSpring.undeformedBSurface))).T))
-np.savetxt("surfaces\\default_A_surface.txt", A, delimiter=",", fmt='%f')
-np.savetxt("surfaces\\default_B_surface.txt", B, delimiter=",", fmt='%f')
+np.savetxt("surfaces\\"+defaultSpring.name+"_A_surface.txt", A, delimiter=",", fmt='%f')
+np.savetxt("surfaces\\"+defaultSpring.name+"_B_surface.txt", B, delimiter=",", fmt='%f')
+
+defaultSpring.deform_by_torque_smartGuess()
 
 plt.show()

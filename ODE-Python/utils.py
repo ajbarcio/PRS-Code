@@ -3,6 +3,25 @@ import matplotlib.collections as mcoll
 
 import matplotlib.pyplot as plt
 
+import csv
+import re
+## dumb dict shit
+
+def csv_to_dict(file_path):
+    result_dict = {}
+    with open(file_path, mode='r', newline='') as csvfile:
+        csv_reader = csv.reader(csvfile)
+        for row in csv_reader:
+            if len(row) == 2:
+                label, value = row
+                result_dict[label] = value
+    return result_dict
+
+def final_of_value(d, prefix):
+    filtered = [k for k in d.keys() if k.startswith(prefix)]
+    highest_num_key = max(filtered, key=lambda x: int(re.findall(r'\d+$', x)[0]))
+    return highest_num_key
+
 ## General function to differentiate an array of values in a fixed mesh
 
 def numerical_fixed_mesh_diff(ymesh, xmesh):
