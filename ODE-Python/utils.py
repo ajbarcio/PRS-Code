@@ -3,6 +3,69 @@ import matplotlib.collections as mcoll
 
 import matplotlib.pyplot as plt
 
+## Function to evaluate piecewise polynomials
+
+def PPoly_Eval(x, coeffs, deriv=0, ranges=0):
+    # FIRST DECISION: Are there multiple polynomials?
+    # print(ranges)
+    if hasattr(ranges, "__len__"):
+        # SECOND DECISION: Are there multiple s points to evaluate?
+        if hasattr(x, "__len__"):
+            y = np.empty(len(x))
+            i = 0
+            for value in x:
+                U = np.empty(coeffs.shape[1])
+                for j in range(coeffs.shape[1]):
+                    preCoeff = 1
+                    for k in range(deriv):
+                        preCoeff = preCoeff*max(coeffs.shape[1]-j-(k+1),0)
+                    U[j] = preCoeff*value**max((coeffs.shape[1]-j-1-deriv),0)
+                for l in range(len(ranges)-1):
+                    if value >= ranges[l] and value < ranges[l+1]:
+                        index = l
+                        break
+                    index = len(ranges)-2
+                y[i] = U.dot(coeffs[index,:])
+                i+=1
+            return (y)
+        else:
+            U = np.empty(coeffs.shape[1])
+            for j in range(coeffs.shape[1]):
+                preCoeff = 1
+                for k in range(deriv):
+                    preCoeff = preCoeff*max(coeffs.shape[1]-j-(k+1),0)
+                U[j] = preCoeff*x**max((coeffs.shape[1]-j-1-deriv),0)
+            for l in range(len(ranges)-1):
+                if x >= ranges[l] and x < ranges[l+1]:
+                    index = l
+                    break
+                index = len(ranges)-2
+            y = U.dot(coeffs[index,:])
+            return (y)
+    else:
+        if hasattr(x, "__len__"):
+            y = np.empty(len(x))
+            i = 0
+            for value in x:
+                U = np.empty(len(coeffs))
+                for j in range(len(coeffs)):
+                    preCoeff = 1
+                    for k in range(deriv):
+                        preCoeff = preCoeff*max(len(coeffs)-j-(k+1),0)
+                    U[j] = preCoeff*value**max((len(coeffs)-j-1-deriv),0)
+                y[i] = U.dot(coeffs)
+                i+=1
+            return (y)
+        else:
+            U = np.empty(len(coeffs))
+            for j in range(len(coeffs)):
+                preCoeff = 1
+                for k in range(deriv):
+                    preCoeff = preCoeff*max(len(coeffs)-j-(k+1),0)
+                U[j] = preCoeff*x**max((len(coeffs)-j-1-deriv),0)
+            y = U.dot(coeffs)
+            return (y[0])
+
 ## General function to differentiate an array of values in a fixed mesh
 
 def numerical_fixed_mesh_diff(ymesh, xmesh):

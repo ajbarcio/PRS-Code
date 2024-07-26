@@ -5,9 +5,9 @@ from StatProfiler import SSProfile
 import scipy
 from copy import deepcopy as dc
 
+from utils import PPoly_Eval
+
 deg2rad = np.pi/180
-
-
 
 """
 ##############################################
@@ -51,7 +51,7 @@ deg2rad = np.pi/180
 """
 
 class Minimal_Polynomial_Definition:
-    def __init__(self, name=None,
+    def __init__(self,
                  # whole bunch of default values:
                  n                   = 2,
                  fullParamLength     = 6,
@@ -83,12 +83,9 @@ class Minimal_Polynomial_Definition:
             i+=1
             SSProfile("reinit").toc()
         # if the spring was given a name, save its input parameters in a filej
-        self.name = name
-        if not name==None:
-            saveVariables = np.hstack([n,correctedFullLength,
-                                       radii,betaAngles,XYFactors])
-            filepath = "springs\\"+name+"_Minimal_Polynomial"
-            np.savetxt(filepath, saveVariables, "%f", ",")
+        self.saveVariables = {'n':     n,     'length':      correctedFullLength,
+                              'radii': radii, 'beta angles': betaAngles,
+                              'control factors': XYFactors}
         # np.savetxt("springs/")
 
     def init(self,
@@ -337,63 +334,3 @@ class Minimal_Polynomial_Definition:
 
 # General/Reused
 
-def PPoly_Eval(x, coeffs, deriv=0, ranges=0):
-    # FIRST DECISION: Are there multiple polynomials?
-    # print(ranges)
-    if hasattr(ranges, "__len__"):
-        # SECOND DECISION: Are there multiple s points to evaluate?
-        if hasattr(x, "__len__"):
-            y = np.empty(len(x))
-            i = 0
-            for value in x:
-                U = np.empty(coeffs.shape[1])
-                for j in range(coeffs.shape[1]):
-                    preCoeff = 1
-                    for k in range(deriv):
-                        preCoeff = preCoeff*max(coeffs.shape[1]-j-(k+1),0)
-                    U[j] = preCoeff*value**max((coeffs.shape[1]-j-1-deriv),0)
-                for l in range(len(ranges)-1):
-                    if value >= ranges[l] and value < ranges[l+1]:
-                        index = l
-                        break
-                    index = len(ranges)-2
-                y[i] = U.dot(coeffs[index,:])
-                i+=1
-            return (y)
-        else:
-            U = np.empty(coeffs.shape[1])
-            for j in range(coeffs.shape[1]):
-                preCoeff = 1
-                for k in range(deriv):
-                    preCoeff = preCoeff*max(coeffs.shape[1]-j-(k+1),0)
-                U[j] = preCoeff*x**max((coeffs.shape[1]-j-1-deriv),0)
-            for l in range(len(ranges)-1):
-                if x >= ranges[l] and x < ranges[l+1]:
-                    index = l
-                    break
-                index = len(ranges)-2
-            y = U.dot(coeffs[index,:])
-            return (y)
-    else:
-        if hasattr(x, "__len__"):
-            y = np.empty(len(x))
-            i = 0
-            for value in x:
-                U = np.empty(len(coeffs))
-                for j in range(len(coeffs)):
-                    preCoeff = 1
-                    for k in range(deriv):
-                        preCoeff = preCoeff*max(len(coeffs)-j-(k+1),0)
-                    U[j] = preCoeff*value**max((len(coeffs)-j-1-deriv),0)
-                y[i] = U.dot(coeffs)
-                i+=1
-            return (y)
-        else:
-            U = np.empty(len(coeffs))
-            for j in range(len(coeffs)):
-                preCoeff = 1
-                for k in range(deriv):
-                    preCoeff = preCoeff*max(len(coeffs)-j-(k+1),0)
-                U[j] = preCoeff*x**max((len(coeffs)-j-1-deriv),0)
-            y = U.dot(coeffs)
-            return (y[0])
