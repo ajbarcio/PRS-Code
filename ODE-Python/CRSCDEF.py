@@ -56,8 +56,7 @@ class Piecewise_Ic_Control():
             else:
                 self.IcParamLens[i] = self.fullParamLength*IcParamLens[i-1]
 
-        self.IcCoeffs, self.domains = self.Ic_multiPoly(
-                                                   self.IcPts, self.IcParamLens)
+        self.IcCoeffs, self.domains = self.Ic_multiPoly()
 
     def Ic_multiPoly(self):
 
@@ -126,7 +125,7 @@ class Piecewise_Ic_Control():
                             1/(np.log((rn+x[1])/(rn-x[0])))-(x[0]+x[1])/(((np.log((rn+x[1])/(rn-x[0])))**2)*(rn+x[1]))], \
                             [-rn*self.t*x[0], rn*self.t*x[1]]])
         # some error checking and escapes for possible non-convergent cases
-        if not(np.isinf(rn) or rn > 10e10): # TODO: change this to some large finite threshold
+        if not(np.isinf(rn) or abs(rn) > 10e10): # TODO: change this to some large finite threshold
             # check for if the beam was locally straight on the last iteration
             if lABPrev[0]==lABPrev[1]:
                 # perturb the initial guess a bit to avoid convergence issues
@@ -173,37 +172,43 @@ class Piecewise_Ic_Control():
 
 #### STANDARD INTERFACE ####
 
+    def get_neturalDistances(self, resolution):
+        self.get_outer_geometry(resolution)
+        return self.la, self.lb
+
     def get_outer_geometry(self, resolution):
 
-        undeformedNeutralSurface = self.path.getNeutralSurface(resolution)
+        undeformedNeutralSurface = self.path.get_neutralSurface(resolution)
         ximesh = np.linspace(0,self.fullParamLength,resolution+1)
 
         lABPrev = [0,0]
-        la = np.empty(len(ximesh))
-        lb = np.empty(len(ximesh))
-        h = np.empty(len(ximesh))
+        self.la = np.empty(len(ximesh))
+        self.lb = np.empty(len(ximesh))
+        self.h = np.empty(len(ximesh))
         # create meshed Ic and rn arrays for use in calculating inner/outer
         # surface
         Ic = self.get_Ic(ximesh)
         rn = self.path.get_rn(ximesh)
+        # print(rn[-5:])
         # perform la/lb rootfinding for each step in the xi mesh
-        for i in range(len(self.ximesh)):
+        for i in range(len(ximesh)):
             SSProfile("lAB rootfinding").tic()
             lAB = self.l_a_l_b_rootfinding(ximesh[i], lABPrev)
             SSProfile("lAB rootfinding").toc()
-            la[i] = lAB[0]
-            lb[i] = lAB[1]
+            self.la[i] = lAB[0]
+            self.lb[i] = lAB[1]
             # calculate overall thickness
-            h[i] = lb[i]+la[i]
+            self.h[i] = self.lb[i]+self.la[i]
             lABPrev = lAB
+        # print(h[-5:])
         alpha = self.path.get_alpha(ximesh)
         # generate xy paths for surfaces
         self.undeformedBSurface = undeformedNeutralSurface + \
-                                  np.hstack((np.atleast_2d(-lb*np.sin(alpha)).T,
-                                             np.atleast_2d(lb*np.cos(alpha)).T))
+                                  np.hstack((np.atleast_2d(-self.lb*np.sin(alpha)).T,
+                                             np.atleast_2d(self.lb*np.cos(alpha)).T))
         self.undeformedASurface = undeformedNeutralSurface - \
-                                np.hstack((np.atleast_2d(-la*np.sin(alpha)).T,
-                                           np.atleast_2d(la*np.cos(alpha)).T))
+                                np.hstack((np.atleast_2d(-self.la*np.sin(alpha)).T,
+                                           np.atleast_2d(self.la*np.cos(alpha)).T))
 
         return self.undeformedASurface, self.undeformedBSurface
 

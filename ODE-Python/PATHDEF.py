@@ -49,6 +49,9 @@ deg2rad = np.pi/180
 #
 #   self.fullParamLen
 #
+#   self.innerRadius
+#        outerRadius
+#
 #
 """
 
@@ -85,6 +88,24 @@ class Minimal_Polynomial_Definition:
             i+=1
             SSProfile("reinit").toc()
         # if the spring was given a name, save its input parameters in a filej
+
+        # this takes way too many lines but its better to see the math written
+        # out:
+
+        # Find coordinates of frames:
+        # at base of spring
+        self.x0 = PPoly_Eval(0,self.XCoeffs)
+        self.y0 = PPoly_Eval(0,self.YCoeffs)
+        # at end of spring
+        self.xL = PPoly_Eval(self.fullParamLength,self.XCoeffs)
+        self.yL = PPoly_Eval(self.fullParamLength,self.YCoeffs)
+        # at end of spring, interms of frame at base of spring
+        self.momentArmX = self.xL - self.x0
+        self.momentArmY = self.yL - self.y0
+
+        self.innerRadius= radii[0]
+        self.outerRadius= radii[-1]
+
         self.saveVariables = {'n':     n,     'length':      correctedFullLength,
                               'radii': radii, 'beta angles': betaAngles,
                               'control factors': XYFactors}
@@ -149,21 +170,8 @@ class Minimal_Polynomial_Definition:
                                               self.XYFactors))
 
         # generate the coefficients for polynomials
-        self.XCoeffs, self.YCoeffs  = self.xy_poly(self.pts, self.XYParamLens)
+        self.XCoeffs, self.YCoeffs  = self.xy_poly()
 
-        # this takes way too many lines but its better to see the math written
-        # out:
-
-        # Find coordinates of frames:
-        # at base of spring
-        self.x0 = PPoly_Eval(0,self.XCoeffs)
-        self.y0 = PPoly_Eval(0,self.YCoeffs)
-        # at end of spring
-        self.xL = PPoly_Eval(self.fullParamLength,self.XCoeffs)
-        self.yL = PPoly_Eval(self.fullParamLength,self.YCoeffs)
-        # at end of spring, interms of frame at base of spring
-        self.momentArmX = self.xL - self.x0
-        self.momentArmY = self.yL - self.y0
 
     def xy_poly(self):
 
@@ -229,7 +237,7 @@ class Minimal_Polynomial_Definition:
         """
 
         self.measureResolution = 200
-        ximesh            = np.linspace(0,self.fullParamLength,measureResolution+1)
+        ximesh            = np.linspace(0,self.fullParamLength,self.measureResolution+1)
 
         # calcualte derivative of x and y with respect to xi (internal parameter)
         self.dxdxi = PPoly_Eval(ximesh, self.XCoeffs, deriv = 1)

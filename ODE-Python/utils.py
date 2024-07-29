@@ -97,7 +97,7 @@ def fixed_rk4(fun, y0, xmesh, *args): # (fun, alphaCoeffs, cICoeffs, y0, Fx, Fy,
                 # y0 = stepRes
                     res[j,i] = y0[j]
             else:
-                stepRes = rk4_step(fun, xmesh[i-1], y0, step, args)
+                stepRes = rk4_step(fun, xmesh[i-1], y0, step, *args)
                 for j in range(len(y0)):
                     res[j,i] = stepRes[j]
                 y0 = stepRes
@@ -108,7 +108,7 @@ def fixed_rk4(fun, y0, xmesh, *args): # (fun, alphaCoeffs, cICoeffs, y0, Fx, Fy,
             if i == 0:
                 res[i] = y0
             else:
-                stepRes = rk4_step(fun, xmesh[i-1], y0, step, args)
+                stepRes = rk4_step(fun, xmesh[i-1], y0, step, *args)
                 res[i] = stepRes
                 y0 = stepRes
     # print("gonna return")
@@ -118,10 +118,10 @@ def rk4_step(fun, x0, y0, dx, *args): # (fun, alphaCoeffs, cICoeffs, x0, y0, du,
     #
     #  Get four sample values of the derivative.
     #
-    f1 = fun ( x0,            y0, args)
-    f2 = fun ( x0 + dx / 2.0, y0 + dx * f1 / 2.0, args)
-    f3 = fun ( x0 + dx / 2.0, y0 + dx * f2 / 2.0, args)
-    f4 = fun ( x0 + dx,       y0 + dx * f3, args)
+    f1 = fun ( x0,            y0, *args)
+    f2 = fun ( x0 + dx / 2.0, y0 + dx * f1 / 2.0, *args)
+    f3 = fun ( x0 + dx / 2.0, y0 + dx * f2 / 2.0, *args)
+    f4 = fun ( x0 + dx,       y0 + dx * f3, *args)
     #
     #  Combine them to estimate the solution gamma at time T1 = T0 + DT.
     #

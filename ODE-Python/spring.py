@@ -1,33 +1,37 @@
 import numpy as np
 import numpy.linalg as lin
+import matplotlib.pyplot as plt
 
 from materials import Maraging300Steel
-from utils import fixed_rk4
+from utils import fixed_rk4, numerical_fixed_mesh_diff, colorline
+
+deg2rad = np.pi/180
 
 class Spring:
     def __init__(self, geoDef, material,
-                 # The following are default values:
-                 t          = 0.375,
                  resolution = 200):
 
         # Parameters and data structures from passed objects
         # Path accessor from path definition
-        self.path     = geoDef.pathDef
+        self.path     = geoDef.path
         # Geometry accessor
-        self.geom     = geoDef
+        self.crsc     = geoDef
         # Material info
         self.material = material
 
-        self.fullArcLength = self.geom.fullParamLength
+        self.fullArcLength = self.crsc.fullParamLength
+        self.resl = resolution
 
         # thickness arg
-        self.t = t
+        self.t = self.crsc.t
 
         # Mesh information
         self.resl = resolution
         self.len = self.resl+1
         self.step = self.fullArcLength/self.resl
         self.endIndex = self.len-1
+
+        self.ximesh = np.linspace(0,self.fullArcLength,self.len)
 
         # finite difference information
         self.finiteDifferenceLength = 0.001
@@ -42,6 +46,7 @@ class Spring:
         try:
             # material properties:
             self.E = self.material.E
+            self.designStress = self.material.yieldStress*.9
 
             # path properties:
             self.x0 = self.path.x0
@@ -54,6 +59,9 @@ class Spring:
 
             self.n = self.path.n
 
+            self.innerRadius = self.path.innerRadius
+            self.outerRadius = self.path.outerRadius
+
         except self.Error as e:
             print("path, cross section, or material definitions are missing \
                   \n standard attributes")
@@ -63,9 +71,8 @@ class Spring:
 
     def deform_ODE(self, xi, deforms, *args):
         # Deal with args in a way that is hopefully better
-        Fx    = args[0]
-        Fy    = args[0]
-        dgds0 = args[0]
+
+        Fx, Fy, dgds0 = args[0]
         # Prepare moment dimensionalizer
         Mdim = self.E*self.crsc.get_Ic(xi)
 
@@ -100,27 +107,28 @@ class Spring:
 
         # set up initial condition
         dgds0 = (SF[2]/self.n + self.momentArmY*SF[0] - self.momentArmX*SF[1])/ \
-                      (self.E*self.geom.get_Ic(0))
+                      (self.E*self.crsc.get_Ic(0))
 
         # perform forward integration
-        self.res  = fixed_rk4(ODE, np.array([0,self.x0,self.y0]), self.ximesh, 
+        self.res  = fixed_rk4(ODE, np.array([0,self.x0,self.y0]), self.ximesh,
                                                           (SF[0], SF[1], dgds0))
         # calcualte error values (difference in pre-and post-iteration radii)
         #                        (difference in final gamma and final beta)
         Rinitial = lin.norm([self.xL,self.yL])
         Rfinal   = lin.norm([self.res[1,-1],self.res[2,-1]])
         # Calculate dBeta using arccos
-        ptInitial = self.pts[-1]/lin.norm(self.pts[-1])
+        ptInitial = np.array([self.xL, self.yL])/ \
+                                          lin.norm(np.array([self.xL, self.yL]))
         ptFinal   = np.array([self.res[1,-1],self.res[2,-1]])/ \
                              lin.norm(np.array([self.res[1,-1],self.res[2,-1]]))
-        
+
         cosAngle = min(ptFinal.dot(ptInitial),1.0)
         self.dBeta    = np.arccos(cosAngle)*np.sign(torqueTarg)
         # Err = diff. in radius, diff between gamma(L) and beta(L), distance
         #       from target torque (just to make matrix square)
-        err = np.array([Rinitial-Rfinal, self.res[0,-1]-self.dBeta, 
+        err = np.array([Rinitial-Rfinal, self.res[0,-1]-self.dBeta,
                                                               SF[2]-torqueTarg])
-        return err, self.res        
+        return err, self.res
 
     def BC_jacobian(self, ODE, SF, torqueTarg, n=3):
 
@@ -151,10 +159,11 @@ class Spring:
         # this line included in case you ever want to use a partial jacobian
         Jac = Jac[0:n,0:n]
 
-    def deform_by_torque(self, torqueTarg, ODE, 
-                         SF=np.array([0,0,0]), 
+        return Jac
+
+    def deform_by_torque(self, torqueTarg, ODE,
+                         SF=np.array([0,0,0]),
                          breakBool=False):
-        
 
         """
         THIS FUNCTION:
@@ -197,4 +206,130 @@ class Spring:
         # store the final solution in the object
         self.solnSF = SF
         self.solnerr = lin.norm(err)
-        return self.res, self.solnSF, divergeFlag, i        
+        return self.res, self.solnSF, divergeFlag, i
+
+    def calculate_stresses(self):
+
+        """
+        THIS FUNCTION:
+            Calcualtes the maximum stress at any point along the beam
+        """
+
+        # calculate gamma derivative for stress calcs
+        dgdxi = numerical_fixed_mesh_diff(self.res[0,:], self.ximesh)
+        dxids = self.path.get_dxi_n(self.ximesh)
+        self.dgds = dgdxi*dxids
+
+        rn = self.path.get_rn(self.ximesh)
+
+        self.a = rn - self.la
+        self.b = rn + self.lb
+
+        # prepare stress arrays
+        self.innerSurfaceStress = np.empty(len(self.ximesh))
+        self.outerSurfaceStress = np.empty(len(self.ximesh))
+        # calculate stress differently depending on whether or not beam is
+        # locally straight
+        for i in range(len(self.innerSurfaceStress)):
+            if not np.isinf(rn[i]):
+                self.innerSurfaceStress[i] =  \
+                    abs(self.E*(1-rn[i]/self.a[i])*rn[i]*self.dgds[i])
+                self.outerSurfaceStress[i] =  \
+                    abs(self.E*(1-rn[i]/self.b[i])*rn[i]*self.dgds[i])
+            else:
+                self.innerSurfaceStress[i] = self.E*self.dgds[i]*0.5*self.h[i]
+
+        # create arrays normalized to the allowable stress (for plotting)
+        self.normalizedInnerStress =self.innerSurfaceStress/self.designStress
+        self.normalizedOuterStress =self.outerSurfaceStress/self.designStress
+
+        # record only the max stress between inner and outer at any point
+        self.maxStresses = np.empty(len(self.normalizedInnerStress))
+        for i in range(len(self.normalizedInnerStress)):
+            if self.normalizedInnerStress[i] > self.normalizedOuterStress[i]:
+                self.maxStresses[i] = self.normalizedInnerStress[i]
+            else:
+                self.maxStresses[i] = self.normalizedOuterStress[i]
+
+        # record the maximum stress along whole beam
+        self.maxStress = np.nanmax([self.innerSurfaceStress, self.outerSurfaceStress])
+
+        return self.maxStress, self.maxStresses
+
+    def plot_spring(self, showBool=True, trans=1):
+
+        self.A, self.B =    self.crsc.get_outer_geometry(self.resl)
+        # print(self.A[-5:])
+        # print("--")
+        # print(self.B[-5:])
+        self.Sn        =    self.path.get_neutralSurface(self.resl)
+        self.Sc        = self.path.get_centroidalSurface(self.resl)
+
+        # plot the principal leg
+        plt.figure("Graphic Results")
+        plt.plot(self.A[:,0],self.A[:,1],"k", alpha=trans)
+        plt.plot(self.B[:,0],self.B[:,1],"k", alpha=trans)
+        plt.plot(self.Sn[:,0],self.Sn[:,1],"--b",label="netural", alpha=trans)
+        plt.plot(self.Sc[:,0],self.Sc[:,1],"--r",label="centroidal", alpha=trans)
+        plt.axis("equal")
+        plt.legend()
+
+        # plot the other legs
+        ang = 2*np.pi/self.n
+        for j in np.linspace(1,self.n-1,self.n-1):
+            th = ang*(j)
+            R = np.array([[np.cos(th),-np.sin(th)],[np.sin(th),np.cos(th)]])
+            transformedA = R.dot(self.A.T).T
+            transformedB = R.dot(self.B.T).T
+            transformedSn = R.dot(self.Sn.T).T
+            transformedSc = R.dot(self.Sc.T).T
+            plt.plot(transformedA[:,0],transformedA[:,1],"k", alpha=trans)
+            plt.plot(transformedB[:,0],transformedB[:,1],"k", alpha=trans)
+            plt.plot(transformedSn[:,0],transformedSn[:,1],"--b", alpha=trans)
+            plt.plot(transformedSc[:,0],transformedSc[:,1],"--r", alpha=trans)
+
+        # plot geometry of inner and outer rotor of spring
+        outerCircle = plt.Circle([0,0],self.outerRadius,color ="k",fill=False)
+        innerCircle = plt.Circle([0,0],self.innerRadius,color ="k",fill=True)
+        fig = plt.gcf()
+        ax = fig.gca()
+        ax.add_patch(outerCircle)
+        ax.add_patch(innerCircle)
+
+        if showBool:
+            plt.show()
+
+    def plot_deform(self, showBool=True):
+
+        self.plot_spring(showBool=False, trans=0.25)
+
+        alpha = self.path.get_alpha(self.ximesh)
+        self.la, self.lb = self.crsc.get_neturalDistances(self.resl)
+        self.h = self.crsc.h
+
+        if hasattr(self, 'res'):
+            self.deformedNeutralSurface = np.hstack(
+                                               (np.atleast_2d(self.res[1,:]).T,
+                                                np.atleast_2d(self.res[2,:]).T))
+            self.deformedBSurface = self.deformedNeutralSurface+np.hstack(
+                    (np.atleast_2d(-self.lb*np.sin(alpha+self.res[0,:])).T,
+                     np.atleast_2d(self.lb*np.cos(alpha+self.res[0,:])).T))
+            self.deformedASurface = self.deformedNeutralSurface-np.hstack(
+                    (np.atleast_2d(-self.la*np.sin(alpha+self.res[0,:])).T,
+                     np.atleast_2d(self.la*np.cos(alpha+self.res[0,:])).T))
+
+            self.calculate_stresses()
+            colorline(self.deformedBSurface[:,0],self.deformedBSurface[:,1],
+                      self.normalizedOuterStress,cmap=plt.get_cmap('rainbow'))
+            colorline(self.deformedASurface[:,0],self.deformedASurface[:,1],
+                      self.normalizedInnerStress,cmap=plt.get_cmap('rainbow'))
+
+            spot = self.outerRadius*np.sin(45*deg2rad)
+
+            plt.text(spot+.25, spot+.25, f"deformation: {self.dBeta/deg2rad:.2f}")
+
+            if showBool:
+                plt.show()
+
+        else:
+            raise AttributeError("yo wait you didnt fucking twisht it yet")
