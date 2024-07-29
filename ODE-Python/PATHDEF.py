@@ -1,11 +1,9 @@
 import numpy as np
 import numpy.linalg as lin
-import matplotlib.pyplot as plt
-from StatProfiler import SSProfile
 import scipy
-from copy import deepcopy as dc
 
 from utils import PPoly_Eval
+from StatProfiler import SSProfile
 
 deg2rad = np.pi/180
 
@@ -20,11 +18,8 @@ deg2rad = np.pi/180
 #           dim as str 'x' or 'y'
 #
 #   get_dxdy_n(coord, dim):
-#           coord as scalar or vector float
-#           dim as str 'x' or 'y'
 #
 #   get_dxi_n(coord):
-#           coord as scalar or vector float
 #
 #   get_rn(coord):
 #
@@ -35,6 +30,11 @@ deg2rad = np.pi/180
 #   get_dalpha(coord):
 #
 #   get_d2alpha(coord):
+#
+#   get_get_neutralSurface(resolution):
+#           resolution as int
+#
+#   get_get_centroidalSurface(resolution):
 #
 # Attributes to include:
 #
@@ -53,12 +53,15 @@ deg2rad = np.pi/180
 class Minimal_Polynomial_Definition:
     def __init__(self,
                  # whole bunch of default values:
+                 crscDef,
                  n                   = 2,
                  fullParamLength     = 6,
                  radii               = np.array([1.1,2.025,2.025,2.95]),
                  betaAngles          = np.array([0,50,100,150])*deg2rad, # FIRST VALUE IS ALWAYS 0 !!!!, same length as radii
                  XYFactors         = np.array([0.333,0.667])
                  ):
+
+        self.crsc = crscDef
 
         self.init(n, fullParamLength, radii,
                   betaAngles, XYFactors)
@@ -218,7 +221,7 @@ class Minimal_Polynomial_Definition:
         # TODO: assert(np.isclose(diff,0))
         # print(XCoeffs, YCoeffs)
         return XCoeffs, YCoeffs
-    
+
     def measure_length(self):
 
         """
@@ -332,5 +335,28 @@ class Minimal_Polynomial_Definition:
             d2ads2 = 0
         return d2ads2
 
-# General/Reused
+    def get_neutralSurface(self, resolution):
+
+        ximesh = np.linspace(0,self.fullParamLength,resolution+1)
+        self.undeformedNeutralSurface = np.hstack(
+                                  (np.atleast_2d(self.get_xy_n(ximesh, 'x')).T,
+                                   np.atleast_2d(self.get_xy_n(ximesh, 'y')).T))
+
+        return self.undeformedNeutralSurface
+
+    def get_centroidalSurface(self, resolution):
+        ximesh = np.linspace(0,self.fullParamLength,resolution+1)
+        Ic = self.crsc.get_Ic(ximesh)
+        t = self.crsc.t
+        h = self.crsc.get_Thk(ximesh)
+        rn = self.get_rn(ximesh)
+        ecc = Ic/(t*h*rn)
+        alpha = self.get_alpha(ximesh)
+
+        neutralSurface = self.get_neutralSurface(resolution)
+        self.undeformedCentroidalSurface = neutralSurface + \
+                       np.hstack((np.atleast_2d(ecc*np.sin(alpha)).T,
+                                  np.atleast_2d(ecc*np.cos(alpha)).T))
+
+        return self.undeformedCentroidalSurface
 

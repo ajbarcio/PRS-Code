@@ -1,11 +1,8 @@
 import numpy as np
 import numpy.linalg as lin
-import matplotlib.pyplot as plt
-from StatProfiler import SSProfile
-import scipy
-from copy import deepcopy as dc
 
 from utils import PPoly_Eval
+from StatProfiler import SSProfile
 
 deg2rad = np.pi/180
 
@@ -14,6 +11,9 @@ deg2rad = np.pi/180
 # STANDARD INTERFACE FOR ALL CRSCDEF OBJECTS #
 ##############################################
 # Methods to include:
+#
+#   get_outer_geometry(resolution):
+#           resolution as int
 #
 #   get_Ic(coord):
 #           coord as scalar or vector float
@@ -174,9 +174,38 @@ class Piecewise_Ic_Control():
 #### STANDARD INTERFACE ####
 
     def get_outer_geometry(self, resolution):
-        
-        self.undeformedNeutralSurface = np.hstack((np.atleast_2d(PPoly_Eval(self.ximesh, self.XCoeffs)).T,
-                                                   np.atleast_2d(PPoly_Eval(self.ximesh, self.YCoeffs)).T))
+
+        undeformedNeutralSurface = self.path.getNeutralSurface(resolution)
+        ximesh = np.linspace(0,self.fullParamLength,resolution+1)
+
+        lABPrev = [0,0]
+        la = np.empty(len(ximesh))
+        lb = np.empty(len(ximesh))
+        h = np.empty(len(ximesh))
+        # create meshed Ic and rn arrays for use in calculating inner/outer
+        # surface
+        Ic = self.get_Ic(ximesh)
+        rn = self.path.get_rn(ximesh)
+        # perform la/lb rootfinding for each step in the xi mesh
+        for i in range(len(self.ximesh)):
+            SSProfile("lAB rootfinding").tic()
+            lAB = self.l_a_l_b_rootfinding(ximesh[i], lABPrev)
+            SSProfile("lAB rootfinding").toc()
+            la[i] = lAB[0]
+            lb[i] = lAB[1]
+            # calculate overall thickness
+            h[i] = lb[i]+la[i]
+            lABPrev = lAB
+        alpha = self.path.get_alpha(ximesh)
+        # generate xy paths for surfaces
+        self.undeformedBSurface = undeformedNeutralSurface + \
+                                  np.hstack((np.atleast_2d(-lb*np.sin(alpha)).T,
+                                             np.atleast_2d(lb*np.cos(alpha)).T))
+        self.undeformedASurface = undeformedNeutralSurface - \
+                                np.hstack((np.atleast_2d(-la*np.sin(alpha)).T,
+                                           np.atleast_2d(la*np.cos(alpha)).T))
+
+        return self.undeformedASurface, self.undeformedBSurface
 
     def get_Thk(self, coord, hasPrev=False):
         # I = th^3/12
