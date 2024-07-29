@@ -1,7 +1,7 @@
 import numpy as np
 import numpy.linalg as lin
 import matplotlib.pyplot as plt
-from spring import Spring
+from spring_old import Spring
 from materials import Maraging300Steel
 
 name = "manual_spring"

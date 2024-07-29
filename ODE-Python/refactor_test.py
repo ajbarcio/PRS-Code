@@ -1,5 +1,5 @@
 import numpy as np
-from spring2 import Spring
+from spring import Spring
 import materials
 import PATHDEF
 import CRSCDEF
@@ -9,8 +9,11 @@ import CRSCDEF
 #                     the overall spring object that contains deformation 
 #                     methods
 
-defaultPath = PATHDEF.Minimal_Polynomial_Definition()
-defaultGeom = CRSCDEF.Piecewise_Ic_Control(path=defaultPath)
+testPath = PATHDEF.Minimal_Polynomial_Definition()
+testCrsc = CRSCDEF.Piecewise_Ic_Control(path=testPath)
+# fuck this
+testPath.get_crscRef(testCrsc)
+
 
 defaultSpring = Spring(defaultGeom, materials.Maraging300Steel())
 

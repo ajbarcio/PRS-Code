@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import numpy.linalg as lin
 
-from spring import Spring
+from spring_old import Spring
 from polynomials import xy_poly, PPoly_Eval
 
 # TODO: Add condition check to this test

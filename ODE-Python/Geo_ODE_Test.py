@@ -3,15 +3,15 @@ from scipy.integrate import solve_ivp as variable_mesh_solve
 import numpy.linalg as lin
 import matplotlib.pyplot as plt
 import time
-from spring import Spring
-import spring
+from spring_old import Spring
+import spring_old
 from materials import Maraging300Steel
 from StatProfiler import SSProfile
 from utils import fixed_rk4
 
 deg2rad = np.pi/180
 # Give the spring some parameters that hopefully do not affect anything about the math
-defaultSpring = spring.generate_simple_spring()
+defaultSpring = spring_old.generate_simple_spring()
 defaultSpring.full_results(deformBool=False)
 # Rootfinding method for getting outer surface geometry
 defaultSpring.generate_undeformed_surfaces()

@@ -1,7 +1,7 @@
 import numpy as np
 import numpy.linalg as lin
 import matplotlib.pyplot as plt
-from spring import Spring
+from spring_old import Spring
 
 deg2rad = np.pi/180
 

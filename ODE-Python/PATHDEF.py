@@ -45,6 +45,8 @@ deg2rad = np.pi/180
 #        momentArmX
 #        momentArmY
 #
+#   self.n
+#
 #   self.fullParamLen
 #
 #
@@ -53,15 +55,12 @@ deg2rad = np.pi/180
 class Minimal_Polynomial_Definition:
     def __init__(self,
                  # whole bunch of default values:
-                 crscDef,
                  n                   = 2,
                  fullParamLength     = 6,
                  radii               = np.array([1.1,2.025,2.025,2.95]),
                  betaAngles          = np.array([0,50,100,150])*deg2rad, # FIRST VALUE IS ALWAYS 0 !!!!, same length as radii
                  XYFactors         = np.array([0.333,0.667])
                  ):
-
-        self.crsc = crscDef
 
         self.init(n, fullParamLength, radii,
                   betaAngles, XYFactors)
@@ -247,6 +246,9 @@ class Minimal_Polynomial_Definition:
         return self.smesh[-1]
 
 #### STANDARD INTERFACE ####
+
+    def get_crscRef(self, crscRef):
+        self.crsc = crscRef
 
     def get_xy_n(self, coord, dim):
         if dim=='x':

@@ -1,7 +1,7 @@
 import numpy as np
 from numpy import linalg as lin
 import matplotlib.pyplot as plt
-from spring import Spring, Deform_Wrapper
+from spring_old import Spring, Deform_Wrapper
 from materials import Maraging300Steel
 
 
