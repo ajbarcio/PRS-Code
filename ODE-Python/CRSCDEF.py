@@ -18,7 +18,8 @@ deg2rad = np.pi/180
 #   get_Ic(coord):
 #           coord as scalar or vector float
 #
-#   get_Thk(coord):
+#   get_Thk(coord, #hasPrev#):
+#           hasPrev as boolean/float if prev exists
 #
 # Attributes to include:
 #
@@ -172,10 +173,35 @@ class Piecewise_Ic_Control():
 
 #### STANDARD INTERFACE ####
 
-    def get_Thk(self, coord):
+    def get_outer_geometry(self, resolution):
+        
+        self.undeformedNeutralSurface = np.hstack((np.atleast_2d(PPoly_Eval(self.ximesh, self.XCoeffs)).T,
+                                                   np.atleast_2d(PPoly_Eval(self.ximesh, self.YCoeffs)).T))
+
+    def get_Thk(self, coord, hasPrev=False):
         # I = th^3/12
         # h = cbrt(12I/t)
-        hPrev = np.cbrt(12*self.get_Ic(coord)/self.t)
+        if not hasPrev:
+            hPrev = np.cbrt(12*self.get_Ic(coord)/self.t)
+            lABPrev = np.array([hPrev/2, hPrev/2])
+        else:
+            lABPrev = hasPrev
+        coord = np.atleast_1d(coord)
+        la = np.empty_like(coord)
+        lb = np.empty_like(coord)
+        h  = np.empty_like(coord)
+        i = 0
+        for value in coord:
+            lAB = self.l_a_l_b_rootfinding(value, lABPrev)
+            lABPrev = lAB
+            la[i] = lAB[0]
+            lb[i] = lAB[1]
+            i+=1
+        h = la+lb
+        if len(h)==1:
+            return h[0]
+        else:
+            return h
 
     def get_Ic(self, coord):
         out = PPoly_Eval(coord, self.IcCoeffs)
