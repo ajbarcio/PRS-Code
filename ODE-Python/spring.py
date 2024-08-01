@@ -9,8 +9,10 @@ deg2rad = np.pi/180
 
 class Spring:
     def __init__(self, geoDef, material,
-                 resolution = 200):
+                 resolution = 200,
+                 name       = None):
 
+        self.name=name
         # Parameters and data structures from passed objects
         # Path accessor from path definition
         self.path     = geoDef.path
@@ -253,6 +255,8 @@ class Spring:
 
         # record the maximum stress along whole beam
         self.maxStress = np.nanmax([self.innerSurfaceStress, self.outerSurfaceStress])
+        if self.maxStress>self.designStress:
+            print("~~~~~~~~~~~ DESIGN STRESS EXCEEDED ~~~~~~~~~~~~")
 
         return self.maxStress, self.maxStresses
 
@@ -271,6 +275,7 @@ class Spring:
         plt.plot(self.B[:,0],self.B[:,1],"k", alpha=trans)
         plt.plot(self.Sn[:,0],self.Sn[:,1],"--b",label="netural", alpha=trans)
         plt.plot(self.Sc[:,0],self.Sc[:,1],"--r",label="centroidal", alpha=trans)
+        plt.plot(self.path.pts[:,0],self.path.pts[:,1])
         plt.axis("equal")
         plt.legend()
 
@@ -326,10 +331,29 @@ class Spring:
 
             spot = self.outerRadius*np.sin(45*deg2rad)
 
-            plt.text(spot+.25, spot+.25, f"deformation: {self.dBeta/deg2rad:.2f}")
+            plt.text(spot+.25, -(spot+.25), f"deformation: {self.dBeta/deg2rad:.2f}")
 
             if showBool:
                 plt.show()
 
         else:
             raise AttributeError("yo wait you didnt fucking twisht it yet")
+
+    def export_surfaces(self):
+        if hasattr(self, 'A'):
+            A = np.hstack([self.A, np.zeros_like(self.A)])
+            B = np.hstack([self.B, np.zeros_like(self.B)])
+            np.savetxt(".\\surfaces\\"+self.name+"_A.csv", A,
+                       fmt='%f',delimiter=',')
+            np.savetxt(".\\surfaces\\"+self.name+"_B.csv", B,
+                       fmt='%f',delimiter=',')
+            np.savetxt(".\\surfaces\\"+self.name+"_A.txt", A,
+                       fmt='%f',delimiter=',')
+            np.savetxt(".\\surfaces\\"+self.name+"_B.txt", B,
+                       fmt='%f',delimiter=',')
+            np.savetxt(".\\surfaces\\"+self.name+"_A.sldcrv", A,
+                       fmt='%f',delimiter=',')
+            np.savetxt(".\\surfaces\\"+self.name+"_B.sldcrv", B,
+                       fmt='%f',delimiter=',')
+        else:
+            print("fuck you")

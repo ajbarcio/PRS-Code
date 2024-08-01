@@ -11,8 +11,8 @@ class Material:
         self.G = self.E/(2*(1+poisson))
         self.yieldStress = yieldStress
 
-# Initialize other materials here and import where used
+# Initialize other materials here
 
 Maraging300Steel = Material(27500000, 309700)
 
-
+# Aluminum         = Material()

@@ -127,6 +127,7 @@ class Piecewise_Ic_Control():
         # some error checking and escapes for possible non-convergent cases
         if not(np.isinf(rn) or abs(rn) > 10e10): # TODO: change this to some large finite threshold
             # check for if the beam was locally straight on the last iteration
+            # print(lABPrev)
             if lABPrev[0]==lABPrev[1]:
                 # perturb the initial guess a bit to avoid convergence issues
                 x0 = [lABPrev[0], lABPrev[1]+0.001]
@@ -181,14 +182,14 @@ class Piecewise_Ic_Control():
         undeformedNeutralSurface = self.path.get_neutralSurface(resolution)
         ximesh = np.linspace(0,self.fullParamLength,resolution+1)
 
-        lABPrev = [0,0]
+        Ic0 = self.get_Ic(0)
+
+        hPrev = np.cbrt(12*Ic0/self.t)
+        lABPrev = np.array([hPrev/2, hPrev/2])
         self.la = np.empty(len(ximesh))
         self.lb = np.empty(len(ximesh))
         self.h = np.empty(len(ximesh))
-        # create meshed Ic and rn arrays for use in calculating inner/outer
-        # surface
-        Ic = self.get_Ic(ximesh)
-        rn = self.path.get_rn(ximesh)
+
         # print(rn[-5:])
         # perform la/lb rootfinding for each step in the xi mesh
         for i in range(len(ximesh)):
@@ -215,12 +216,13 @@ class Piecewise_Ic_Control():
     def get_Thk(self, coord, hasPrev=False):
         # I = th^3/12
         # h = cbrt(12I/t)
+        coord = np.atleast_1d(coord)
         if not hasPrev:
-            hPrev = np.cbrt(12*self.get_Ic(coord)/self.t)
+            hPrev = np.cbrt(12*self.get_Ic(coord[0])/self.t)
             lABPrev = np.array([hPrev/2, hPrev/2])
         else:
             lABPrev = hasPrev
-        coord = np.atleast_1d(coord)
+
         la = np.empty_like(coord)
         lb = np.empty_like(coord)
         h  = np.empty_like(coord)

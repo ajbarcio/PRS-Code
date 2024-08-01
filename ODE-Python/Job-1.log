@@ -1,0 +1,18 @@
+Analysis initiated from SIMULIA established products
+Abaqus JOB Job-1
+Abaqus 2023
+Abaqus License Manager checked out the following licenses:
+Abaqus/Standard checked out 5 tokens from Flexnet server hprc-license.tamu.edu.
+<25 out of 443 licenses remain available>.
+Begin Analysis Input File Processor
+7/30/2024 9:37:00 PM
+Run pre.exe
+7/30/2024 9:37:13 PM
+Abaqus Error: Analysis Input File Processor exited with an error - Please see the 
+Job-1.dat file for possible error messages if the file exists.
+Begin SIM Wrap-up
+7/30/2024 9:37:14 PM
+Run SMASimUtility.exe
+7/30/2024 9:37:14 PM
+End SIM Wrap-up
+Abaqus/Analysis exited with errors

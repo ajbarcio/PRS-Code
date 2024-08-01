@@ -1,0 +1,531 @@
+# -*- coding: mbcs -*-
+from part import *
+from material import *
+from section import *
+from assembly import *
+from step import *
+from interaction import *
+from load import *
+from mesh import *
+from optimization import *
+from job import *
+from sketch import *
+from visualization import *
+from connectorBehavior import *
+mdb.models['Model-1'].ConstrainedSketch(name='__profile__', sheetSize=5.0)
+mdb.models['Model-1'].sketches['__profile__'].Spline(points=[(1.441421, 
+    -0.141421), (1.461328, -0.120004), (1.481489, -0.098272), (1.501809, 
+    -0.076216), (1.522199, -0.053823), (1.542574, -0.031081), (1.562853, 
+    -0.007975), (1.582959, 0.015507), (1.602817, 0.03938), (1.622358, 
+    0.063657), (1.641512, 0.088348), (1.660213, 0.113466), (1.678398, 
+    0.139019), (1.696004, 0.165014), (1.712973, 0.191455), (1.729245, 
+    0.218344), (1.744765, 0.245681), (1.759477, 0.27346), (1.773331, 0.301672), 
+    (1.786274, 0.330307), (1.79826, 0.359347), (1.809243, 0.388772), (1.819182, 
+    0.418559), (1.828036, 0.44868), (1.835773, 0.479102), (1.842359, 0.509792), 
+    (1.847769, 0.540711), (1.851981, 0.57182), (1.854978, 0.603078), (1.856746, 
+    0.634443), (1.857278, 0.665872), (1.856572, 0.697323), (1.854629, 
+    0.728755), (1.851455, 0.760128), (1.84706, 0.791405), (1.841458, 0.82255), 
+    (1.834664, 0.85353), (1.826699, 0.884314), (1.817584, 0.914877), (1.807342, 
+    0.945191), (1.795997, 0.975236), (1.783574, 1.004991), (1.770099, 
+    1.034438), (1.755598, 1.06356), (1.740097, 1.092343), (1.723622, 1.120773), 
+    (1.706199, 1.148837), (1.687852, 1.176523), (1.668606, 1.203819), (
+    1.648486, 1.230712), (1.627514, 1.257191), (1.605745, 1.283266), (1.583234, 
+    1.308954), (1.560004, 1.334249), (1.53608, 1.359147), (1.511485, 1.383642), 
+    (1.486244, 1.407728), (1.460379, 1.431397), (1.433914, 1.454644), (
+    1.406872, 1.477462), (1.379275, 1.499842), (1.351148, 1.521776), (1.322514, 
+    1.543257), (1.293394, 1.564276), (1.263813, 1.584824), (1.233793, 
+    1.604891), (1.203358, 1.62447), (1.172531, 1.643549), (1.141334, 1.66212), 
+    (1.109791, 1.680172), (1.077926, 1.697698), (1.045761, 1.714685), (
+    1.013319, 1.731126), (0.980624, 1.74701), (0.947698, 1.762328), (0.914566, 
+    1.777071), (0.881249, 1.791229), (0.847772, 1.804794), (0.814156, 
+    1.817757), (0.780425, 1.830111), (0.746602, 1.841847), (0.71271, 1.852958), 
+    (0.678771, 1.863438), (0.644809, 1.873281), (0.610845, 1.882483), (
+    0.576902, 1.891041), (0.543003, 1.898952), (0.50917, 1.906217), (0.475425, 
+    1.912837), (0.44179, 1.918819), (0.408287, 1.924172), (0.374937, 1.92891), 
+    (0.34176, 1.933052), (0.308777, 1.936625), (0.276005, 1.939666), (0.243459, 
+    1.942219), (0.211151, 1.944337), (0.17909, 1.94608), (0.147276, 1.94751), (
+    0.115706, 1.948681), (0.084367, 1.949632), (0.053244, 1.950145), (0.022337, 
+    1.949988), (-0.008342, 1.949161), (-0.038783, 1.947664), (-0.068974, 
+    1.945499), (-0.098906, 1.942666), (-0.128567, 1.939168), (-0.15795, 
+    1.935007), (-0.187045, 1.930187), (-0.215844, 1.924712), (-0.244339, 
+    1.918585), (-0.272522, 1.911812), (-0.300388, 1.904398), (-0.327928, 
+    1.89635), (-0.355139, 1.887675), (-0.382014, 1.878379), (-0.408549, 
+    1.868472), (-0.43474, 1.857962), (-0.460584, 1.846859), (-0.486079, 
+    1.835172), (-0.511244, 1.822957), (-0.536106, 1.810267), (-0.560668, 
+    1.797109), (-0.584937, 1.783489), (-0.608914, 1.769413), (-0.632604, 
+    1.754885), (-0.65601, 1.739913), (-0.679135, 1.724501), (-0.701982, 
+    1.708656), (-0.724553, 1.692386), (-0.746852, 1.675698), (-0.768882, 
+    1.658601), (-0.790645, 1.641106), (-0.812147, 1.623222), (-0.83339, 
+    1.604962), (-0.854381, 1.586337), (-0.875123, 1.567362), (-0.895624, 
+    1.54805), (-0.915889, 1.528415), (-0.935925, 1.508472), (-0.955741, 
+    1.488238), (-0.975343, 1.467727), (-0.994741, 1.446958), (-1.013943, 
+    1.425945), (-1.03296, 1.404707), (-1.0518, 1.38326), (-1.070475, 1.361621), 
+    (-1.088995, 1.339808), (-1.10737, 1.317839), (-1.125611, 1.29573), (
+    -1.143731, 1.273499), (-1.161741, 1.251164), (-1.179652, 1.228741), (
+    -1.197476, 1.206247), (-1.215224, 1.1837), (-1.23291, 1.161116), (
+    -1.250545, 1.138512), (-1.26814, 1.115902), (-1.285707, 1.093304), (
+    -1.303258, 1.070733), (-1.320781, 1.048185), (-1.338265, 1.02566), (
+    -1.355724, 1.003175), (-1.373174, 0.980743), (-1.390627, 0.958379), (
+    -1.408097, 0.936096), (-1.425597, 0.913907), (-1.443139, 0.891822), (
+    -1.460734, 0.869852), (-1.478395, 0.848006), (-1.496132, 0.826293), (
+    -1.513956, 0.804721), (-1.531877, 0.783296), (-1.549904, 0.762024), (
+    -1.568047, 0.740908), (-1.586315, 0.719955), (-1.604715, 0.699164), (
+    -1.623255, 0.67854), (-1.641944, 0.658081), (-1.660786, 0.637788), (
+    -1.679789, 0.617659), (-1.698958, 0.597693), (-1.718298, 0.577884), (
+    -1.737813, 0.55823), (-1.757507, 0.538725), (-1.777382, 0.519362), (
+    -1.797439, 0.500133), (-1.817681, 0.48103), (-1.838106, 0.462043), (
+    -1.858713, 0.443162), (-1.879501, 0.424374), (-1.900466, 0.405665), (
+    -1.921602, 0.387023), (-1.942904, 0.36843), (-1.964364, 0.34987), (
+    -1.985973, 0.331324), (-2.007719, 0.312771), (-2.02959, 0.29419), (
+    -2.051571, 0.275558), (-2.073646, 0.256849)])
+mdb.models['Model-1'].sketches['__profile__'].Spline(points=[(1.158579, 
+    0.141421), (1.178179, 0.162497), (1.197442, 0.183224), (1.216309, 
+    0.203632), (1.234722, 0.223747), (1.252632, 0.24359), (1.26999, 0.263178), 
+    (1.286753, 0.282522), (1.302884, 0.301631), (1.318349, 0.32051), (1.333119, 
+    0.339163), (1.34717, 0.357588), (1.360486, 0.375785), (1.373053, 0.393752), 
+    (1.384864, 0.411486), (1.395919, 0.428985), (1.406223, 0.446249), (
+    1.415785, 0.463279), (1.424621, 0.480082), (1.432751, 0.496666), (1.440196, 
+    0.513046), (1.446982, 0.529242), (1.453136, 0.545278), (1.458683, 
+    0.561188), (1.463648, 0.577008), (1.468052, 0.592781), (1.471911, 
+    0.608554), (1.475237, 0.624376), (1.478034, 0.640299), (1.480301, 
+    0.656373), (1.48203, 0.672647), (1.483207, 0.689167), (1.483812, 0.705974), 
+    (1.48382, 0.723103), (1.483207, 0.740581), (1.481943, 0.758432), (1.479998, 
+    0.776669), (1.477345, 0.795299), (1.473956, 0.814326), (1.469808, 
+    0.833743), (1.464878, 0.853542), (1.459148, 0.873709), (1.452605, 
+    0.894227), (1.445238, 0.915075), (1.43704, 0.936232), (1.428008, 0.957675), 
+    (1.418143, 0.979379), (1.407449, 1.001318), (1.395933, 1.02347), (1.383605, 
+    1.045809), (1.370477, 1.068312), (1.356529, 1.090927), (1.34174, 1.113601), 
+    (1.326127, 1.136303), (1.309711, 1.159004), (1.29251, 1.181677), (1.274548, 
+    1.204295), (1.255845, 1.226832), (1.236424, 1.249263), (1.21631, 1.271564), 
+    (1.195525, 1.293713), (1.174095, 1.315686), (1.152044, 1.337461), (
+    1.129396, 1.359019), (1.106177, 1.380339), (1.082412, 1.401402), (1.058125, 
+    1.422188), (1.033342, 1.44268), (1.008088, 1.462861), (0.982387, 1.482714), 
+    (0.956264, 1.502223), (0.929743, 1.521372), (0.902849, 1.540147), (
+    0.875605, 1.558533), (0.848034, 1.576515), (0.820161, 1.594082), (0.792006, 
+    1.611219), (0.763594, 1.627915), (0.734945, 1.644157), (0.706081, 
+    1.659934), (0.677022, 1.675233), (0.647789, 1.690045), (0.618401, 
+    1.704357), (0.588877, 1.718159), (0.559236, 1.731438), (0.529493, 
+    1.744184), (0.499668, 1.756382), (0.469774, 1.768021), (0.439829, 
+    1.779083), (0.409846, 1.789552), (0.379839, 1.799406), (0.349823, 
+    1.808621), (0.319809, 1.817168), (0.289812, 1.825009), (0.259846, 
+    1.832101), (0.229926, 1.838391), (0.200069, 1.843818), (0.170299, 
+    1.848316), (0.14064, 1.851817), (0.111125, 1.854263), (0.081791, 1.855612), 
+    (0.05268, 1.856091), (0.023816, 1.855944), (-0.004792, 1.855172), (
+    -0.033135, 1.853778), (-0.061203, 1.851764), (-0.08899, 1.849134), (
+    -0.116487, 1.845891), (-0.14369, 1.842038), (-0.170591, 1.837581), (
+    -0.197188, 1.832524), (-0.223475, 1.826872), (-0.24945, 1.820629), (
+    -0.27511, 1.813802), (-0.300453, 1.806396), (-0.325478, 1.798417), (
+    -0.350186, 1.789871), (-0.374575, 1.780766), (-0.398648, 1.771106), (
+    -0.422405, 1.7609), (-0.445848, 1.750154), (-0.468956, 1.738828), (
+    -0.491704, 1.726885), (-0.514089, 1.714339), (-0.536113, 1.701204), (
+    -0.557774, 1.687495), (-0.579077, 1.67323), (-0.600026, 1.658426), (
+    -0.620626, 1.643099), (-0.640883, 1.627268), (-0.660807, 1.61095), (
+    -0.680406, 1.594163), (-0.699689, 1.576923), (-0.718667, 1.559247), (
+    -0.737351, 1.541151), (-0.755753, 1.522651), (-0.773884, 1.503763), (
+    -0.791756, 1.484501), (-0.809382, 1.46488), (-0.826775, 1.444915), (
+    -0.843946, 1.42462), (-0.86091, 1.404008), (-0.87768, 1.383095), (
+    -0.894268, 1.361893), (-0.910687, 1.340416), (-0.926953, 1.318678), (
+    -0.943077, 1.296692), (-0.959074, 1.274472), (-0.974957, 1.252032), (
+    -0.99074, 1.229384), (-1.006438, 1.206543), (-1.022063, 1.183522), (
+    -1.037631, 1.160334), (-1.053155, 1.136993), (-1.068649, 1.113512), (
+    -1.084128, 1.089904), (-1.099605, 1.066184), (-1.115095, 1.042363), (
+    -1.130611, 1.018457), (-1.146167, 0.994476), (-1.161777, 0.970435), (
+    -1.177479, 0.946364), (-1.193308, 0.922291), (-1.209272, 0.898225), (
+    -1.225381, 0.874179), (-1.241644, 0.850162), (-1.258071, 0.826187), (
+    -1.274671, 0.802263), (-1.291452, 0.778403), (-1.308423, 0.754616), (
+    -1.325592, 0.730915), (-1.342966, 0.707309), (-1.360552, 0.68381), (
+    -1.378357, 0.660427), (-1.396387, 0.63717), (-1.414645, 0.61405), (
+    -1.433136, 0.591074), (-1.451863, 0.568252), (-1.470828, 0.545591), (
+    -1.490032, 0.5231), (-1.509476, 0.500784), (-1.529157, 0.478651), (
+    -1.549075, 0.456706), (-1.569225, 0.434952), (-1.589602, 0.413395), (
+    -1.610201, 0.392036), (-1.631013, 0.370878), (-1.652031, 0.349921), (
+    -1.673243, 0.329165), (-1.694638, 0.308608), (-1.716202, 0.288249), (
+    -1.73792, 0.268082), (-1.759776, 0.248104), (-1.781752, 0.228308), (
+    -1.803827, 0.208686), (-1.82598, 0.18923), (-1.848188, 0.16993), (
+    -1.870425, 0.150774), (-1.892665, 0.13175), (-1.914878, 0.112843), (
+    -1.937034, 0.09404)])
+mdb.models['Model-1'].sketches['__profile__'].Line(point1=(1.441421, -0.141421)
+    , point2=(1.158579, 0.141421))
+mdb.models['Model-1'].sketches['__profile__'].Line(point1=(-2.073646, 0.256849)
+    , point2=(-1.937034, 0.09404))
+mdb.models['Model-1'].sketches.changeKey(fromName='__profile__', toName=
+    '__save__')
+mdb.models['Model-1'].ConstrainedSketch(name='__profile__', sheetSize=200.0)
+mdb.models['Model-1'].sketches['__profile__'].retrieveSketch(sketch=
+    mdb.models['Model-1'].sketches['__save__'])
+del mdb.models['Model-1'].sketches['__save__']
+mdb.models['Model-1'].Part(dimensionality=THREE_D, name='Part-1', type=
+    DEFORMABLE_BODY)
+mdb.models['Model-1'].parts['Part-1'].BaseSolidExtrude(depth=0.375, sketch=
+    mdb.models['Model-1'].sketches['__profile__'])
+del mdb.models['Model-1'].sketches['__profile__']
+mdb.models['Model-1'].rootAssembly.DatumCsysByDefault(CARTESIAN)
+mdb.models['Model-1'].rootAssembly.Instance(dependent=OFF, name='Part-1-1', 
+    part=mdb.models['Model-1'].parts['Part-1'])
+mdb.models['Model-1'].rootAssembly.RadialInstancePattern(axis=(0.0, 0.0, 1.0), 
+    instanceList=('Part-1-1', ), number=2, point=(0.0, 0.0, 0.0), totalAngle=
+    360.0)
+mdb.models['Model-1'].rootAssembly.ReferencePoint(point=
+    mdb.models['Model-1'].rootAssembly.datums[1].origin)
+mdb.models['Model-1'].rootAssembly.Set(name='m_Set-1', referencePoints=(
+    mdb.models['Model-1'].rootAssembly.referencePoints[6], ))
+mdb.models['Model-1'].rootAssembly.Set(faces=
+    mdb.models['Model-1'].rootAssembly.instances['Part-1-1-rad-2'].faces.findAt(
+    ((1.982571, -0.14831, 0.25), ), )+\
+    mdb.models['Model-1'].rootAssembly.instances['Part-1-1'].faces.findAt(((
+    -1.982571, 0.14831, 0.25), ), ), name='s_Set-1')
+mdb.models['Model-1'].MultipointConstraint(controlPoint=
+    mdb.models['Model-1'].rootAssembly.sets['m_Set-1'], csys=None, mpcType=
+    TIE_MPC, name='Constraint-1', surface=
+    mdb.models['Model-1'].rootAssembly.sets['s_Set-1'], userMode=DOF_MODE_MPC, 
+    userType=0)
+mdb.models['Model-1'].rootAssembly.Set(faces=
+    mdb.models['Model-1'].rootAssembly.instances['Part-1-1'].faces.findAt(((
+    1.34714, -0.04714, 0.25), ), )+\
+    mdb.models['Model-1'].rootAssembly.instances['Part-1-1-rad-2'].faces.findAt(
+    ((-1.34714, 0.04714, 0.25), ), ), name='Set-3')
+mdb.models['Model-1'].EncastreBC(createStepName='Initial', localCsys=None, 
+    name='BC-1', region=mdb.models['Model-1'].rootAssembly.sets['Set-3'])
+mdb.models['Model-1'].Material(name='M300')
+mdb.models['Model-1'].materials['M300'].Elastic(table=((27500000.0, 0.33), ))
+mdb.models['Model-1'].HomogeneousSolidSection(material='M300', name='Section-1'
+    , thickness=None)
+mdb.models['Model-1'].rootAssembly.InstanceFromBooleanMerge(domain=GEOMETRY, 
+    instances=(mdb.models['Model-1'].rootAssembly.instances['Part-1-1'], 
+    mdb.models['Model-1'].rootAssembly.instances['Part-1-1-rad-2']), name=
+    'Part-2', originalInstances=SUPPRESS)
+mdb.models['Model-1'].parts['Part-2'].Set(cells=
+    mdb.models['Model-1'].parts['Part-2'].cells.findAt(((-0.908573, 1.535566, 
+    0.1875), ), ((-1.297377, -1.175368, 0.1875), ), ), name='Set-1')
+mdb.models['Model-1'].parts['Part-2'].SectionAssignment(offset=0.0, 
+    offsetField='', offsetType=MIDDLE_SURFACE, region=
+    mdb.models['Model-1'].parts['Part-2'].sets['Set-1'], sectionName=
+    'Section-1', thicknessAssignment=FROM_SECTION)
+mdb.models['Model-1'].rootAssembly.regenerate()
+mdb.models['Model-1'].rootAssembly.makeIndependent(instances=(
+    mdb.models['Model-1'].rootAssembly.instances['Part-2-1'], ))
+mdb.models['Model-1'].rootAssembly.setMeshControls(algorithm=MEDIAL_AXIS, 
+    regions=
+    mdb.models['Model-1'].rootAssembly.instances['Part-2-1'].cells.findAt(((
+    -0.908573, 1.535566, 0.1875), ), ((-1.297377, -1.175368, 0.1875), ), ))
+mdb.models['Model-1'].rootAssembly.seedPartInstance(deviationFactor=0.01, 
+    minSizeFactor=0.01, regions=(
+    mdb.models['Model-1'].rootAssembly.instances['Part-2-1'], ), size=0.125)
+mdb.models['Model-1'].rootAssembly.generateMesh(regions=(
+    mdb.models['Model-1'].rootAssembly.instances['Part-2-1'], ))
+mdb.models['Model-1'].StaticStep(initialInc=0.1, name='Step-1', previous=
+    'Initial')
+mdb.models['Model-1'].rootAssembly.Set(name='Set-5', referencePoints=(
+    mdb.models['Model-1'].rootAssembly.referencePoints[6], ))
+mdb.models['Model-1'].Moment(cm3=4550.0, createStepName='Step-1', 
+    distributionType=UNIFORM, field='', localCsys=None, name='Load-1', region=
+    mdb.models['Model-1'].rootAssembly.sets['Set-5'])
+mdb.Job(atTime=None, contactPrint=OFF, description='', echoPrint=OFF, 
+    explicitPrecision=SINGLE, getMemoryFromAnalysis=True, historyPrint=OFF, 
+    memory=90, memoryUnits=PERCENTAGE, model='Model-1', modelPrint=OFF, 
+    multiprocessingMode=DEFAULT, name='Job-1', nodalOutputPrecision=SINGLE, 
+    numCpus=1, numGPUs=0, numThreadsPerMpiProcess=1, queue=None, resultsFormat=
+    ODB, scratch='', type=ANALYSIS, userSubroutine='', waitHours=0, 
+    waitMinutes=0)
+mdb.models['Model-1'].rootAssembly.Set(faces=
+    mdb.models['Model-1'].rootAssembly.instances['Part-2-1'].faces.findAt(((
+    1.34714, -0.04714, 0.25), ), ((-1.34714, 0.04714, 0.25), ), ), name=
+    'Set-6')
+mdb.models['Model-1'].boundaryConditions['BC-1'].setValues(region=
+    mdb.models['Model-1'].rootAssembly.sets['Set-6'])
+mdb.models['Model-1'].rootAssembly.Set(faces=
+    mdb.models['Model-1'].rootAssembly.instances['Part-2-1'].faces.findAt(((
+    -1.982571, 0.14831, 0.25), ), ((1.982571, -0.14831, 0.25), ), ), name=
+    's_Set-7')
+mdb.models['Model-1'].constraints['Constraint-1'].setValues(surface=
+    mdb.models['Model-1'].rootAssembly.sets['s_Set-7'])
+mdb.jobs['Job-1'].submit(consistencyChecking=OFF)
+mdb.jobs['Job-1']._Message(STARTED, {'phase': BATCHPRE_PHASE, 
+    'clientHost': 'BCDC-HCLQCX3', 'handle': 0, 'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 3 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 4 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 5 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 8 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 11 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 12 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 13 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 16 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 75 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 137 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 138 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 139 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 140 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 256 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 315 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 377 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 378 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 379 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 380 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 496 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 727 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 728 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 959 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 960 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(ERROR, {'phase': BATCHPRE_PHASE, 
+    'message': '1 nodes have inactive dof on which boundary conditions are specified. The nodes have been identified in node set ErrNodeBCInactiveDof.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(ODB_FILE, {'phase': BATCHPRE_PHASE, 
+    'file': 'C:\\Stuff\\SMM\\PRS-Code-Git\\ODE-Python\\Job-1.odb', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(ABORTED, {'phase': BATCHPRE_PHASE, 
+    'message': 'Analysis phase failed due to errors', 'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(ERROR, {
+    'message': 'Analysis Input File Processor exited with an error - Please see the  Job-1.dat file for possible error messages if the file exists.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(JOB_ABORTED, {
+    'message': 'Analysis Input File Processor exited with an error - Please see the  Job-1.dat file for possible error messages if the file exists.', 
+    'jobName': 'Job-1'})
+mdb.models['Model-1'].boundaryConditions['BC-1'].setValues(region=
+    mdb.models['Model-1'].rootAssembly.sets['Set-6'])
+mdb.jobs['Job-1'].submit(consistencyChecking=OFF)
+mdb.jobs['Job-1']._Message(STARTED, {'phase': BATCHPRE_PHASE, 
+    'clientHost': 'BCDC-HCLQCX3', 'handle': 0, 'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 3 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 4 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 5 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 8 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 11 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 12 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 13 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 16 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 75 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 137 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 138 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 139 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 140 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 256 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 315 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 377 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 378 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 379 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 380 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 496 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 727 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 728 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 959 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 960 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(ERROR, {'phase': BATCHPRE_PHASE, 
+    'message': '1 nodes have inactive dof on which boundary conditions are specified. The nodes have been identified in node set ErrNodeBCInactiveDof.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(ODB_FILE, {'phase': BATCHPRE_PHASE, 
+    'file': 'C:\\Stuff\\SMM\\PRS-Code-Git\\ODE-Python\\Job-1.odb', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(ABORTED, {'phase': BATCHPRE_PHASE, 
+    'message': 'Analysis phase failed due to errors', 'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(ERROR, {
+    'message': 'Analysis Input File Processor exited with an error - Please see the  Job-1.dat file for possible error messages if the file exists.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(JOB_ABORTED, {
+    'message': 'Analysis Input File Processor exited with an error - Please see the  Job-1.dat file for possible error messages if the file exists.', 
+    'jobName': 'Job-1'})
+del mdb.models['Model-1'].boundaryConditions['BC-1']
+del mdb.models['Model-1'].constraints['Constraint-1']
+mdb.models['Model-1'].rootAssembly.Set(faces=
+    mdb.models['Model-1'].rootAssembly.instances['Part-2-1'].faces.findAt(((
+    1.34714, -0.04714, 0.25), ), ((-1.34714, 0.04714, 0.25), ), ), name=
+    'Set-8')
+mdb.models['Model-1'].DisplacementBC(amplitude=UNSET, createStepName='Initial', 
+    distributionType=UNIFORM, fieldName='', localCsys=None, name='BC-1', 
+    region=mdb.models['Model-1'].rootAssembly.sets['Set-8'], u1=SET, u2=SET, 
+    u3=SET, ur1=SET, ur2=SET, ur3=SET)
+mdb.models['Model-1'].rootAssembly.Set(name='m_Set-9', referencePoints=(
+    mdb.models['Model-1'].rootAssembly.referencePoints[6], ))
+mdb.models['Model-1'].rootAssembly.Set(faces=
+    mdb.models['Model-1'].rootAssembly.instances['Part-2-1'].faces.findAt(((
+    -1.982571, 0.14831, 0.25), ), ((1.982571, -0.14831, 0.25), ), ), name=
+    's_Set-9')
+mdb.models['Model-1'].MultipointConstraint(controlPoint=
+    mdb.models['Model-1'].rootAssembly.sets['m_Set-9'], csys=None, mpcType=
+    TIE_MPC, name='Constraint-1', surface=
+    mdb.models['Model-1'].rootAssembly.sets['s_Set-9'], userMode=DOF_MODE_MPC, 
+    userType=0)
+mdb.jobs['Job-1'].submit(consistencyChecking=OFF)
+mdb.jobs['Job-1']._Message(STARTED, {'phase': BATCHPRE_PHASE, 
+    'clientHost': 'BCDC-HCLQCX3', 'handle': 0, 'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 3 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 4 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 5 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 8 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 11 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 12 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 13 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 16 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 75 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 137 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 138 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 139 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 140 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 256 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 315 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 377 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 378 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 379 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 380 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 496 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 727 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 728 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 959 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(WARNING, {'phase': BATCHPRE_PHASE, 
+    'message': 'NODES 960 INSTANCE PART-2-1 AND 1 (ASSEMBLY) IN THE TIE MPC ARE NOT COINCIDENT.  THE MPC WILL CONSTRAIN ROTATIONAL RIGID-BODY MOTION BETWEEN THE NODES.  INTERPRET RESULTS WITH CAUTION OR CONSIDER SUBSTITUTING A BEAM OR LINK MPC.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(ERROR, {'phase': BATCHPRE_PHASE, 
+    'message': '1 nodes have inactive dof on which boundary conditions are specified. The nodes have been identified in node set ErrNodeBCInactiveDof.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(ODB_FILE, {'phase': BATCHPRE_PHASE, 
+    'file': 'C:\\Stuff\\SMM\\PRS-Code-Git\\ODE-Python\\Job-1.odb', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(ABORTED, {'phase': BATCHPRE_PHASE, 
+    'message': 'Analysis phase failed due to errors', 'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(ERROR, {
+    'message': 'Analysis Input File Processor exited with an error - Please see the  Job-1.dat file for possible error messages if the file exists.', 
+    'jobName': 'Job-1'})
+mdb.jobs['Job-1']._Message(JOB_ABORTED, {
+    'message': 'Analysis Input File Processor exited with an error - Please see the  Job-1.dat file for possible error messages if the file exists.', 
+    'jobName': 'Job-1'})
