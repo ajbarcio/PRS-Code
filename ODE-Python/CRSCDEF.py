@@ -242,3 +242,7 @@ class Piecewise_Ic_Control():
     def get_Ic(self, coord):
         out = PPoly_Eval(coord, self.IcCoeffs, ranges=self.domains)
         return out
+    
+    def get_dIc(self, coord):
+        out = PPoly_Eval(coord, self.IcCoeffs, ranges=self.domains, deriv=1)
+        return out

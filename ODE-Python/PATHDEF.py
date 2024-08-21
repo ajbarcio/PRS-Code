@@ -112,7 +112,6 @@ class Minimal_Polynomial_Definition:
                               'control factors': XYFactors}
         # np.savetxt("springs/")
 
-
     def init(self,
              n                   = 2,
              fullParamLength     = 6,
@@ -314,6 +313,9 @@ class Minimal_Polynomial_Definition:
                         dyds**2*d3yds3*dxds )
 
         drnds = -numerator/denominator
+
+        if abs(drnds)==float('inf'):
+            drnds = 0
 
         return drnds
 
