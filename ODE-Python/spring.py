@@ -36,7 +36,7 @@ class Spring:
         self.ximesh = np.linspace(0,self.fullArcLength,self.len)
 
         # finite difference information
-        self.finiteDifferenceLength = 0.001
+        self.finiteDifferenceLength = self.path.fullParamLength/(2*self.resl)
         self.finiteDifferenceAngle  = .1*deg2rad
         self.finiteDifferenceForce  = 0.1
         self.finiteDifferenceTorque = 0.5
@@ -138,12 +138,18 @@ class Spring:
             # print(Q)
             # print(P)
             q_dot = lin.pinv(Q).dot(P).dot(p_dot)
-            # print(p_dot)
-            # print(q_dot)
+            print(p_dot)
+            print(q_dot)
 
-        if lin.norm(q_dot) >100:
-            print("q_dot", q_dot)
-            print("p_dot", p_dot)
+        if not np.isfinite(q_dot.any()) or lin.norm(q_dot) >10e5:
+            print("your if statement worked")
+            xi_next      = xi+self.finiteDifferenceLength
+            lalb_current = self.crsc.get_lalb(xi)
+            lalb_next    = self.crsc.get_lalb(xi_next)
+            q_dot = numerical_fixed_mesh_diff(np.array([lalb_current, lalb_next]), np.array([xi, xi_next]))
+
+            # print("q_dot", q_dot)
+            # print("p_dot", p_dot)
         # Back to xi space
         # q_dot = q_dot/dxids
 

@@ -1,5 +1,6 @@
 import numpy as np
 from scipy import optimize as opt
+import scipy.integrate as intg
 from matplotlib import pyplot as plt
 
 import materials
@@ -26,33 +27,54 @@ testPath = PATHDEF.Minimal_Polynomial_Definition4(n=2, fullParamLength=4,
 testCrsc = CRSCDEF.Piecewise_Ic_Control(pathDef=testPath,
                        IcPts = np.array([.002, .000026, .000026, .0003]),
                        IcParamLens = np.array([.50, .6]))
-testCrsc2 = CRSCDEF.Piecewise_Ic_Control(pathDef=testPath,
+testCrsc1 = CRSCDEF.Piecewise_Ic_Control(pathDef=testPath,
                        IcPts = np.array([.0003, 0.000026, .0003]),
                        IcParamLens = np.array([0.5]))
 
 # fuck this
-testPath.get_crscRef(testCrsc2)
+testPath.get_crscRef(testCrsc1)
 
-
-testSpring = Spring(testCrsc2, materials.Maraging300Steel, name="20270730_spring")
+# Initialize a spring and generate its shape (rootfinding method)
+testSpring = Spring(testCrsc1, materials.Maraging300Steel, 
+                    resolution=1000, name="20270730_spring")
 testSpring.crsc.get_outer_geometry(testSpring.resl)
 
+# Change this value to edit the index along the mesh at which we want to start
+# the ODE method of thickness generation
 smi = 0
 
+# Set the initial value for the ODE
 y0 = np.array([testSpring.crsc.la[smi], testSpring.crsc.lb[smi]])
-
+# Integrate forward along the fixed mesh
 geometry = fixed_rk4(testSpring.geo_ODE, y0, testSpring.ximesh[smi:])
-# print(geometry)
+# python_res = intg.solve_ivp(testSpring.geo_ODE, (testSpring.ximesh[smi], 
+#                                                  testSpring.ximesh[-1]), y0, 
+#                                                  method='BDF')
 
-plt.figure()
-plt.plot(testSpring.ximesh[smi:], geometry[0,:])
-plt.plot(testSpring.ximesh[smi:], geometry[1,:])
-plt.plot(testSpring.ximesh[smi:], testSpring.crsc.la[smi:])
-plt.plot(testSpring.ximesh[smi:], testSpring.crsc.lb[smi:])
+# geometry_alt = python_res.y
 
+plt.figure("Outer Profile Result Comparison")
+plt.plot(testSpring.ximesh[smi:], geometry[0,:], label="ODE la")
+plt.plot(testSpring.ximesh[smi:], geometry[1,:], label="ODE lb")
+# plt.plot(python_res.t, geometry_alt[0,:], label="adaptive mesh ODE la")
+# plt.plot(python_res.t, geometry_alt[1,:], label="adaptive mesh ODE lb")
+plt.plot(testSpring.ximesh[smi:], testSpring.crsc.la[smi:], label="rootfinding la")
+plt.plot(testSpring.ximesh[smi:], testSpring.crsc.lb[smi:], label="rootfinding la")
+
+plt.ylim(0,.14)
+plt.legend()
+
+h = geometry[0,:]+geometry[1,:]
+err = testSpring.crsc.h[smi:]-h
+
+plt.figure("result error")
+plt.plot(testSpring.ximesh[smi:], err, label="error")
+
+# Empirically (numerically) find the derivatives of the thickness profile wrt s
 dladxi_real = numerical_fixed_mesh_diff(testSpring.crsc.la, testSpring.ximesh)
 dlbdxi_real = numerical_fixed_mesh_diff(testSpring.crsc.lb, testSpring.ximesh)
 
+# Evaluate ODE to analytically find derivatives 
 dladxi_analytical = np.empty_like(dladxi_real)
 dlbdxi_analytical = np.empty_like(dladxi_real)
 
@@ -63,26 +85,21 @@ for value in testSpring.ximesh:
     dlbdxi_analytical[i] = dlalbdxi_analytical[1]
     i+=1
 
-# print(dladxi_analytical)
-# print(dlbdxi_analytical)
-plt.figure()
-plt.plot(testSpring.ximesh, dlbdxi_real-dlbdxi_analytical, label="b error")
-plt.plot(testSpring.ximesh, dladxi_real-dladxi_analytical, label="a error")
+plt.figure("derivative error")
+plt.plot(testSpring.ximesh, dlbdxi_real-dlbdxi_analytical, label="dlbds error")
+plt.plot(testSpring.ximesh, dladxi_real-dladxi_analytical, label="dlads error")
 plt.ylim(-0.5,0.5)
 plt.legend()
-plt.figure()
-plt.plot(testSpring.ximesh, dladxi_real, label="real a")
-plt.plot(testSpring.ximesh, dladxi_analytical, label="analytical a")
-plt.plot(testSpring.ximesh, dlbdxi_real, label="real b")
-plt.plot(testSpring.ximesh, dlbdxi_analytical, label="analytical b")
 
-allRn = testSpring.path.get_rn(testSpring.ximesh)
-
-plt.plot(testSpring.ximesh, allRn, label="rn")
+plt.figure("Derivative Result Comparison")
+plt.plot(testSpring.ximesh, dladxi_real, label="real dlads")
+plt.plot(testSpring.ximesh, dladxi_analytical, label="analytical dlads")
+plt.plot(testSpring.ximesh, dlbdxi_real, label="real dlbds")
+plt.plot(testSpring.ximesh, dlbdxi_analytical, label="analytical dlads")
 plt.ylim(-.06,0.06)
 plt.legend()
 
-plt.figure()
+plt.figure("rn derivative accuracy check (does derivative act like a derivative)")
 plt.plot(testSpring.ximesh, testSpring.path.get_rn(testSpring.ximesh), label="rn")
 plt.plot(testSpring.ximesh, testSpring.path.get_drn(testSpring.ximesh), label="drn")
 plt.plot(testSpring.ximesh, numerical_fixed_mesh_diff(testSpring.path.get_rn(testSpring.ximesh), testSpring.ximesh), label="drn numerical")

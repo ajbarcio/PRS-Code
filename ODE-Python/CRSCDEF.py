@@ -239,6 +239,27 @@ class Piecewise_Ic_Control():
         else:
             return h
 
+    def get_lalb(self, coord, hasPrev=False):
+        coord = np.atleast_1d(coord)
+        if not hasPrev:
+            hPrev = np.cbrt(12*self.get_Ic(coord[0])/self.t)
+            lABPrev = np.array([hPrev/2, hPrev/2])
+        else:
+            lABPrev = hasPrev
+
+        la = np.empty_like(coord)
+        lb = np.empty_like(coord)
+        h  = np.empty_like(coord)
+        i = 0
+        for value in coord:
+            lAB = self.l_a_l_b_rootfinding(value, lABPrev)
+            lABPrev = lAB
+            la[i] = lAB[0]
+            lb[i] = lAB[1]
+            i+=1
+        lalb = np.array(la, lb)
+        return lalb
+
     def get_Ic(self, coord):
         out = PPoly_Eval(coord, self.IcCoeffs, ranges=self.domains)
         return out
