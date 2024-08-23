@@ -10,11 +10,30 @@ from spring import Spring, deg2rad
 
 from utils import fixed_rk4, numerical_fixed_mesh_diff
 
+import sympy as sp
 
-a = 1
-r = float('inf')
-I = 1/12
+x = sp.symbols('x')
 
-A = np.array([[-a,a],[1/(r-a)-1/r,1/(r+a)+1/r]])
-print(A)
-print(lin.pinv(A))
+func = (x**2-4)/(3*x+6)
+
+print(sp.limit(func, x, -2))
+
+# coeffs = np.array([1,2.2,3,4,5.2])
+# polynomial = sp.Poly(coeffs, x).as_expr()
+# differential = sp.diff(polynomial, x)
+# func = sp.cos(x)
+# print(sp.diff(polynomial, x))
+# print(differential)
+
+# # polynomial = polynomial.as_expr()
+# # differential = differential.as_expr()
+
+# input = np.array([1,2,3,4])
+
+# polyLambda = sp.lambdify(x, polynomial, "numpy")
+# diffLambda = sp.lambdify(x, differential)
+# funcLambda = sp.lambdify(x, func,       "numpy")
+
+# print(polyLambda(input))
+# print(diffLambda(input))
+# print(funcLambda(input))

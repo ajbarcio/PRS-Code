@@ -27,24 +27,28 @@ testCrsc = CRSCDEF.Piecewise_Ic_Control(pathDef=testPath,
                        IcPts = np.array([.002, .000026, .000026, .0003]),
                        IcParamLens = np.array([.50, .6]))
 testCrsc2 = CRSCDEF.Piecewise_Ic_Control(pathDef=testPath,
-                       IcPts = np.array([.0003, .0003]),
-                       IcParamLens = np.array([]))
+                       IcPts = np.array([.0003, 0.000026, .0003]),
+                       IcParamLens = np.array([0.5]))
 
 # fuck this
-testPath.get_crscRef(testCrsc)
+testPath.get_crscRef(testCrsc2)
 
 
-
-
-testSpring = Spring(testCrsc, materials.Maraging300Steel, name="20270730_spring")
+testSpring = Spring(testCrsc2, materials.Maraging300Steel, name="20270730_spring")
 testSpring.crsc.get_outer_geometry(testSpring.resl)
 
-smi = 50
+smi = 0
 
 y0 = np.array([testSpring.crsc.la[smi], testSpring.crsc.lb[smi]])
 
 geometry = fixed_rk4(testSpring.geo_ODE, y0, testSpring.ximesh[smi:])
 # print(geometry)
+
+plt.figure()
+plt.plot(testSpring.ximesh[smi:], geometry[0,:])
+plt.plot(testSpring.ximesh[smi:], geometry[1,:])
+plt.plot(testSpring.ximesh[smi:], testSpring.crsc.la[smi:])
+plt.plot(testSpring.ximesh[smi:], testSpring.crsc.lb[smi:])
 
 dladxi_real = numerical_fixed_mesh_diff(testSpring.crsc.la, testSpring.ximesh)
 dlbdxi_real = numerical_fixed_mesh_diff(testSpring.crsc.lb, testSpring.ximesh)
@@ -59,8 +63,9 @@ for value in testSpring.ximesh:
     dlbdxi_analytical[i] = dlalbdxi_analytical[1]
     i+=1
 
-print(dladxi_analytical)
-print(dlbdxi_analytical)
+# print(dladxi_analytical)
+# print(dlbdxi_analytical)
+plt.figure()
 plt.plot(testSpring.ximesh, dlbdxi_real-dlbdxi_analytical, label="b error")
 plt.plot(testSpring.ximesh, dladxi_real-dladxi_analytical, label="a error")
 plt.ylim(-0.5,0.5)
@@ -70,10 +75,18 @@ plt.plot(testSpring.ximesh, dladxi_real, label="real a")
 plt.plot(testSpring.ximesh, dladxi_analytical, label="analytical a")
 plt.plot(testSpring.ximesh, dlbdxi_real, label="real b")
 plt.plot(testSpring.ximesh, dlbdxi_analytical, label="analytical b")
-plt.ylim(-.2,.2)
+
+allRn = testSpring.path.get_rn(testSpring.ximesh)
+
+plt.plot(testSpring.ximesh, allRn, label="rn")
+plt.ylim(-.06,0.06)
 plt.legend()
 
-
-
+plt.figure()
+plt.plot(testSpring.ximesh, testSpring.path.get_rn(testSpring.ximesh), label="rn")
+plt.plot(testSpring.ximesh, testSpring.path.get_drn(testSpring.ximesh), label="drn")
+plt.plot(testSpring.ximesh, numerical_fixed_mesh_diff(testSpring.path.get_rn(testSpring.ximesh), testSpring.ximesh), label="drn numerical")
+plt.ylim(-10,10)
+plt.legend()
 
 plt.show()

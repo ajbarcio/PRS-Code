@@ -106,7 +106,7 @@ class Spring:
 
         dIcdxi = self.crsc.get_dIc(xi)
         drndxi = self.path.get_drn(xi)
-
+        
         # # transform to arc length space
 
         # dxids = self.path.get_dxi_n(xi)
@@ -134,13 +134,16 @@ class Spring:
         try:
             q_dot = lin.inv(Q).dot(P).dot(p_dot)
         except lin.LinAlgError:
-            print("excepted", xi)
-            print(Q)
-            print(P)
+            print("singular exception at", xi)
+            # print(Q)
+            # print(P)
             q_dot = lin.pinv(Q).dot(P).dot(p_dot)
-            print(p_dot)
-            print(q_dot)
+            # print(p_dot)
+            # print(q_dot)
 
+        if lin.norm(q_dot) >100:
+            print("q_dot", q_dot)
+            print("p_dot", p_dot)
         # Back to xi space
         # q_dot = q_dot/dxids
 

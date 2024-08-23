@@ -2,8 +2,10 @@ import numpy as np
 import numpy.linalg as lin
 import matplotlib.pyplot as plt
 import scipy
-
-from utils import PPoly_Eval
+import sympy as sp
+import warnings
+warnings.filterwarnings("ignore")
+from utils import PPoly_Eval, numerical_fixed_mesh_diff
 from StatProfiler import SSProfile
 
 deg2rad = np.pi/180
@@ -313,9 +315,6 @@ class Minimal_Polynomial_Definition:
                         dyds**2*d3yds3*dxds )
 
         drnds = -numerator/denominator
-
-        if abs(drnds)==float('inf'):
-            drnds = 0
 
         return drnds
 
@@ -981,13 +980,21 @@ class Minimal_Polynomial_Definition3:
         dyds   = PPoly_Eval(coord, self.YCoeffs, deriv=1)
         dxds   = PPoly_Eval(coord, self.YCoeffs, deriv=1)
 
-        denominator = (d2yds2*dxds-d2xds2*dyds)**2
-        numerator   = ( dxds**3*d3yds3 - dyds**3*d3xds3 +
-                        2*dyds*d2xds2**2*dxds - 2*dyds*d2yds2**2*dxds - dxds**2*d3xds3*dyds -
-                        2*dxds**2*d2yds2*d2xds2 + 2*dyds**2*d2yds2*d2xds2 +
-                        dyds**2*d3yds3*dxds )
+        # denominator = (d2yds2*dxds-d2xds2*dyds)**2
+        # numerator   = ( dxds**3*d3yds3 - dyds**3*d3xds3 +
+        #                 2*dyds*d2xds2**2*dxds - 2*dyds*d2yds2**2*dxds - dxds**2*d3xds3*dyds -
+        #                 2*dxds**2*d2yds2*d2xds2 + 2*dyds**2*d2yds2*d2xds2 +
+        #                 dyds**2*d3yds3*dxds )
 
-        drnds = -numerator/denominator
+        # drnds = -numerator/denominator
+
+        num = (1+dyds**2/dxds**2)
+        den = (d2yds2/dxds-d2xds2*dyds/dxds**2)
+
+        dnumds = 2*dyds*(dxds*d2yds2-d2xds2*dyds)/dxds**3
+        ddends = (dxds**2*d3yds3-2*dxds*d2xds2*d2yds2+dyds*(2*d2xds2**2-dxds*d3xds3))/dxds**3
+
+        drnds = (dnumds*den-num*ddends)/den**2
 
         return drnds
 
@@ -1082,6 +1089,9 @@ class Minimal_Polynomial_Definition4:
             i+=1
             SSProfile("reinit").toc()
         # if the spring was given a name, save its input parameters in a filej
+
+        # do this so that symbolic algebra only happens once at beginning
+        self.prepare_rn_expr()
 
         # this takes way too many lines but its better to see the math written
         # out:
@@ -1276,6 +1286,23 @@ class Minimal_Polynomial_Definition4:
         # return the overall length of the spring
         return self.smesh[-1]
 
+    def prepare_rn_expr(self):
+        XCoeffs = self.XCoeffs.flatten()
+        YCoeffs = self.YCoeffs.flatten()
+
+        s = sp.symbols('s')
+        yPoly = sp.Poly(YCoeffs, s).as_expr()
+        xPoly = sp.Poly(XCoeffs, s).as_expr()
+
+        dyds   = sp.diff(yPoly, s)
+        dxds   = sp.diff(xPoly, s)
+        d2yds2 = sp.diff(yPoly, s, 2)
+        d2xds2 = sp.diff(xPoly, s, 2)
+
+        rn = ((1+dyds**2/dxds**2)/(d2yds2/dxds-d2xds2*dyds/dxds**2))
+        self.drnds_expr = sp.diff(rn, s)
+        self.drnds = sp.lambdify(s, self.drnds_expr, "numpy")
+
 #### STANDARD INTERFACE ####
 
     def get_crscRef(self, crscRef):
@@ -1322,22 +1349,14 @@ class Minimal_Polynomial_Definition4:
         return rn
 
     def get_drn(self, coord):
-        d3yds3 = PPoly_Eval(coord, self.YCoeffs, deriv=3)
-        d3xds3 = PPoly_Eval(coord, self.XCoeffs, deriv=3)
-        d2yds2 = PPoly_Eval(coord, self.YCoeffs, deriv=2)
-        d2xds2 = PPoly_Eval(coord, self.XCoeffs, deriv=2)
-        dyds   = PPoly_Eval(coord, self.YCoeffs, deriv=1)
-        dxds   = PPoly_Eval(coord, self.YCoeffs, deriv=1)
 
-        denominator = (d2yds2*dxds-d2xds2*dyds)**2
-        numerator   = ( dxds**3*d3yds3 - dyds**3*d3xds3 +
-                        2*dyds*d2xds2**2*dxds - 2*dyds*d2yds2**2*dxds - dxds**2*d3xds3*dyds -
-                        2*dxds**2*d2yds2*d2xds2 + 2*dyds**2*d2yds2*d2xds2 +
-                        dyds**2*d3yds3*dxds )
+        coord = np.atleast_1d(coord)
+        out = self.drnds(coord)        
+        if len(out)==1:
+            return out[0]
+        else:
+            return out
 
-        drnds = -numerator/denominator
-
-        return drnds
 
     def get_alpha(self, coord):
         if hasattr(coord, "__len__"):
