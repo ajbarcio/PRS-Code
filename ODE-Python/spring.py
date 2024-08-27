@@ -13,8 +13,10 @@ class Spring:
                  name       = None):
 
         ### SILLY THINGS FOR DEBUGGING GEO ODE ###
-        self.singularityCounter = 0
+        self.singularityCounter  = 0
         self.numericalSubCounter = 0
+        # Nominal 1
+        self.geoFeedbackGain     = 0
 
         self.name=name
         # Parameters and data structures from passed objects
@@ -102,25 +104,37 @@ class Spring:
         return LHS
 
     def geo_ODE(self, xi, q):
-              
+
         # treating path as known (nominal)
         # treating IC   as known (preliminary)
-        Ic = self.crsc.get_Ic(xi)
         rn = self.path.get_rn(xi)
+        Ic = self.crsc.get_Ic(xi)
 
         dIcdxi = self.crsc.get_dIc(xi)
         drndxi = self.path.get_drn(xi)
-        
         # # transform to arc length space
-
-        # dxids = self.path.get_dxi_n(xi)
-        # dIcds = dIcdxi*dxids
-        # drnds = drndxi*dxids
+        dxids = self.path.get_dxi_n(xi)
+        dIcds = dIcdxi*dxids
+        drnds = drndxi*dxids
 
         # Version without transform
 
-        dIcds = dIcdxi
-        drnds = drndxi
+        # dIcds = dIcdxi
+        # drnds = drndxi
+        def jac(x, rn): # IC doesn't happen to occur in the derivatives
+            return np.array([[1/(np.log((rn+x[1])/(rn-x[0])))-(x[0]+x[1])/(((np.log((rn+x[1])/(rn-x[0])))**2)*(rn-x[0])), \
+                            1/(np.log((rn+x[1])/(rn-x[0])))-(x[0]+x[1])/(((np.log((rn+x[1])/(rn-x[0])))**2)*(rn+x[1]))], \
+                            [-rn*self.t*x[0], rn*self.t*x[1]]])
+        # Adjust with feedback gain
+        # (Single step try first)
+        rnCheck = (q[0]+q[1])/(np.log((rn+q[1])/(rn-q[0])))
+        IcCheck = self.t*rn*(q[0]+q[1])*(q[0]-q[1])/2
+        if not xi == 0:
+            err  = np.array([rnCheck-rn, IcCheck-Ic])
+            corr = lin.inv(jac(q, rn)).dot(err)
+            print(err)
+            print(corr)
+            q += corr*self.geoFeedbackGain
 
         # q = prime     states (la, lb)
         # p = secondary states (Ic, rn)
@@ -144,9 +158,10 @@ class Spring:
             q_dot = lin.pinv(Q).dot(P).dot(p_dot)
             self.singularityCounter+=1
         # If we have a bogus answer
-        if np.invert(np.isfinite(q_dot)).any() or lin.norm(q_dot) > 1:
-            # Just substitute that particular step with a numerical 
+        if np.invert(np.isfinite(q_dot)).any(): # or lin.norm(q_dot) > 1:
+            # Just substitute that particular step with a numerical
             # approximation of the derivative
+            print("bogus answer")
             xi_next      = xi+self.finiteDifferenceLength
             lalb_current = self.crsc.get_lalb(xi)
             lalb_next    = self.crsc.get_lalb(xi_next)
@@ -156,8 +171,9 @@ class Spring:
             self.numericalSubCounter+=1
             # print("q_dot", q_dot)
             # print("p_dot", p_dot)
+
         # Back to xi space
-        # q_dot = q_dot/dxids
+        q_dot = q_dot/dxids
 
         return q_dot.flatten()
 

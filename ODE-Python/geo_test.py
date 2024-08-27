@@ -35,7 +35,7 @@ testCrsc1 = CRSCDEF.Piecewise_Ic_Control(pathDef=testPath,
 testPath.get_crscRef(testCrsc)
 
 # Initialize a spring and generate its shape (rootfinding method)
-testSpring = Spring(testCrsc, materials.Maraging300Steel, 
+testSpring = Spring(testCrsc, materials.Maraging300Steel,
                     resolution=1000, name="20270730_spring")
 testSpring.crsc.get_outer_geometry(testSpring.resl)
 
@@ -45,11 +45,12 @@ smi = 0
 
 # Set the initial value for the ODE
 y0 = np.array([testSpring.crsc.la[smi], testSpring.crsc.lb[smi]])
+print(y0)
 # Integrate forward along the fixed mesh
 geometry = fixed_rk4(testSpring.geo_ODE, y0, testSpring.ximesh[smi:])
 print("about to try variable mesh")
-python_res = intg.solve_ivp(testSpring.geo_ODE, (testSpring.ximesh[smi], 
-                                                 testSpring.ximesh[-1]), y0, 
+python_res = intg.solve_ivp(testSpring.geo_ODE, (testSpring.ximesh[smi],
+                                                 testSpring.ximesh[-1]), y0,
                                                  method='LSODA')
 print(testSpring.singularityCounter)
 print(testSpring.numericalSubCounter)
@@ -78,7 +79,7 @@ plt.plot(testSpring.ximesh[smi:], err, label="error")
 dladxi_real = numerical_fixed_mesh_diff(testSpring.crsc.la, testSpring.ximesh)
 dlbdxi_real = numerical_fixed_mesh_diff(testSpring.crsc.lb, testSpring.ximesh)
 
-# Evaluate ODE to analytically find derivatives 
+# Evaluate ODE to analytically find derivatives
 dladxi_analytical = np.empty_like(dladxi_real)
 dlbdxi_analytical = np.empty_like(dladxi_real)
 

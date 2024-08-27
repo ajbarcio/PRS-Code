@@ -1355,7 +1355,7 @@ class Minimal_Polynomial_Definition4:
     def get_drn(self, coord):
 
         coord = np.atleast_1d(coord)
-        out = self.drnds(coord)        
+        out = self.drnds(coord)
         if len(out)==1:
             return out[0]
         else:
