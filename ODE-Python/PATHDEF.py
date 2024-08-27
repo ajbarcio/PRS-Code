@@ -1300,7 +1300,11 @@ class Minimal_Polynomial_Definition4:
         d2xds2 = sp.diff(xPoly, s, 2)
 
         rn = ((1+dyds**2/dxds**2)/(d2yds2/dxds-d2xds2*dyds/dxds**2))
+        # print(rn)
+        # print("---------------------------------")
         self.drnds_expr = sp.diff(rn, s)
+        # print(self.drnds_expr)
+        # print(self.fullParamLength)
         self.drnds = sp.lambdify(s, self.drnds_expr, "numpy")
 
 #### STANDARD INTERFACE ####

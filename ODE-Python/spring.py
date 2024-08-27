@@ -12,6 +12,10 @@ class Spring:
                  resolution = 200,
                  name       = None):
 
+        ### SILLY THINGS FOR DEBUGGING GEO ODE ###
+        self.singularityCounter = 0
+        self.numericalSubCounter = 0
+
         self.name=name
         # Parameters and data structures from passed objects
         # Path accessor from path definition
@@ -130,32 +134,32 @@ class Spring:
         p_dot = np.array([[dIcds],[drnds]])
 
         # This is the diffeq step
-
         try:
             q_dot = lin.inv(Q).dot(P).dot(p_dot)
+        # There is a chance the matrix is singular, in that case:
         except lin.LinAlgError:
+            # Catch exception
             print("singular exception at", xi)
-            # print(Q)
-            # print(P)
+            # Take pseudoinverse instead
             q_dot = lin.pinv(Q).dot(P).dot(p_dot)
-            print(p_dot)
-            print(q_dot)
-
-        if not np.isfinite(q_dot.any()) or lin.norm(q_dot) >10e5:
-            print("your if statement worked")
+            self.singularityCounter+=1
+        # If we have a bogus answer
+        if np.invert(np.isfinite(q_dot)).any() or lin.norm(q_dot) > 1:
+            # Just substitute that particular step with a numerical 
+            # approximation of the derivative
             xi_next      = xi+self.finiteDifferenceLength
             lalb_current = self.crsc.get_lalb(xi)
             lalb_next    = self.crsc.get_lalb(xi_next)
-            q_dot = numerical_fixed_mesh_diff(np.array([lalb_current, lalb_next]), np.array([xi, xi_next]))
-
+            q1_dot = numerical_fixed_mesh_diff(np.array([lalb_current[0], lalb_next[0]]), np.array([xi, xi_next]))
+            q2_dot = numerical_fixed_mesh_diff(np.array([lalb_current[1], lalb_next[1]]), np.array([xi, xi_next]))
+            q_dot = np.array([q1_dot[0], q2_dot[0]])
+            self.numericalSubCounter+=1
             # print("q_dot", q_dot)
             # print("p_dot", p_dot)
         # Back to xi space
         # q_dot = q_dot/dxids
 
         return q_dot.flatten()
-
-
 
     def forward_integration(self, ODE, SF, torqueTarg):
 

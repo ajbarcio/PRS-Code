@@ -257,7 +257,7 @@ class Piecewise_Ic_Control():
             la[i] = lAB[0]
             lb[i] = lAB[1]
             i+=1
-        lalb = np.array(la, lb)
+        lalb = np.array([la, lb])
         return lalb
 
     def get_Ic(self, coord):

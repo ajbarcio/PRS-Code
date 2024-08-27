@@ -12,11 +12,25 @@ from utils import fixed_rk4, numerical_fixed_mesh_diff
 
 import sympy as sp
 
-x = sp.symbols('x')
+x = np.array([[0],[float('nan')]])
+print(x)
+print(np.isfinite(x))
+print(np.isfinite(x).any())
+print(np.invert(np.isfinite(x)))
+print(np.invert(np.isfinite(x)).any())
+x = np.array([[0],[5]])
+print(x)
+print(np.isfinite(x))
+print(np.isfinite(x).any())
+print(np.invert(np.isfinite(x)))
+print(np.invert(np.isfinite(x)).any())
 
-func = (x**2-4)/(3*x+6)
 
-print(sp.limit(func, x, -2))
+# x = sp.symbols('x')
+
+# func = (x**2-4)/(3*x+6)
+
+# print(sp.limit(func, x, -2))
 
 # coeffs = np.array([1,2.2,3,4,5.2])
 # polynomial = sp.Poly(coeffs, x).as_expr()
