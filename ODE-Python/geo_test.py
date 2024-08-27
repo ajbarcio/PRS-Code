@@ -48,12 +48,12 @@ y0 = np.array([testSpring.crsc.la[smi], testSpring.crsc.lb[smi]])
 # Integrate forward along the fixed mesh
 geometry = fixed_rk4(testSpring.geo_ODE, y0, testSpring.ximesh[smi:])
 print("about to try variable mesh")
-# python_res = intg.solve_ivp(testSpring.geo_ODE, (testSpring.ximesh[smi], 
-#                                                  testSpring.ximesh[-1]), y0, 
-#                                                  method='BDF')
+python_res = intg.solve_ivp(testSpring.geo_ODE, (testSpring.ximesh[smi], 
+                                                 testSpring.ximesh[-1]), y0, 
+                                                 method='LSODA')
 print(testSpring.singularityCounter)
 print(testSpring.numericalSubCounter)
-# geometry_alt = python_res.y
+geometry_alt = python_res.y
 
 plt.figure("Outer Profile Result Comparison")
 plt.plot(testSpring.ximesh[smi:], testSpring.crsc.la[smi:], color='#cc1616', label="rootfinding la")
@@ -61,8 +61,8 @@ plt.plot(testSpring.ximesh[smi:], testSpring.crsc.lb[smi:], color='#3f0d80', lab
 
 plt.plot(testSpring.ximesh[smi:], geometry[0,:], "--", color='#16800d', label="ODE la")
 plt.plot(testSpring.ximesh[smi:], geometry[1,:], "--", color='#c4c116', label="ODE lb")
-# plt.plot(python_res.t, geometry_alt[0,:], label="adaptive mesh ODE la")
-# plt.plot(python_res.t, geometry_alt[1,:], label="adaptive mesh ODE lb")
+plt.plot(python_res.t, geometry_alt[0,:], label="adaptive mesh ODE la")
+plt.plot(python_res.t, geometry_alt[1,:], label="adaptive mesh ODE lb")
 
 
 plt.ylim(0,.14)
