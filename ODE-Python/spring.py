@@ -12,12 +12,6 @@ class Spring:
                  resolution = 200,
                  name       = None):
 
-        ### SILLY THINGS FOR DEBUGGING GEO ODE ###
-        self.singularityCounter  = 0
-        self.numericalSubCounter = 0
-        # Nominal 1
-        self.geoFeedbackGain     = 0
-
         self.name=name
         # Parameters and data structures from passed objects
         # Path accessor from path definition
@@ -40,6 +34,16 @@ class Spring:
         self.endIndex = self.len-1
 
         self.ximesh = np.linspace(0,self.fullArcLength,self.len)
+
+        ### SILLY THINGS FOR DEBUGGING GEO ODE ###
+        self.singularityCounter  = 0
+        self.zeroSubCounter = 0
+        # Nominal 1
+        self.geoFeedbackGain     = -1
+        self.q_prev = None
+        self.rnErr = []
+        self.IcErr = []
+        self.thickXi = []
 
         # finite difference information
         self.finiteDifferenceLength = self.path.fullParamLength/(2*self.resl)
@@ -128,12 +132,16 @@ class Spring:
         # Adjust with feedback gain
         # (Single step try first)
         rnCheck = (q[0]+q[1])/(np.log((rn+q[1])/(rn-q[0])))
-        IcCheck = self.t*rn*(q[0]+q[1])*(q[0]-q[1])/2
+        IcCheck = -self.t*rn*(q[0]+q[1])*(q[0]-q[1])/2
         if not xi == 0:
-            err  = np.array([rnCheck-rn, IcCheck-Ic])
-            corr = lin.inv(jac(q, rn)).dot(err)
-            print(err)
-            print(corr)
+            err  = [rnCheck-rn, IcCheck-Ic]
+            self.rnErr.append(err[0])
+            self.IcErr.append(err[1])
+            self.thickXi.append(xi)
+            corr = lin.inv(jac(q, rn)).dot(np.array(err))
+            # print(err)
+            # print(corr)
+            # geoFeedbackGain set to a negative number
             q += corr*self.geoFeedbackGain
 
         # q = prime     states (la, lb)
@@ -161,20 +169,23 @@ class Spring:
         if np.invert(np.isfinite(q_dot)).any(): # or lin.norm(q_dot) > 1:
             # Just substitute that particular step with a numerical
             # approximation of the derivative
-            print("bogus answer")
-            xi_next      = xi+self.finiteDifferenceLength
-            lalb_current = self.crsc.get_lalb(xi)
-            lalb_next    = self.crsc.get_lalb(xi_next)
-            q1_dot = numerical_fixed_mesh_diff(np.array([lalb_current[0], lalb_next[0]]), np.array([xi, xi_next]))
-            q2_dot = numerical_fixed_mesh_diff(np.array([lalb_current[1], lalb_next[1]]), np.array([xi, xi_next]))
-            q_dot = np.array([q1_dot[0], q2_dot[0]])
-            self.numericalSubCounter+=1
+            print("bogus answer", xi, lin.norm(q_dot))
+            # xi_next      = xi+self.finiteDifferenceLength
+            # lalb_current = self.crsc.get_lalb(xi)
+            # lalb_next    = self.crsc.get_lalb(xi_next)
+            # q1_dot = numerical_fixed_mesh_diff(np.array([lalb_current[0], lalb_next[0]]), np.array([xi, xi_next]))
+            # q2_dot = numerical_fixed_mesh_diff(np.array([lalb_current[1], lalb_next[1]]), np.array([xi, xi_next]))
+            # q_dot = np.array([q1_dot[0], q2_dot[0]])
+            self.zeroSubCounter+=1
+            
+            # Just call it zero 5head
+            q_dot = np.array([0, 0])
             # print("q_dot", q_dot)
             # print("p_dot", p_dot)
 
         # Back to xi space
         q_dot = q_dot/dxids
-
+        self.q_prev = q
         return q_dot.flatten()
 
     def forward_integration(self, ODE, SF, torqueTarg):
