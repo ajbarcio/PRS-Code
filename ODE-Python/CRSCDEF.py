@@ -177,6 +177,37 @@ class Piecewise_Ic_Control():
         self.get_outer_geometry(resolution)
         return self.la, self.lb
 
+    def get_outer_geometry_ODE(self, resolution, lalb):
+
+        undeformedNeutralSurface = self.path.get_neutralSurface(resolution)
+        ximesh = np.linspace(0,self.fullParamLength,resolution+1)
+
+        y0 = self.l_a_l_b_rootfinding(0, np.array([0,0]))
+
+        Ic0 = self.get_Ic(0)
+
+        hPrev = np.cbrt(12*Ic0/self.t)
+        lABPrev = np.array([hPrev/2, hPrev/2])
+        self.la = np.empty(len(ximesh))
+        self.lb = np.empty(len(ximesh))
+        self.h = np.empty(len(ximesh))
+
+        self.la = lalb[0,:]
+        self.lb = lalb[1,:]
+        self.h  = self.la+self.lb
+
+        alpha = self.path.get_alpha(ximesh)
+        # generate xy paths for surfaces
+        self.undeformedBSurface = undeformedNeutralSurface + \
+                                  np.hstack((np.atleast_2d(-self.lb*np.sin(alpha)).T,
+                                             np.atleast_2d(self.lb*np.cos(alpha)).T))
+        self.undeformedASurface = undeformedNeutralSurface - \
+                                np.hstack((np.atleast_2d(-self.la*np.sin(alpha)).T,
+                                           np.atleast_2d(self.la*np.cos(alpha)).T))
+
+        return self.undeformedASurface, self.undeformedBSurface
+
+
     def get_outer_geometry(self, resolution):
 
         undeformedNeutralSurface = self.path.get_neutralSurface(resolution)

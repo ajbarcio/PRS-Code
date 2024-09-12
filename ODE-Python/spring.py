@@ -38,9 +38,10 @@ class Spring:
         ### SILLY THINGS FOR DEBUGGING GEO ODE ###
         self.singularityCounter  = 0
         self.zeroSubCounter = 0
-        # Nominal 1
+        # -1 has a local minima for error correction
         self.geoFeedbackGain     = -1
-        self.q_prev = None
+        self.geoDerivativeGain   = -0.1
+        self.corr_prev = np.array([0,0])
         self.rnErr = []
         self.IcErr = []
         self.thickXi = []
@@ -185,7 +186,6 @@ class Spring:
 
         # Back to xi space
         q_dot = q_dot/dxids
-        self.q_prev = q
         return q_dot.flatten()
 
     def forward_integration(self, ODE, SF, torqueTarg):
@@ -350,6 +350,50 @@ class Spring:
             print("~~~~~~~~~~~ DESIGN STRESS EXCEEDED ~~~~~~~~~~~~")
 
         return self.maxStress, self.maxStresses
+
+    def plot_spring_ODE(self, geometry, showBool=True, trans=1):
+
+            self.A, self.B =    self.crsc.get_outer_geometry_ODE(self.resl, geometry)
+            # print(self.A[-5:])
+            # print("--")
+            # print(self.B[-5:])
+            self.Sn        =    self.path.get_neutralSurface(self.resl)
+            self.Sc        = self.path.get_centroidalSurface(self.resl)
+
+            # plot the principal leg
+            plt.figure("Graphic Results")
+            plt.plot(self.A[:,0],self.A[:,1],"--g", alpha=trans)
+            plt.plot(self.B[:,0],self.B[:,1],"--g", alpha=trans)
+            plt.plot(self.Sn[:,0],self.Sn[:,1],"--b",label="netural", alpha=trans)
+            plt.plot(self.Sc[:,0],self.Sc[:,1],"--r",label="centroidal", alpha=trans)
+            plt.plot(self.path.pts[:,0],self.path.pts[:,1])
+            plt.axis("equal")
+            plt.legend()
+
+            # plot the other legs
+            ang = 2*np.pi/self.n
+            for j in np.linspace(1,self.n-1,self.n-1):
+                th = ang*(j)
+                R = np.array([[np.cos(th),-np.sin(th)],[np.sin(th),np.cos(th)]])
+                transformedA = R.dot(self.A.T).T
+                transformedB = R.dot(self.B.T).T
+                transformedSn = R.dot(self.Sn.T).T
+                transformedSc = R.dot(self.Sc.T).T
+                plt.plot(transformedA[:,0],transformedA[:,1],"k", alpha=trans)
+                plt.plot(transformedB[:,0],transformedB[:,1],"k", alpha=trans)
+                plt.plot(transformedSn[:,0],transformedSn[:,1],"--b", alpha=trans)
+                plt.plot(transformedSc[:,0],transformedSc[:,1],"--r", alpha=trans)
+
+            # plot geometry of inner and outer rotor of spring
+            outerCircle = plt.Circle([0,0],self.outerRadius,color ="k",fill=False)
+            innerCircle = plt.Circle([0,0],self.innerRadius,color ="k",fill=True)
+            fig = plt.gcf()
+            ax = fig.gca()
+            ax.add_patch(outerCircle)
+            ax.add_patch(innerCircle)
+
+            if showBool:
+                plt.show()
 
     def plot_spring(self, showBool=True, trans=1):
 

@@ -69,18 +69,24 @@ plt.ylim(0,.14)
 plt.legend()
 
 h = geometry[0,:]+geometry[1,:]
-err = testSpring.crsc.h[smi:]-h
+err = abs(testSpring.crsc.h[smi:]-h)
 
-plt.figure("result error")
+plt.figure("resulting thickness error")
 plt.plot(testSpring.ximesh[smi:], err, label="error")
 
 # print(testSpring.pStateErr)
-plt.figure("integration checks")
-plt.plot(testSpring.thickXi, testSpring.rnErr, label="rn")
-plt.plot(testSpring.thickXi, testSpring.IcErr, label="Ic")
+plt.figure("pState integration checks")
+plt.plot(testSpring.thickXi, testSpring.rnErr, label="rn error")
+plt.plot(testSpring.thickXi, testSpring.IcErr, label="Ic error")
 plt.legend()
 
 print(np.max(err))
+
+outerGeometryA, outerGeometryB = testSpring.crsc.get_outer_geometry_ODE(testSpring.resl, geometry)
+# print(outerGeometryA, outerGeometryB)
+
+testSpring.plot_spring(showBool=False)
+testSpring.plot_spring_ODE(geometry, showBool=False)
 
 # # Empirically (numerically) find the derivatives of the thickness profile wrt s
 # dladxi_real = numerical_fixed_mesh_diff(testSpring.crsc.la, testSpring.ximesh)
