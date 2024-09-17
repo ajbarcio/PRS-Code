@@ -26,7 +26,7 @@ testCrsc = CRSCDEF.Piecewise_Ic_Control(pathDef=testPath,
 # fuck this
 testPath.get_crscRef(testCrsc)
 
-testSpring = Spring(testCrsc, materials.Maraging300Steel, name="20270730_spring")
+testSpring = Spring(testCrsc, materials.Maraging300Steel, name="G2Sz6_spring")
 
 # Actually try to deform it
 # res, SF, divergeFlag, i = testSpring.deform_by_torque(-4549,

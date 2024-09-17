@@ -1,0 +1,4 @@
+# ignore all abaqus generated files
+ModelDBs
+*.rpy
+*.rpy.*
