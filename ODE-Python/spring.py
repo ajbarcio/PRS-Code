@@ -489,34 +489,6 @@ class Spring:
                     path = os.path.join(
                          os.path.relpath(currDir),"surfaces",self.name+surf+ext)
                     np.savetxt(path, surfacesData[i],fmt='%f',delimiter=',')
-            #         i+=1
-            # if platform.system()=='Windows':
-            #     # Use the windows format for path names (ewwwwww)
-            #     np.savetxt(".\\surfaces\\"+self.name+"_A.csv", A,
-            #             fmt='%f',delimiter=',')
-            #     np.savetxt(".\\surfaces\\"+self.name+"_Bcsv", B,
-            #             fmt='%f',delimiter=',').
-            #     np.savetxt(".\\surfaces\\"+self.name+"_A.txt", A,
-            #             fmt='%f',delimiter=',')
-            #     np.savetxt(".\\surfaces\\"+self.name+"_B.txt", B,
-            #             fmt='%f',delimiter=',')
-            #     np.savetxt(".\\surfaces\\"+self.name+"_A.sldcrv", A,
-            #             fmt='%f',delimiter=',')
-            #     np.savetxt(".\\surfaces\\"+self.name+"_B.sldcrv", B,
-            #             fmt='%f',delimiter=',')
-            # elif platform.system()=='Linux':
-            #     # Use the linux format for path names (yay!)
-            #     np.savetxt("./surfaces/"+self.name+"_A.csv", A,
-            #             fmt='%f',delimiter=',')
-            #     np.savetxt("./surfaces/"+self.name+"_B.csv", B,
-            #             fmt='%f',delimiter=',')
-            #     np.savetxt("./surfaces/"+self.name+"_A.txt", A,
-            #             fmt='%f',delimiter=',')
-            #     np.savetxt("./surfaces/"+self.name+"_B.txt", B,
-            #             fmt='%f',delimiter=',')
-            #     np.savetxt("./surfaces/"+self.name+"_A.sldcrv", A,
-            #             fmt='%f',delimiter=',')
-            #     np.savetxt("./surfaces/"+self.name+"_B.sldcrv", B,
-            #             fmt='%f',delimiter=',')                
+                    i+=1
         else:
             print("Too early to call; please generate inner and outer surfaces before export")
