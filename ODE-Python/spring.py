@@ -1,4 +1,6 @@
 import numpy as np
+import scipy as scp
+import scipy.stats as stat
 import numpy.linalg as lin
 import matplotlib.pyplot as plt
 
@@ -219,7 +221,7 @@ class Spring:
         self.dBeta    = np.arccos(cosAngle)*np.sign(torqueTarg)
         # Err = diff. in radius, diff between gamma(L) and beta(L), distance
         #       from target torque (just to make matrix square)
-        err = np.array([Rinitial-Rfinal, self.res[0,-1]-self.dBeta,
+        err = np.array([Rinitial-Rfinal, abs(self.res[0,-1])-abs(self.dBeta),
                                                               SF[2]-torqueTarg])
         return err, self.res
 
@@ -299,7 +301,133 @@ class Spring:
         # store the final solution in the object
         self.solnSF = SF
         self.solnerr = lin.norm(err)
+        self.solnerrVec = err
         return self.res, self.solnSF, divergeFlag, i
+
+    def detailed_deform_regression(self, torqueTarg, ODE, resl, degree):
+        steps = np.linspace(0,1*degree,resl+1)*torqueTarg
+        print(steps)
+        # mags   = []
+        # angles = []
+        Fxs   = []
+        Fys = []
+        solnSF = np.array([0,0,steps[0]])
+        for step in  steps:
+            print("trying", step, "inlb")
+            print("initial guess:", solnSF)
+            gres, solnSF, divergeFlag, i = self.deform_by_torque(step, 
+                                                                 ODE,
+                                                                 SF=solnSF,
+                                                                 breakBool=False)
+            Fxs.append(solnSF[0])
+            Fys.append(solnSF[1])
+            # mags.append(lin.norm(solnSF))
+            # angles.append(np.arctan2(solnSF[1],solnSF[0]))
+            # recreateSolnSF = [lin.norm(solnSF)*np.cos(np.arctan2(solnSF[1],solnSF[0])), 
+            #                     lin.norm(solnSF)*np.sin(np.arctan2(solnSF[1],solnSF[0]))]
+            # print("next initial guess should be (real answer):", solnSF)
+            # print("next initial guess should be:", recreateSolnSF)
+            # self.plot_deform(showBool=False)
+            # print(self.solnerr)
+        
+        FxRegress = stat.linregress(steps, Fxs)
+        FyRegress = stat.linregress(steps[1:], Fys[1:])
+        
+        # Plotting for debug
+        plt.figure("Fx regression")
+        plt.scatter(steps, Fxs)
+        plt.plot(steps, FxRegress.slope*np.array(steps)+FxRegress.intercept)
+        plt.figure("Fy regression")
+        plt.scatter(steps, Fys)
+        plt.plot(steps, FyRegress.slope*np.array(steps)+FyRegress.intercept)
+
+    def deform_by_torque_predict_forces(self, torqueTarg, ODE, breakBool=False):
+        defBreakBool = breakBool
+        steps = [torqueTarg*0.05, torqueTarg*0.2]
+        Fxs   = []
+        Fys = []
+        for step in  steps:
+            gres, solnSF, divergeFlag, i = self.deform_by_torque(step, 
+                                                                 ODE,
+                                                                 breakBool=defBreakBool)
+            Fxs.append(solnSF[0])
+            Fys.append(solnSF[1])
+            # self.plot_deform(showBool=False)
+        
+        FxRegress = stat.linregress(steps, Fxs)
+        FyRegress = stat.linregress(steps, Fys)
+
+        # upper bound (hopefully)
+        FxPredict = FxRegress.slope*(torqueTarg)+FxRegress.intercept
+        FyPredict = FyRegress.slope*(torqueTarg)+FyRegress.intercept
+
+        # Plotting for debug
+        # plt.figure("magnitudes regression")
+        # stepsPlot = steps+[torqueTarg]
+        # magsPlot = Fxs+[FxPredict]
+        # angsPlot = Fys+[FyPredict]
+        # plt.scatter(stepsPlot, magsPlot)
+        # plt.plot(stepsPlot, FxRegress.slope*np.array(stepsPlot)+FxRegress.intercept)
+        # plt.figure("angles regression")
+        # plt.scatter(stepsPlot, angsPlot)
+        # plt.plot(stepsPlot, FyRegress.slope*np.array(stepsPlot)+FyRegress.intercept)
+
+        SFPredict = np.array([FxPredict, 
+                              FyPredict,
+                              torqueTarg])
+        print("Predicted Guess:", SFPredict)
+
+        res, solnSF, divergeFlag, i = self.deform_by_torque(torqueTarg, ODE, 
+                                                            SF=SFPredict,
+                                                            breakBool=True) # Not sure about this one
+
+        print("Solution       :", solnSF)
+        return res, solnSF, divergeFlag, i
+
+    def deform_by_torque_predict_angle(self, torqueTarg, ODE, breakBool=False):
+        defBreakBool = breakBool
+        steps = [torqueTarg*0.05, torqueTarg*0.2]
+        mags   = []
+        angles = []
+        for step in  steps:
+            gres, solnSF, divergeFlag, i = self.deform_by_torque(step, 
+                                                                 ODE,
+                                                                 breakBool=defBreakBool)
+            mags.append(lin.norm(solnSF))
+            angles.append(np.arctan2(solnSF[1],solnSF[0]))
+            self.plot_deform(showBool=False)
+        
+        magRegress = stat.linregress(steps, mags)
+        angRegress = stat.linregress(steps, angles)
+
+        # upper bound
+        magPredict = magRegress.slope*(torqueTarg)+magRegress.intercept
+        angPredict = angRegress.slope*(torqueTarg)+angRegress.intercept
+
+        # Plotting for debug
+        plt.figure("magnitudes regression")
+        print("seriously what the fuck", steps)
+        stepsPlot = steps+[torqueTarg]
+        print("man what the fuck", stepsPlot)
+        magsPlot = mags+[magPredict]
+        angsPlot = angles+[angPredict]
+        plt.scatter(stepsPlot, magsPlot)
+        plt.plot(stepsPlot, magRegress.slope*np.array(stepsPlot)+magRegress.intercept)
+        plt.figure("angles regression")
+        plt.scatter(stepsPlot, angsPlot)
+        plt.plot(stepsPlot, angRegress.slope*np.array(stepsPlot)+angRegress.intercept)
+
+        print(magPredict, angPredict)
+        SFPredict = np.array([magPredict*np.cos(angPredict), 
+                            magPredict*np.sin(angPredict),
+                            torqueTarg])
+        print(SFPredict)
+
+        res, solnSF, divergeFlag, i = self.deform_by_torque(torqueTarg, ODE, 
+                                                            SF=SFPredict,
+                                                            breakBool=True) # Not sure about this one
+
+        return res, solnSF, divergeFlag, i
 
     def calculate_stresses(self):
 
