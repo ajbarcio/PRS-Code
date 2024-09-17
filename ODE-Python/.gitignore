@@ -1,0 +1,5 @@
+# ignore abaqus files
+*.rpy
+*.rpy.*
+# ignore surfaces directory
+surfaces
