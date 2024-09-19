@@ -34,7 +34,9 @@ class Spring:
         self.resl = resolution
         self.len = self.resl+1
         self.step = self.fullArcLength/self.resl
-        self.endIndex = self.len-1
+        # self.endIndex = self.len-1
+
+        self.indices = np.arange(0,self.len)
 
         self.ximesh = np.linspace(0,self.fullArcLength,self.len)
 
@@ -222,7 +224,7 @@ class Spring:
         self.dBeta    = np.arccos(cosAngle)*np.sign(torqueTarg)
         # Err = diff. in radius, diff between gamma(L) and beta(L), distance
         #       from target torque (just to make matrix square)
-        err = np.array([Rinitial-Rfinal, abs(self.res[0,-1])-abs(self.dBeta),
+        err = np.array([Rinitial-Rfinal, (self.res[0,-1])-(self.dBeta),
                                                               SF[2]-torqueTarg])
         return err, self.res
 
@@ -320,16 +322,11 @@ class Spring:
                                                                  ODE,
                                                                  SF=solnSF,
                                                                  breakBool=False)
+            print("final guess:  ", solnSF)
+            print("error: ", self.solnerrVec)
             Fxs.append(solnSF[0])
             Fys.append(solnSF[1])
-            # mags.append(lin.norm(solnSF))
-            # angles.append(np.arctan2(solnSF[1],solnSF[0]))
-            # recreateSolnSF = [lin.norm(solnSF)*np.cos(np.arctan2(solnSF[1],solnSF[0])), 
-            #                     lin.norm(solnSF)*np.sin(np.arctan2(solnSF[1],solnSF[0]))]
-            # print("next initial guess should be (real answer):", solnSF)
-            # print("next initial guess should be:", recreateSolnSF)
-            # self.plot_deform(showBool=False)
-            # print(self.solnerr)
+            self.plot_deform(showBool=False)
         
         FxRegress = stat.linregress(steps, Fxs)
         FyRegress = stat.linregress(steps[1:], Fys[1:])
@@ -380,7 +377,7 @@ class Spring:
 
         res, solnSF, divergeFlag, i = self.deform_by_torque(torqueTarg, ODE, 
                                                             SF=SFPredict,
-                                                            breakBool=True) # Not sure about this one
+                                                            breakBool=False) # Not sure about this one
 
         print("Solution       :", solnSF)
         return res, solnSF, divergeFlag, i
@@ -460,7 +457,14 @@ class Spring:
                     abs(self.E*(1-rn[i]/self.b[i])*rn[i]*self.dgds[i])
             else:
                 self.innerSurfaceStress[i] = self.E*self.dgds[i]*0.5*self.h[i]
-
+        # Do some fuck shit with arrays to be able to identify mesh locations
+        # where stress is too high without for loops
+        structuredStresses = np.vstack((self.indices, self.innerSurfaceStress, self.outerSurfaceStress))
+        self.violationIndices = np.array([stressPair for stressPair in structuredStresses.T if any(stressPair[1:]>self.designStress)])
+        # Store list of violation indices as integers and in the correct shape
+        if len(self.violationIndices)>1:
+            self.violationIndices = self.violationIndices.T[0].astype(int)
+        
         # create arrays normalized to the allowable stress (for plotting)
         self.normalizedInnerStress =self.innerSurfaceStress/self.designStress
         self.normalizedOuterStress =self.outerSurfaceStress/self.designStress
@@ -473,6 +477,8 @@ class Spring:
             else:
                 self.maxStresses[i] = self.normalizedOuterStress[i]
 
+        self.stressScore = len(self.violationIndices)/len(self.indices)
+        print(f"Stress Score: {self.stressScore*100}%")
         # record the maximum stress along whole beam
         self.maxStress = np.nanmax([self.innerSurfaceStress, self.outerSurfaceStress])
         if self.maxStress>self.designStress:
@@ -595,8 +601,26 @@ class Spring:
 
             spot = self.outerRadius*np.sin(45*deg2rad)
 
-            plt.text(spot+.25, -(spot+.25), f"deformation: {self.dBeta/deg2rad:.2f}")
+            degree_sign = u'\N{DEGREE SIGN}'
 
+            if len(self.violationIndices)>0:
+                # Create lsit of x-y locations along neutral surface where either
+                # outer surface is too stressed
+                violationLocs = np.array([self.deformedNeutralSurface[i] for i in self.violationIndices])
+                # Plot them
+                print(self.violationIndices)
+                plt.scatter(violationLocs[:,0],violationLocs[:,1],color='red')
+            
+            self.minThk = np.min(self.h)
+            minThkInd   = np.argmin(self.h)
+            plt.scatter(self.deformedNeutralSurface[minThkInd,0],
+                        self.deformedNeutralSurface[minThkInd,1],color='blue')
+
+            plt.text(spot+.25, -(spot+.125), f"deformation: {self.dBeta/deg2rad:.2f}{degree_sign}")
+            plt.text(spot+.25, -(spot+.375), f"root thk: {self.h[0]:.2f}")
+            plt.text(spot+.25, -(spot+.625), f"tip thk: {self.h[-1]:.2f}")
+            plt.text(spot+.25, -(spot+.875), f"min thk: {self.minThk:.2f}")
+            plt.ylim((-(spot+.875)*1.2, self.outerRadius*1.2))
             if showBool:
                 plt.show()
 
