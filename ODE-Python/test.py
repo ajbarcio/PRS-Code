@@ -14,7 +14,6 @@ from utils import fixed_rk4, numerical_fixed_mesh_diff
 
 import sympy as sp
 
-<<<<<<< HEAD
 a, b, r, t, I = sp.symbols('a,b,r,t,I')
 dI, dr        = sp.symbols('dI,dr')
 da, db        = sp.symbols('da,db')
@@ -46,9 +45,7 @@ print(sp.simplify(res[1])-sp.simplify(res[0]))
 # print(np.isfinite(x).any())
 # print(np.invert(np.isfinite(x)))
 # print(np.invert(np.isfinite(x)).any())
-=======
 df = pd.read_excel('Spring_Constraints.ods', engine='odf', index_col=0)
->>>>>>> c469998 (fixed some small errors)
 
 data =df.loc['Size 5', 'ID lim (in)']
 print(data)

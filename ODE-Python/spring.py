@@ -3,6 +3,7 @@ import scipy as scp
 import scipy.stats as stat
 import numpy.linalg as lin
 import matplotlib.pyplot as plt
+import os
 
 from materials import Maraging300Steel
 from utils import fixed_rk4, numerical_fixed_mesh_diff, colorline
@@ -606,17 +607,44 @@ class Spring:
         if hasattr(self, 'A'):
             A = np.hstack([self.A, np.zeros_like(self.A)])
             B = np.hstack([self.B, np.zeros_like(self.B)])
-            np.savetxt(".\\surfaces\\"+self.name+"_A.csv", A,
-                       fmt='%f',delimiter=',')
-            np.savetxt(".\\surfaces\\"+self.name+"_B.csv", B,
-                       fmt='%f',delimiter=',')
-            np.savetxt(".\\surfaces\\"+self.name+"_A.txt", A,
-                       fmt='%f',delimiter=',')
-            np.savetxt(".\\surfaces\\"+self.name+"_B.txt", B,
-                       fmt='%f',delimiter=',')
-            np.savetxt(".\\surfaces\\"+self.name+"_A.sldcrv", A,
-                       fmt='%f',delimiter=',')
-            np.savetxt(".\\surfaces\\"+self.name+"_B.sldcrv", B,
-                       fmt='%f',delimiter=',')
+            fileExtStrs  = [".csv", ".txt", ".sldcrv"]
+            surfaces     = ["_A", "_B"]
+            surfacesData = [A,B]
+            currDir = os.getcwd()
+            for ext in fileExtStrs:
+                i = 0
+                for surf in surfaces:
+                    path = os.path.join(
+                         os.path.relpath(currDir),"surfaces",self.name+surf+ext)
+                    np.savetxt(path, surfacesData[i],fmt='%f',delimiter=',')
+            #         i+=1
+            # if platform.system()=='Windows':
+            #     # Use the windows format for path names (ewwwwww)
+            #     np.savetxt(".\\surfaces\\"+self.name+"_A.csv", A,
+            #             fmt='%f',delimiter=',')
+            #     np.savetxt(".\\surfaces\\"+self.name+"_Bcsv", B,
+            #             fmt='%f',delimiter=',').
+            #     np.savetxt(".\\surfaces\\"+self.name+"_A.txt", A,
+            #             fmt='%f',delimiter=',')
+            #     np.savetxt(".\\surfaces\\"+self.name+"_B.txt", B,
+            #             fmt='%f',delimiter=',')
+            #     np.savetxt(".\\surfaces\\"+self.name+"_A.sldcrv", A,
+            #             fmt='%f',delimiter=',')
+            #     np.savetxt(".\\surfaces\\"+self.name+"_B.sldcrv", B,
+            #             fmt='%f',delimiter=',')
+            # elif platform.system()=='Linux':
+            #     # Use the linux format for path names (yay!)
+            #     np.savetxt("./surfaces/"+self.name+"_A.csv", A,
+            #             fmt='%f',delimiter=',')
+            #     np.savetxt("./surfaces/"+self.name+"_B.csv", B,
+            #             fmt='%f',delimiter=',')
+            #     np.savetxt("./surfaces/"+self.name+"_A.txt", A,
+            #             fmt='%f',delimiter=',')
+            #     np.savetxt("./surfaces/"+self.name+"_B.txt", B,
+            #             fmt='%f',delimiter=',')
+            #     np.savetxt("./surfaces/"+self.name+"_A.sldcrv", A,
+            #             fmt='%f',delimiter=',')
+            #     np.savetxt("./surfaces/"+self.name+"_B.sldcrv", B,
+            #             fmt='%f',delimiter=',')                
         else:
-            print("fuck you")
+            print("Too early to call; please generate inner and outer surfaces before export")
