@@ -642,5 +642,6 @@ class Spring:
                          os.path.relpath(currDir),"surfaces",self.name+surf+ext)
                     np.savetxt(path, surfacesData[i],fmt='%f',delimiter=',')
                     i+=1
+            print("wrote spring as: ", self.name)
         else:
             print("Too early to call; please generate inner and outer surfaces before export")
