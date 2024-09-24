@@ -38,6 +38,9 @@ list  = [0,3,5,4,8,6,1,2,3,2,7,9]
 array = np.array(list)
 elist = enumerate(list)
 earray = np.ndenumerate(array)
+
+for a, b in enumerate(list):
+    print(a,b)
 # print(earray[:])
 limit = 3
 filteredList  = [item for item in list if item < limit]

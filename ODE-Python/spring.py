@@ -4,6 +4,7 @@ import scipy.stats as stat
 import numpy.linalg as lin
 import matplotlib.pyplot as plt
 import os
+from scipy.optimize import curve_fit
 
 from materials import Maraging300Steel
 from utils import fixed_rk4, numerical_fixed_mesh_diff, colorline
@@ -627,6 +628,48 @@ class Spring:
         else:
             raise AttributeError("yo wait you didnt fucking twisht it yet")
 
+    def linearity_plot(self, torqueLevel, torqueResl):
+        
+        torques = np.linspace(-torqueLevel,torqueLevel,torqueResl)
+        torquesList = list(torques)
+        betas = np.empty(len(torques))
+        stiffnesses = np.empty(len(torques))
+
+        for step, torque in enumerate(torquesList):
+            self.deform_by_torque(torque,self.deform_ODE,SF=np.array([0,0,torque]))
+            betas[step] = self.dBeta/deg2rad
+            stiffnesses[step] = torque/betas[step]
+            print(step,end="\r")
+        print("\n")
+
+        def deflection_reg(x,a,b,c):
+            return a*x**2+b*x+c
+        def deflection_deriv(x,a,b,c):
+            return a*x+b
+        def stiffness_reg(x,a,b):
+            return a*x+b
+        
+        tpopt, tpcov = curve_fit(deflection_reg,betas,torques)
+        spopt, spcov = curve_fit(stiffness_reg,betas,stiffnesses)
+
+        print("deflection:", tpopt)
+        print("stiffness:", spopt)
+        # print("accuracy:",np.sqrt(np.diag(dpcov)))
+
+        plt.figure("torque vs deflection")
+        plt.plot(betas, torques)
+        remesh = np.linspace(betas[0],betas[-1],torqueResl*10)
+        plt.plot(remesh,deflection_reg(remesh,*tpopt),
+                 "--", label = "regression")
+        plt.legend()
+
+        plt.figure("stiffness vs deflection")
+        plt.plot(betas, stiffness_reg(betas, *spopt), label = "direct regression")
+        plt.plot(betas, deflection_deriv(betas,*tpopt), label = "differential of deflection")
+        plt.plot(betas, numerical_fixed_mesh_diff(torques,betas), label = "numerical differentiation")
+        plt.plot(betas, stiffnesses)
+        plt.legend()
+
     def export_surfaces(self):
         if hasattr(self, 'A'):
             A = np.hstack([self.A, np.zeros_like(self.A)])
@@ -645,3 +688,4 @@ class Spring:
             print("wrote spring as: ", self.name)
         else:
             print("Too early to call; please generate inner and outer surfaces before export")
+    
