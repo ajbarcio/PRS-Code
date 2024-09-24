@@ -99,7 +99,7 @@ class Spring:
 
         LHS = np.empty(3)
 
-        LHS[0] = (dgds0 + Fy/Mdim*(deforms[1]-self.x0) -  \
+        LHS[0] = (dgds0 + Fy/Mdim*(deforms[1]-self.x0) - 
                                                    Fx/Mdim*(deforms[2]-self.y0))
         LHS[1] = np.cos(np.arctan2(dyds,dxds)+deforms[0])
         LHS[2] = np.sin(np.arctan2(dyds,dxds)+deforms[0])
@@ -110,6 +110,87 @@ class Spring:
         # transfer back from s space to xi space
         LHS = LHS/dxids
         return LHS
+
+    def alt_geo_ODE(self, xi, q):
+
+
+        # treating path as known (nominal)
+        # treating IC   as known (preliminary)
+        rn = self.path.get_rn(xi)
+        Ic = self.crsc.get_Ic(xi)
+
+        dIcdxi = self.crsc.get_dIc(xi)
+        drndxi = self.path.get_drn(xi)
+        # # transform to arc length space
+        dxids = self.path.get_dxi_n(xi)
+        dIcds = dIcdxi*dxids
+        drnds = drndxi*dxids
+
+        # Version without transform
+
+        # dIcds = dIcdxi
+        # drnds = drndxi
+        def jac(x, rn): # IC doesn't happen to occur in the derivatives
+            return np.array([[1/(np.log((rn+x[1])/(rn-x[0])))-(x[0]+x[1])/(((np.log((rn+x[1])/(rn-x[0])))**2)*(rn-x[0])), \
+                            1/(np.log((rn+x[1])/(rn-x[0])))-(x[0]+x[1])/(((np.log((rn+x[1])/(rn-x[0])))**2)*(rn+x[1]))], \
+                            [-rn*self.t*x[0], rn*self.t*x[1]]])
+        # Adjust with feedback gain
+        # (Single step try first)
+        rnCheck = (q[0]+q[1])/(np.log((rn+q[1])/(rn-q[0])))
+        IcCheck = -self.t*rn*(q[0]+q[1])*(q[0]-q[1])/2
+        if not xi == 0:
+            err  = [rnCheck-rn, IcCheck-Ic]
+            self.rnErr.append(err[0])
+            self.IcErr.append(err[1])
+            self.thickXi.append(xi)
+            corr = lin.inv(jac(q, rn)).dot(np.array(err))
+            # print(err)
+            # print(corr)
+            # geoFeedbackGain set to a negative number
+            q += corr*self.geoFeedbackGain
+
+        # q = prime     states (la, lb)
+        # p = secondary states (Ic, rn)
+        # Q = assembled prime     quasi-state vectors
+        # P = assembled secondary quasi-state vectors
+
+        Q = np.array([[-q[0],            q[1]],
+                      [1/(rn-q[0])-1/rn, 1/(rn+q[1])-1/rn]])
+        P = np.array([[1/(rn*self.t),    -Ic/(rn**2*self.t)],
+                      [0,                1/(rn-q[0])-1/(rn+q[1])-(q[1]+q[0])/rn**2]])
+        p_dot = np.array([[dIcds],[drnds]])
+
+        # This is the diffeq step
+        try:
+            q_dot = lin.inv(Q).dot(P).dot(p_dot)
+        # There is a chance the matrix is singular, in that case:
+        except lin.LinAlgError:
+            # Catch exception
+            print("singular exception at", xi)
+            # Take pseudoinverse instead
+            q_dot = lin.pinv(Q).dot(P).dot(p_dot)
+            self.singularityCounter+=1
+        # If we have a bogus answer
+        if np.invert(np.isfinite(q_dot)).any(): # or lin.norm(q_dot) > 1:
+            # Just substitute that particular step with a numerical
+            # approximation of the derivative
+            print("bogus answer", xi, lin.norm(q_dot))
+            # xi_next      = xi+self.finiteDifferenceLength
+            # lalb_current = self.crsc.get_lalb(xi)
+            # lalb_next    = self.crsc.get_lalb(xi_next)
+            # q1_dot = numerical_fixed_mesh_diff(np.array([lalb_current[0], lalb_next[0]]), np.array([xi, xi_next]))
+            # q2_dot = numerical_fixed_mesh_diff(np.array([lalb_current[1], lalb_next[1]]), np.array([xi, xi_next]))
+            # q_dot = np.array([q1_dot[0], q2_dot[0]])
+            self.zeroSubCounter+=1
+            
+            # Just call it zero 5head
+            q_dot = np.array([0, 0])
+            # print("q_dot", q_dot)
+            # print("p_dot", p_dot)
+
+        # Back to xi space
+        q_dot = q_dot/dxids
+        return q_dot.flatten()
 
     def geo_ODE(self, xi, q):
 
