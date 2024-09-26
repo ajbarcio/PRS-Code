@@ -85,6 +85,49 @@ class Spring:
     class Error(Exception):
         pass
 
+    def full_ODE_oneSided(self, xi, states, *args):
+        # Repackage states
+        gamma, x, y, la, lb = states
+        # Repackage loads (IC)
+        M, Fx, Fy, dgds0 = args[0]
+        # Get distortion derivative
+        dxids = self.path.get_dxi_n(xi)
+
+        # get alpha (ensure transformation to s space)
+        dxds = self.path.get_dxdy_n(xi, 'x')*dxids
+        dyds = self.path.get_dxdy_n(xi, 'y')*dxids
+        alpha = np.arctan2(dyds,dxds)
+        # treating path as known (nominal)
+        rn = self.path.get_rn(xi)
+        # Prepare moment dimensionalizer
+        Ic = self.t*rn/2*(lb**2-la**2)
+        Mdim = self.E*Ic
+
+        T0 = (M/self.n + self.momentArmY*Fx - self.momentArmX*Fy)
+
+        # ASSUME a surface dominates
+        # provide appropriate derivatives
+        pinvla = (lb**2-la**2)*(rn-la)/(-2*la**2*(rn-la)-rn)
+        pinvlb = (lb**2-la**2)/(2*lb)
+
+        # Forcing function for geometry ODE
+        nfunc = (Fx*np.sin(alpha+gamma)-Fy*np.cos(alpha+gamma))/ \
+                (Fy*(x-self.x0)-Fx*(y-self.y0)+T0)
+
+        LHS = np.empty(len(states))
+
+        # Deformation ODE
+        LHS[0] = dgds0 + Fy/Mdim*(x-self.x0) - Fx/Mdim*(y-self.y0)
+        LHS[1] = np.cos(alpha+gamma)
+        LHS[2] = np.sin(alpha+gamma)
+        # Geometry ODE:
+        LHS[3] = pinvla*nfunc
+        LHS[4] = pinvlb*nfunc
+
+        # predictStressStatus=evalStressStatus
+        LHS = LHS/dxids
+        return LHS
+
     def full_ODE(self, xi, states, *args):
         # Repackage states
         gamma, x, y, la, lb = states
@@ -116,18 +159,21 @@ class Spring:
             if stressPredictInner>stressPredictOuter:
                 # a surface dominates
                 # provide appropriate derivatives
-                dlads = (lb**2-la**2)*(rn-la)/(-2*la**2*(rn-la)-rn)
-                dlbds = (lb**2-la**2)/(2*lb)
+                pinvla = (lb**2-la**2)*(rn-la)/(-2*la**2*(rn-la)-rn)
+                pinvlb = (lb**2-la**2)/(2*lb)
                 # flag predicted dominating surface
                 predictStressStatus = "a"
             elif stressPredictInner<stressPredictOuter:
                 # b surface dominates
+                # NOTE THESE DERIVATIVES ARE INNAPROPRIATE
+                pinvla = (lb**2-la**2)*(rn-la)/(-2*la**2*(rn-la)-rn)
+                pinvlb = (lb**2-la**2)/(2*lb)
                 predictStressStatus = "b"
                 pass
             elif stressPredictInner==stressPredictOuter:
                 # neither surface dominates
-                dlads = 0
-                dlbds = 0
+                pinvla = 0
+                pinvlb = 0
                 predictStressStatus = "skip"
             else:
                 print("States are wildly invalid")
@@ -140,10 +186,12 @@ class Spring:
             LHS[1] = np.cos(alpha+gamma)
             LHS[2] = np.sin(alpha+gamma)
             # Geometry ODE:
-            LHS[3] = dlads
-            LHS[4] = dlbds
+            LHS[3] = pinvla
+            LHS[4] = pinvlb
 
-            # Check for RESULTANT dominating stress case:
+            # predictStressStatus=evalStressStatus
+
+            #Check for RESULTANT dominating stress case:
             stressInner = abs(LHS[0]*self.E*rn*(la/(rn-la)))
             stressOuter = abs(LHS[0]*self.E*rn*(lb/(rn+lb)))
             if predictStressStatus != "skip":
@@ -153,7 +201,7 @@ class Spring:
                     evalStressStatus = "b"
             elif predictStressStatus=="skip":
                 predictStressStatus=evalStressStatus
-            
+            print(i)
             i+=1
         if i > 20:
             print("whole lot of flip flops at", xi, ", flip-flops:", i)
@@ -347,6 +395,32 @@ class Spring:
         # Back to xi space
         q_dot = q_dot/dxids
         return q_dot.flatten()
+
+    def optimization_integration(self, ODE, SF, lalb, torqueTarg, startingIndex):
+
+        # set up initial condition
+        dgds0 = (SF[2]/self.n + self.momentArmY*SF[0] - self.momentArmX*SF[1])/ \
+                      (self.E*self.crsc.get_Ic(0))
+        # perform forward integration
+        self.res  = fixed_rk4(ODE, np.array([0,self.x0,self.y0,lalb[0],lalb[1]]),
+                              self.ximesh[startingIndex:], (SF[2], SF[0], SF[1], dgds0))
+
+        # errors for BVP: same as normal
+        Rinitial = lin.norm([self.xL,self.yL])
+        Rfinal   = lin.norm([self.res[1,-1],self.res[2,-1]])
+        # Calculate dBeta using arccos
+        ptInitial = np.array([self.xL, self.yL])/ \
+                                          lin.norm(np.array([self.xL, self.yL]))
+        ptFinal   = np.array([self.res[1,-1],self.res[2,-1]])/ \
+                             lin.norm(np.array([self.res[1,-1],self.res[2,-1]]))
+
+        cosAngle = min(ptFinal.dot(ptInitial),1.0)
+        self.dBeta    = np.arccos(cosAngle)*np.sign(torqueTarg)
+        # Err = diff. in radius, diff between gamma(L) and beta(L), distance
+        #       from target torque (just to make matrix square)
+        err = np.array([Rinitial-Rfinal, (self.res[0,-1])-(self.dBeta),
+                                                              SF[2]-torqueTarg])
+        return err, self.res
 
     def forward_integration(self, ODE, SF, torqueTarg):
 
