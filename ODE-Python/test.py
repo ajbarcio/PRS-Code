@@ -19,21 +19,26 @@ import sympy as sp
 # data =df.loc['Size 5', 'ID lim (in)']
 # print(data)
 
-a,b,c,d,e = sp.symbols("a,b,c,d,e")
-x,y = sp.symbols("x,y")
-la, lb, rn, drn = sp.symbols("la,lb,rn,drn")
-aleph = 1/(rn+x)-1/rn
-beth  = 1/(rn-x)-1/(rn+y)-(x+y)/rn**2
+states = [0,1,2,3,4]
+gamma, x, y, la, lb = states
+print(gamma)
+print(la)
 
-# print(aleph.subs(x,la))
-# print(beth.subs([(x,y),(la,lb)]))
+# a,b,c,d,e = sp.symbols("a,b,c,d,e")
+# x,y = sp.symbols("x,y")
+# la, lb, rn, drn = sp.symbols("la,lb,rn,drn")
+# aleph = 1/(rn+x)-1/rn
+# beth  = 1/(rn-x)-1/(rn+y)-(x+y)/rn**2
 
-A = sp.Matrix(2,2,[-la,lb,aleph.subs(x,-la),aleph.subs(x,lb)])
-B = sp.Matrix(2,1,[0,drn*beth.subs([(x,la),(y,lb)])])
-X = A.inv()*B
-X = X.subs(lb,la)
-print(X[0])
-print(X[1])
+# # print(aleph.subs(x,la))
+# # print(beth.subs([(x,y),(la,lb)]))
+
+# A = sp.Matrix(2,2,[-la,lb,aleph.subs(x,-la),aleph.subs(x,lb)])
+# B = sp.Matrix(2,1,[0,drn*beth.subs([(x,la),(y,lb)])])
+# X = A.inv()*B
+# X = X.subs(lb,la)
+# print(X[0])
+# print(X[1])
 
 # list  = [0,3,5,4,8,6,1,2,3,2,7,9]
 # array = np.array(list)

@@ -85,6 +85,82 @@ class Spring:
     class Error(Exception):
         pass
 
+    def full_ODE(self, xi, states, *args):
+        # Repackage states
+        gamma, x, y, la, lb = states
+        # Repackage loads (IC)
+        Fx, Fy, dgds0 = args[0]
+        # Get distortion derivative
+        dxids = self.path.get_dxi_n(xi)
+
+        # get alpha (ensure transformation to s space)
+        dxds = self.path.get_dxdy_n(xi, 'x')*dxids
+        dyds = self.path.get_dxdy_n(xi, 'y')*dxids
+        alpha = np.arctan2(dyds,dxds)
+        # treating path as known (nominal)
+        rn = self.path.get_rn(xi)
+        # Prepare moment dimensionalizer
+        Ic = self.t*rn/2*(lb**2-la**2)
+        Mdim = self.E*Ic
+
+        i = 0
+        predictStressStatus = 1
+        evalStressStatus = 0
+        while predictStressStatus!=evalStressStatus:
+
+            # Check for EXPECTED dominating stress case:
+            
+            stressPredictInner = abs(la/(rn-la))
+            stressPredictOuter = abs(lb/(rn+lb))
+            
+            if stressPredictInner>stressPredictOuter:
+                # a surface dominates
+                # provide appropriate derivatives
+                dlads = (lb**2-la**2)*(rn-la)/(-2*la**2*(rn-la)-rn)
+                dlbds = (lb**2-la**2)/(2*lb)
+                # flag predicted dominating surface
+                predictStressStatus = "a"
+            elif stressPredictInner<stressPredictOuter:
+                # b surface dominates
+                predictStressStatus = "b"
+                pass
+            elif stressPredictInner==stressPredictOuter:
+                # neither surface dominates
+                dlads = 0
+                dlbds = 0
+                predictStressStatus = "skip"
+            else:
+                print("States are wildly invalid")
+                return 0
+
+            LHS = np.empty(len(states))
+
+            # Deformation ODE
+            LHS[0] = dgds0 + Fy/Mdim*(x-self.x0) - Fx/Mdim*(y-self.y0)
+            LHS[1] = np.cos(alpha+gamma)
+            LHS[2] = np.sin(alpha+gamma)
+            # Geometry ODE:
+            LHS[3] = dlads
+            LHS[4] = dlbds
+
+            # Check for RESULTANT dominating stress case:
+            stressInner = abs(LHS[0]*self.E*rn*(la/(rn-la)))
+            stressOuter = abs(LHS[0]*self.E*rn*(lb/(rn+lb)))
+            if predictStressStatus != "skip":
+                if stressInner>stressOuter:
+                    evalStressStatus = "a"
+                elif stressInner<stressOuter:
+                    evalStressStatus = "b"
+            elif predictStressStatus=="skip":
+                predictStressStatus=evalStressStatus
+            
+            i+=1
+        if i > 20:
+            print("whole lot of flip flops at", xi, ", flip-flops:", i)
+        # transfer back from s space to xi space
+        LHS = LHS/dxids
+        return LHS
+
     def deform_ODE(self, xi, deforms, *args):
         # Deal with args in a way that is hopefully better
 
