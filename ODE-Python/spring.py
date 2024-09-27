@@ -87,6 +87,7 @@ class Spring:
 
     def free_ODE(self, xi, states, *args):
             pass
+    
     def full_ODE(self, xi, states, *args):
 
         # Repackage states
@@ -99,7 +100,8 @@ class Spring:
         # get alpha (ensure transformation to s space)
         dxds = self.path.get_dxdy_n(xi, 'x')*dxids
         dyds = self.path.get_dxdy_n(xi, 'y')*dxids
-        alpha = np.arctan2(dyds,dxds)
+        
+        alpha = self.path.get_alpha(xi)
         # treating path as known (nominal)
         rn = self.path.get_rn(xi)
         # print(states, rn)
@@ -141,7 +143,6 @@ class Spring:
             print("a surface dominates")
         elif innerStressFactor<outerStressFactor:
             # b surface dominates
-            # NOTE THESE DERIVATIVES ARE INNAPROPRIATE
             pinvla = (lb**2-la**2)/(-2*la)
             pinvlb = lb*(lb**2-la**2)*(rn+lb)/(2*lb**2*(rn+lb)-rn)
             print("b surface dominates")

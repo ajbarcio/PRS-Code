@@ -16,6 +16,9 @@ deg2rad = np.pi/180
 ##############################################
 # Methods to include:
 #
+#   get_crscRef(crscRef):
+#           crscRef as a CRSCDEF object
+#   
 #   get_xy_n(coord, dim):
 #           coord as scalar or vector float
 #           dim as str 'x' or 'y'
@@ -34,10 +37,10 @@ deg2rad = np.pi/180
 #
 #   get_d2alpha(coord):
 #
-#   get_get_neutralSurface(resolution):
+#   get_neutralSurface(resolution):
 #           resolution as int
 #
-#   get_get_centroidalSurface(resolution):
+#   get_centroidalSurface(resolution):
 #
 # Attributes to include:
 #
@@ -58,19 +61,110 @@ deg2rad = np.pi/180
 #
 """
 
-class linear_rn:
-    def __init__(self, start=10, end=15,
-                 n=2,
-                 fullParamLength = 6,
-                 rootRadius = 1):
-        self.start = start
-        self.end = end
+class Linear_Rn_Spiral:
+    def __init__(self, start=1, end=2, xiRange = np.pi/2, n=2):
 
         self.n = n
-        self.fullParamLength = fullParamLength
 
-    def init(self, fullParamLength, start, end):
-        pass
+        self.start = start
+        self.end   = end
+        self.xiRange = xiRange
+
+        self.drndxi = (self.end-self.start)/(xiRange)
+
+        self.x0 = self.get_xy_n(0, 'x')
+        self.y0 = self.get_xy_n(0, 'y')
+        self.xL = self.get_xy_n(xiRange, 'x')
+        self.yL = self.get_xy_n(xiRange, 'y')
+        self.momentArmX = self.xL - self.x0
+        self.momentArmY = self.yL - self.y0
+
+        self.fullParamLength = xiRange
+        self.innerRadius  = start
+        self.outerRadius  = end
+
+    def measure_length(self):
+        self.measureResolution = 200
+        ximesh            = np.linspace(0,self.xiRange,self.measureResolution+1)
+
+        # calcualte derivative of x and y with respect to xi (internal parameter)
+        self.dxdxi = self.get_dxi_n(ximesh, 'x')
+        self.dydxi = self.get_dxi_n(ximesh, 'y')
+        integrand = np.sqrt(self.dxdxi**2+self.dydxi**2)
+        # create a mesh in s according by integrating along the parameter to find
+        # arc length
+        self.smesh = np.zeros(len(ximesh))
+        self.smesh[1:len(self.smesh)] = scipy.integrate.cumulative_trapezoid(
+                                         integrand, ximesh, ximesh[1]-ximesh[0])
+        # print(self.smesh)
+        assert(self.smesh[0]==0)
+        # return the overall length of the spring
+        return self.smesh[-1]
+
+    ########################
+    ## Standard Interface ##
+    ########################
+
+    def get_crscRef(self, crscRef):
+        self.crsc = crscRef
+
+    def get_xy_n(self, xi, dim):
+        if dim=='x':
+            return self.get_rn(xi)*np.cos(xi)
+        if dim=='y':
+            return self.get_rn(xi)*np.sin(xi)
+
+    def get_dxdy_n(self, xi, dim):
+        if dim=='x':
+            return -self.get_rn(xi)*np.sin(xi)
+        if dim=='y':
+            return self.get_rn(xi)*np.cos(xi)
+
+    def get_rn(self, xi):
+        return self.start+self.drndxi*xi
+
+    def get_drn(self, xi):
+        return self.drndxi
+    
+    def get_dxi_n(self, xi):
+        dxdxi = self.get_dxdy_n(xi, 'x')
+        dydxi = self.get_dxdy_n(xi, 'y')
+        dxids = 1/np.sqrt(dxdxi**2+dydxi**2)
+        return dxids
+    
+    def get_alpha(self, xi):
+        dydxi = self.get_dxdy_n(xi, 'y')
+        dxdxi = self.get_dxdy_n(xi, 'x')
+        return np.atan2(dydxi,dxdxi)
+
+    def get_dalpha(self, xi):
+        return 1
+    
+    def get_d2alpha(self, xi):
+        return 0
+    
+    def get_neutralSurface(self, resolution):
+        ximesh = np.linspace(0,self.xiRange,resolution+1)
+        self.undeformedNeutralSurface = np.hstack(
+                                  (np.atleast_2d(self.get_xy_n(ximesh, 'x')).T,
+                                   np.atleast_2d(self.get_xy_n(ximesh, 'y')).T))
+        return self.undeformedNeutralSurface
+    
+    def get_centroidalSurface(self):
+        ximesh = np.linspace(0,self.fullParamLength,resolution+1)
+        Ic = self.crsc.get_Ic(ximesh)
+        t = self.crsc.t
+        h = self.crsc.get_Thk(ximesh)
+        rn = self.get_rn(ximesh)
+        ecc = Ic/(t*h*rn)
+        alpha = self.get_alpha(ximesh)
+
+        neutralSurface = self.get_neutralSurface(resolution)
+        self.undeformedCentroidalSurface = neutralSurface + \
+                       np.hstack((np.atleast_2d(ecc*np.sin(alpha)).T,
+                                  np.atleast_2d(ecc*np.cos(alpha)).T))
+
+        return self.undeformedCentroidalSurface
 
 class Minimal_Polynomial_Definition:
     def __init__(self,
@@ -363,7 +457,7 @@ class Minimal_Polynomial_Definition:
 
     def get_neutralSurface(self, resolution):
 
-        ximesh = np.linspace(0,self.fullParamLength,resolution+1)
+        ximesh = np.linspace(0,self.xiRange,resolution+1)
         self.undeformedNeutralSurface = np.hstack(
                                   (np.atleast_2d(self.get_xy_n(ximesh, 'x')).T,
                                    np.atleast_2d(self.get_xy_n(ximesh, 'y')).T))
@@ -1374,7 +1468,6 @@ class Minimal_Polynomial_Definition4:
             return out[0]
         else:
             return out
-
 
     def get_alpha(self, coord):
         if hasattr(coord, "__len__"):
