@@ -53,13 +53,71 @@ deg2rad = np.pi/180
 #
 #   self.n
 #
-#   self.fullParamLen
+#   self.fullParamLength
 #
 #   self.innerRadius
 #        outerRadius
 #
 #
 """
+
+class Empty:
+    def __init__(self, n, x0, y0, xL, yL):
+        self.returnValue = 0
+
+        self.n = n
+
+        self.x0 = x0
+        self.y0 = y0
+        self.xL = xL
+        self.yL = yL
+        self.momentArmX = self.xL - self.x0
+        self.momentArmY = self.yL - self.y0
+
+        self.fullParamLength = 1
+        self.innerRadius     = lin.norm([x0,y0])
+        self.outerRadius     = lin.norm([xL,yL])
+
+    def measure_length(self):
+        return self.returnValue
+
+    ########################
+    ## Standard Interface ##
+    ########################
+
+    def get_crscRef(self, crscRef):
+        self.crsc = crscRef
+
+    def get_xy_n(self, xi, dim):
+        return self.returnValue
+
+    def get_dxdy_n(self, xi, dim):
+        return self.returnValue
+
+    def get_rn(self, xi):
+        return self.returnValue
+
+    def get_drn(self, xi):
+        return self.returnValue
+    
+    def get_dxi_n(self, xi):
+        # what am I going to do here
+        return 1
+    
+    def get_alpha(self, xi):
+        return self.returnValue
+
+    def get_dalpha(self, xi):
+        return self.returnValue
+    
+    def get_d2alpha(self, xi):
+        return self.returnValue
+    
+    def get_neutralSurface(self, resolution):
+        return self.returnValue
+    
+    def get_centroidalSurface(self):
+        return self.returnValue
 
 class Linear_Rn_Spiral:
     def __init__(self, start=1, end=2, xiRange = np.pi/2, n=2):
@@ -150,7 +208,7 @@ class Linear_Rn_Spiral:
                                    np.atleast_2d(self.get_xy_n(ximesh, 'y')).T))
         return self.undeformedNeutralSurface
     
-    def get_centroidalSurface(self):
+    def get_centroidalSurface(self, resolution):
         ximesh = np.linspace(0,self.fullParamLength,resolution+1)
         Ic = self.crsc.get_Ic(ximesh)
         t = self.crsc.t

@@ -20,7 +20,7 @@ testPath = PATHDEF.Minimal_Polynomial_Definition4(n=2, fullParamLength=4,
                                        betaAngles = np.array([0,87.5,175])*deg2rad,
                                        XYFactors = np.array([0.5]))
 testPath2 = PATHDEF.Linear_Rn_Spiral()
-testCrsc = CRSCDEF.Piecewise_Ic_Control(pathDef=testPath2,
+testCrsc = CRSCDEF.Piecewise_Ic_Control(pathDef=testPath,
                                         IcPts=np.array([0.0025,0.0025]),
                                         IcParamLens=np.array([]))
 # fuck this
@@ -29,25 +29,35 @@ testPath2.get_crscRef(testCrsc)
 
 testSpring = Spring(testCrsc, materials.Maraging300Steel, resolution=1000)
 
-testTorque = 3000
-startingIndex = 0
+testTorque = 500
+startingIndex = 1
 
-# res, solnSF, divergeFlag, i = testSpring.opt_deform_by_torque(testTorque, testSpring.full_ODE,SF=np.array([0,0,0]), plotBool=True)
+# res, solnSF, divergeFlag, i = testSpring.opt_deform_by_torque(testTorque, 
+#                                     testSpring.full_ODE,SF=np.array([0,0,testTorque]), 
+#                                     lalb0=np.array([0.04,0.05]),plotBool=True)
+# plt.figure("error progression")
+# plt.plot(testSpring.errs)
 # testSpring.detailed_deform_regression(testTorque, testSpring.full_ODE, 5, 1)
 
 # print(i, divergeFlag, solnSF)
 # print(testSpring.solnerrVec)
-plt.show()
+# for i in range(10):
+    # for j in range(10):
 err, res = testSpring.optimization_integration(testSpring.full_ODE,
-                                               np.array([30,50,testTorque]),
-                                               np.array([0.05,0.1]),testTorque,
-                                               startingIndex)
+                                        np.array([5,5,testTorque]),
+                                        np.array([0.04,0.05]),testTorque,
+                                        startingIndex)
 
 rn = testSpring.path.get_rn(testSpring.ximesh[startingIndex:])
 la = res[3,:]
 lb = res[4,:]
-stressInner = testSpring.E**res[0,:]*rn*(la/(rn-la))
-stressOuter = testSpring.E**res[0,:]*rn*(lb/(rn+lb))
+dgdxi = numerical_fixed_mesh_diff(res[0,:], testSpring.ximesh[startingIndex:])
+dxids = testSpring.path.get_dxi_n(testSpring.ximesh[startingIndex:])
+dgds = dgdxi*dxids
+stressInner = abs(testSpring.E*dgds*rn*(la/(rn-la)))
+stressOuter = abs(testSpring.E*dgds*rn*(lb/(rn+lb)))
+
+cmap = plt.get_cmap('rainbow')
 
 print(err)
 plt.figure("stress success")

@@ -30,6 +30,42 @@ deg2rad = np.pi/180
 #
 """
 
+class Empty():
+    def __init__(self,
+                 pathDef, t):
+
+        self.path = pathDef
+        self.fullParamLength = self.path.fullParamLength
+        self.returnValue = 0
+        self.t = t
+
+        self.returnValue=0
+
+#### STANDARD INTERFACE ####
+
+    def get_neturalDistances(self, resolution):
+        return self.returnValue
+
+    def get_outer_geometry_ODE(self, resolution, lalb):
+        return self.returnValue
+
+
+    def get_outer_geometry(self, resolution):
+
+        return self.returnValue
+
+    def get_Thk(self, coord, hasPrev=False):
+        return self.returnValue
+
+    def get_lalb(self, coord, hasPrev=False):
+        return self.returnValue
+
+    def get_Ic(self, coord):
+        return self.returnValue
+    
+    def get_dIc(self, coord):
+        return self.returnValue
+
 class Piecewise_Ic_Control():
     def __init__(self,
                  pathDef,

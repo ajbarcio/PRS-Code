@@ -52,8 +52,8 @@ class Spring:
         # finite difference information
         self.finiteDifferenceLength = self.path.fullParamLength/(2*self.resl)
         self.finiteDifferenceAngle  = .1*deg2rad
-        self.finiteDifferenceForce  = 0.1
-        self.finiteDifferenceTorque = 0.5
+        self.finiteDifferenceForce  = 0.1*10
+        self.finiteDifferenceTorque = 0.5*10
         self.finiteDifferenceIc     = 0.00001
         self.finiteDifferenceFactor = 0.001
 
@@ -86,8 +86,84 @@ class Spring:
         pass
 
     def free_ODE(self, xi, states, *args):
-            pass
-    
+
+        # print(xi)
+        # print(states)
+        # Defining decision function depending on what side is most stressed
+        def SCDF(la, lb, rn):
+            if rn==float('inf'):
+                innerStressFactor = la
+                outerStressFactor = innerStressFactor
+            else:
+                innerStressFactor = abs(la/(rn-la))
+                outerStressFactor = abs(lb/(rn+lb))
+
+            if innerStressFactor==outerStressFactor:
+                print("trivial case")
+                pinvla = 0
+                pinvlb = 0
+                pinvrn = 0
+            elif innerStressFactor>outerStressFactor:
+                # a surface dominates
+                # provide appropriate derivatives
+                pinvla = la*(lb**2-la**2)*(rn-la)/(-2*la**2*(rn-la)-rn)
+                pinvlb = (lb**2-la**2)/(2*lb)
+                pinvrn = 1/(rn-la)
+                # print("a surface dominates")
+                return pinvla, pinvlb, pinvrn
+            elif innerStressFactor<outerStressFactor:
+                # b surface dominates
+                pinvla = (lb**2-la**2)/(-2*la)
+                pinvlb = lb*(lb**2-la**2)*(rn+lb)/(2*lb**2*(rn+lb)-rn)
+                pinvrn = 1/(rn+lb)
+                # print("b surface dominates")
+                return pinvla, pinvlb, pinvrn
+            else:
+                print("States are wildly invalid")
+                print(states, rn)
+                raise Exception("Something has gone terribly wrong")
+
+        # States and loads
+        gamma, alpha, rn, x, y, la, lb = states 
+        Fx, Fy, dgds0 = args[0]
+        # distortion
+        dxids = self.path.get_dxi_n(xi)
+
+        #NOTHING IS KNOWN
+
+        # Prepare moment dimensionalizer
+        if not lb==la:
+            Ic = self.t*rn/2*(lb**2-la**2)
+        else:
+            Ic = 1/12*self.t*(2*la)**3
+        Mdim = self.E*Ic
+
+        # Prepare geometric forcing constraint function
+        T0 = dgds0*Mdim
+
+        GFCF = (Fx*np.sin(alpha+gamma) - Fy*np.cos(alpha+gamma))/ \
+                (Fy*(x-self.x0) - Fx*(y-self.y0) + T0)
+        
+        # Decide which ODE to use based on stress constraint decision function
+        pinva, pinvb, pinvr = SCDF(la, lb, rn)
+        LHS = np.empty(len(states))
+
+        # Unconstrained Deformation Functions
+        LHS[0] = dgds0 + Fy/Mdim*(x-self.x0) - Fx/Mdim*(y-self.y0)
+        LHS[1] = np.cos(alpha+gamma)
+        LHS[2] = np.sin(alpha+gamma)
+        # Constrained Geometry Functions
+        LHS[3] = pinva*GFCF
+        LHS[4] = pinvb*GFCF
+        LHS[5] = pinvr*GFCF
+        # Translation Function: rn into alpha
+        LHS[6] = 1/rn
+
+        LHS = LHS/dxids # transform to xi space
+        # print(LHS)
+
+        return LHS
+
     def full_ODE(self, xi, states, *args):
 
         # Repackage states
@@ -105,6 +181,7 @@ class Spring:
         # treating path as known (nominal)
         rn = self.path.get_rn(xi)
         # print(states, rn)
+
         # Prepare moment dimensionalizer
         if not lb==la:
             Ic = self.t*rn/2*(lb**2-la**2)
@@ -140,12 +217,12 @@ class Spring:
             # provide appropriate derivatives
             pinvla = la*(lb**2-la**2)*(rn-la)/(-2*la**2*(rn-la)-rn)
             pinvlb = (lb**2-la**2)/(2*lb)
-            print("a surface dominates")
+            # print("a surface dominates")
         elif innerStressFactor<outerStressFactor:
             # b surface dominates
             pinvla = (lb**2-la**2)/(-2*la)
             pinvlb = lb*(lb**2-la**2)*(rn+lb)/(2*lb**2*(rn+lb)-rn)
-            print("b surface dominates")
+            # print("b surface dominates")
         else:
             print("States are wildly invalid")
             print(states, rn)
@@ -362,6 +439,79 @@ class Spring:
     def optimization_integration_forPackage(self, ODE, SF, lalb0, torqueTarg, startingIndex):
         pass
 
+    def free_optimization(self, torqueTarg, 
+                                      SF  = np.array([0,0,0]),
+                                      RCs = np.array([0,0,float('inf'),1,0,.04,.05])):
+                                      # gamma, alpha, rn, x0, y0, la, lb)
+        # def jac(currAlpha0):
+            # fd = 45
+            # print("jacobian time")
+            # print("before:", RCs)
+            # RCs[1]=currAlpha0+fd*deg2rad
+            # print("after:", RCs)
+            # print("forward fd")
+            # resf = fixed_rk4(self.free_ODE, RCs, self.ximesh, (SF[0], SF[1], dgds0))
+            # xFinal = self.res[1,-1]
+            # yFinal = self.res[2,-1]
+            # xErr = xFinal-self.path.xL-xFinal
+            # yErr = xFinal-self.path.yL-yFinal
+            # errf = lin.norm([xErr, yErr])
+            # RCs[1]=currAlpha0-fd*deg2rad
+            # print("backward fd")
+            # resb = fixed_rk4(self.free_ODE, RCs, self.ximesh, (SF[0], SF[1], dgds0))
+            # xFinal = self.res[1,-1]
+            # yFinal = self.res[2,-1]
+            # xErr = xFinal-self.path.xL-xFinal
+            # yErr = xFinal-self.path.yL-yFinal
+            # errb = lin.norm([xErr, yErr])
+            # print(errb, errf)
+            # derrdalpha = (errb-errf)/(2*fd*deg2rad)
+            # print("err rate of change", derrdalpha)
+            # return derrdalpha
+
+        gamma0, alpha0, rn0, x0, y0, la0, lb0 = RCs
+        Ic0 = self.t*rn0/2*(lb0**2-la0**2)
+        dgds0 = (SF[2]/self.n + self.momentArmY*SF[0] - self.momentArmX*SF[1])/ \
+                      (self.E*Ic0)
+        err = 1
+        i=0
+        # try to aim for the right direction by turning alpha_0
+        # while err > 10e-6:
+            # print("iteration", i)
+            # forward integration
+        self.res = fixed_rk4(self.free_ODE, RCs, self.ximesh, (SF[0], SF[1], dgds0))
+
+            # xFinal = self.res[1,-1]
+            # yFinal = self.res[2,-1]
+            # xErr = xFinal-self.path.xL-xFinal
+            # yErr = xFinal-self.path.yL-yFinal
+            # err = lin.norm([xErr, yErr])
+            # print("error:", err)
+
+            # J = jac(alpha0)
+            # print(J)
+
+            # alpha0 = alpha0 - err/J
+            # RCs[1] = alpha0
+            # i+=1
+        # errors for BVP: same as normal
+        Rinitial = lin.norm([self.xL,self.yL])
+        Rfinal   = lin.norm([self.res[1,-1],self.res[2,-1]])
+        # Calculate dBeta using arccos
+        ptInitial = np.array([self.xL, self.yL])/ \
+                                          lin.norm(np.array([self.xL, self.yL]))
+        ptFinal   = np.array([self.res[1,-1],self.res[2,-1]])/ \
+                             lin.norm(np.array([self.res[1,-1],self.res[2,-1]]))
+
+        cosAngle = min(ptFinal.dot(ptInitial),1.0)
+        self.dBeta    = np.arccos(cosAngle)*np.sign(torqueTarg)
+        # Err = diff. in radius, diff between gamma(L) and beta(L), distance
+        #       from target torque (just to make matrix square)
+        err = np.array([Rinitial-Rfinal, (self.res[0,-1])-(self.dBeta),
+                                                              SF[2]-torqueTarg])
+        return err, self.res
+
+
     def optimization_integration(self, ODE, SF, lalb0, torqueTarg, startingIndex):
 
         # set up initial condition
@@ -499,8 +649,9 @@ class Spring:
         # 0th iteration
         i = 0
         divergeFlag = 0
-        # limit to 100 iterations to converge
-        while i <100:
+        # limit to 50 iterations to converge
+        self.errs=[]
+        while i < 100:
             errPrev = err
             # determine boundary condition compliance, estimate jacobian
             err, self.res = self.optimization_integration(ODE,SF,lalb0,torqueTarg,startingIndex)
@@ -530,6 +681,9 @@ class Spring:
                 plt.figure("solution progression")
                 plt.plot(self.res[1,:],self.res[2,:])
             i+=1
+            print(i, lin.norm(err))
+            self.errs.append(lin.norm(err))
+            print(lin.pinv(J))
         # store the final solution in the object
         self.solnSF = SF
         self.solnerr = lin.norm(err)
