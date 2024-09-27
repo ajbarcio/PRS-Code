@@ -85,50 +85,10 @@ class Spring:
     class Error(Exception):
         pass
 
-    def full_ODE_oneSided(self, xi, states, *args):
-        # Repackage states
-        gamma, x, y, la, lb = states
-        # Repackage loads (IC)
-        M, Fx, Fy, dgds0 = args[0]
-        # Get distortion derivative
-        dxids = self.path.get_dxi_n(xi)
-
-        # get alpha (ensure transformation to s space)
-        dxds = self.path.get_dxdy_n(xi, 'x')*dxids
-        dyds = self.path.get_dxdy_n(xi, 'y')*dxids
-        alpha = np.arctan2(dyds,dxds)
-        # treating path as known (nominal)
-        rn = self.path.get_rn(xi)
-        # Prepare moment dimensionalizer
-        Ic = self.t*rn/2*(lb**2-la**2)
-        Mdim = self.E*Ic
-
-        T0 = (M/self.n + self.momentArmY*Fx - self.momentArmX*Fy)
-
-        # ASSUME a surface dominates
-        # provide appropriate derivatives
-        pinvla = (lb**2-la**2)*(rn-la)/(-2*la**2*(rn-la)-rn)
-        pinvlb = (lb**2-la**2)/(2*lb)
-
-        # Forcing function for geometry ODE
-        nfunc = (Fx*np.sin(alpha+gamma)-Fy*np.cos(alpha+gamma))/ \
-                (Fy*(x-self.x0)-Fx*(y-self.y0)+T0)
-
-        LHS = np.empty(len(states))
-
-        # Deformation ODE
-        LHS[0] = dgds0 + Fy/Mdim*(x-self.x0) - Fx/Mdim*(y-self.y0)
-        LHS[1] = np.cos(alpha+gamma)
-        LHS[2] = np.sin(alpha+gamma)
-        # Geometry ODE:
-        LHS[3] = pinvla*nfunc
-        LHS[4] = pinvlb*nfunc
-
-        # predictStressStatus=evalStressStatus
-        LHS = LHS/dxids
-        return LHS
-
+    def free_ODE(self, xi, states, *args):
+            pass
     def full_ODE(self, xi, states, *args):
+
         # Repackage states
         gamma, x, y, la, lb = states
         # Repackage loads (IC)
@@ -142,71 +102,73 @@ class Spring:
         alpha = np.arctan2(dyds,dxds)
         # treating path as known (nominal)
         rn = self.path.get_rn(xi)
+        # print(states, rn)
         # Prepare moment dimensionalizer
-        Ic = self.t*rn/2*(lb**2-la**2)
+        if not lb==la:
+            Ic = self.t*rn/2*(lb**2-la**2)
+        else:
+            Ic = 1/12*self.t*(2*la)**3
         Mdim = self.E*Ic
 
-        i = 0
-        predictStressStatus = 1
-        evalStressStatus = 0
-        while predictStressStatus!=evalStressStatus:
+        T0 = dgds0*Mdim
 
-            # Check for EXPECTED dominating stress case:
-            
-            stressPredictInner = abs(la/(rn-la))
-            stressPredictOuter = abs(lb/(rn+lb))
-            
-            if stressPredictInner>stressPredictOuter:
-                # a surface dominates
-                # provide appropriate derivatives
-                pinvla = (lb**2-la**2)*(rn-la)/(-2*la**2*(rn-la)-rn)
-                pinvlb = (lb**2-la**2)/(2*lb)
-                # flag predicted dominating surface
-                predictStressStatus = "a"
-            elif stressPredictInner<stressPredictOuter:
-                # b surface dominates
-                # NOTE THESE DERIVATIVES ARE INNAPROPRIATE
-                pinvla = (lb**2-la**2)*(rn-la)/(-2*la**2*(rn-la)-rn)
-                pinvlb = (lb**2-la**2)/(2*lb)
-                predictStressStatus = "b"
-                pass
-            elif stressPredictInner==stressPredictOuter:
-                # neither surface dominates
-                pinvla = 0
-                pinvlb = 0
-                predictStressStatus = "skip"
-            else:
-                print("States are wildly invalid")
-                return 0
+        nfunc = (Fx*np.sin(alpha+gamma) - Fy*np.cos(alpha+gamma))/ \
+                (Fy*(x-self.x0) - Fx*(y-self.y0) + T0)
+        if np.isnan(nfunc):
+            # print("nfunc is nan")
+            nfunc = 0
+        # Check for EXPECTED dominating stress case:
+        # print(la,lb)
+        # print(xi)
+        # print(states, rn)
+        # print(la, lb)
+        if rn==float('inf'):
+            innerStressFactor = la
+            outerStressFactor = innerStressFactor
+        else:
+            innerStressFactor = abs(la/(rn-la))
+            outerStressFactor = abs(lb/(rn+lb))
 
-            LHS = np.empty(len(states))
+        if innerStressFactor==outerStressFactor:
+            print("trivial case")
+            pinvla = 0
+            pinvlb = 0
+        elif innerStressFactor>outerStressFactor:
+            # a surface dominates
+            # provide appropriate derivatives
+            pinvla = la*(lb**2-la**2)*(rn-la)/(-2*la**2*(rn-la)-rn)
+            pinvlb = (lb**2-la**2)/(2*lb)
+            print("a surface dominates")
+        elif innerStressFactor<outerStressFactor:
+            # b surface dominates
+            # NOTE THESE DERIVATIVES ARE INNAPROPRIATE
+            pinvla = (lb**2-la**2)/(-2*la)
+            pinvlb = lb*(lb**2-la**2)*(rn+lb)/(2*lb**2*(rn+lb)-rn)
+            print("b surface dominates")
+        else:
+            print("States are wildly invalid")
+            print(states, rn)
+            raise Exception("Something has gone terribly wrong")
 
-            # Deformation ODE
-            LHS[0] = dgds0 + Fy/Mdim*(x-self.x0) - Fx/Mdim*(y-self.y0)
-            LHS[1] = np.cos(alpha+gamma)
-            LHS[2] = np.sin(alpha+gamma)
-            # Geometry ODE:
-            LHS[3] = pinvla
-            LHS[4] = pinvlb
+        LHS = np.empty(len(states))
 
-            # predictStressStatus=evalStressStatus
+        # Deformation ODE
+        LHS[0] = dgds0 + Fy/Mdim*(x-self.x0) - Fx/Mdim*(y-self.y0)
+        LHS[1] = np.cos(alpha+gamma)
+        LHS[2] = np.sin(alpha+gamma)
+        # Geometry ODE:
+        LHS[3] = pinvla*nfunc
+        LHS[4] = pinvlb*nfunc
 
-            #Check for RESULTANT dominating stress case:
-            stressInner = abs(LHS[0]*self.E*rn*(la/(rn-la)))
-            stressOuter = abs(LHS[0]*self.E*rn*(lb/(rn+lb)))
-            if predictStressStatus != "skip":
-                if stressInner>stressOuter:
-                    evalStressStatus = "a"
-                elif stressInner<stressOuter:
-                    evalStressStatus = "b"
-            elif predictStressStatus=="skip":
-                predictStressStatus=evalStressStatus
-            print(i)
-            i+=1
-        if i > 20:
-            print("whole lot of flip flops at", xi, ", flip-flops:", i)
+        # print("pinv", pinvla, pinvlb)
+        # print("nfunc", nfunc)
+        # print("derivs", LHS[3], LHS[4])
+
         # transfer back from s space to xi space
         LHS = LHS/dxids
+        # print(dxids)
+        # print("states:", states)
+        # print("derivs:", LHS)
         return LHS
 
     def deform_ODE(self, xi, deforms, *args):
@@ -223,7 +185,7 @@ class Spring:
 
         LHS = np.empty(3)
 
-        LHS[0] = (dgds0 + Fy/Mdim*(deforms[1]-self.x0) - 
+        LHS[0] = (dgds0 + Fy/Mdim*(deforms[1]-self.x0) -
                                                    Fx/Mdim*(deforms[2]-self.y0))
         LHS[1] = np.cos(np.arctan2(dyds,dxds)+deforms[0])
         LHS[2] = np.sin(np.arctan2(dyds,dxds)+deforms[0])
@@ -306,7 +268,7 @@ class Spring:
             # q2_dot = numerical_fixed_mesh_diff(np.array([lalb_current[1], lalb_next[1]]), np.array([xi, xi_next]))
             # q_dot = np.array([q1_dot[0], q2_dot[0]])
             self.zeroSubCounter+=1
-            
+
             # Just call it zero 5head
             q_dot = np.array([0, 0])
             # print("q_dot", q_dot)
@@ -386,7 +348,7 @@ class Spring:
             # q2_dot = numerical_fixed_mesh_diff(np.array([lalb_current[1], lalb_next[1]]), np.array([xi, xi_next]))
             # q_dot = np.array([q1_dot[0], q2_dot[0]])
             self.zeroSubCounter+=1
-            
+
             # Just call it zero 5head
             q_dot = np.array([0, 0])
             # print("q_dot", q_dot)
@@ -396,15 +358,17 @@ class Spring:
         q_dot = q_dot/dxids
         return q_dot.flatten()
 
-    def optimization_integration(self, ODE, SF, lalb, torqueTarg, startingIndex):
+    def optimization_integration_forPackage(self, ODE, SF, lalb0, torqueTarg, startingIndex):
+        pass
+
+    def optimization_integration(self, ODE, SF, lalb0, torqueTarg, startingIndex):
 
         # set up initial condition
         dgds0 = (SF[2]/self.n + self.momentArmY*SF[0] - self.momentArmX*SF[1])/ \
                       (self.E*self.crsc.get_Ic(0))
         # perform forward integration
-        self.res  = fixed_rk4(ODE, np.array([0,self.x0,self.y0,lalb[0],lalb[1]]),
-                              self.ximesh[startingIndex:], (SF[2], SF[0], SF[1], dgds0))
-
+        self.res  = fixed_rk4(ODE, np.array([0,self.x0,self.y0,lalb0[0],lalb0[1]]),
+                              self.ximesh[startingIndex:], (SF[0], SF[1], dgds0))
         # errors for BVP: same as normal
         Rinitial = lin.norm([self.xL,self.yL])
         Rfinal   = lin.norm([self.res[1,-1],self.res[2,-1]])
@@ -457,6 +421,37 @@ class Spring:
                                                               SF[2]-torqueTarg])
         return err, self.res
 
+    def opt_BC_jacobian(self, ODE, SF, lalb0, torqueTarg, startingIndex, n=3):
+
+        """
+        THIS FUNCTION:
+            estimates the jacobian of the forward integration with respect to
+            the spatial force vector using a finite difference method
+        """
+
+        # Jacobian is square because square matrix good
+        Jac = np.empty((n,n))
+        # assign each row at a time
+        for i in range(n):
+            finiteDifference = np.zeros(len(SF))
+            # decide based on whether you're using a force or torque which
+            # difference to use
+            if i < 2:
+                finiteDifference[i] = self.finiteDifferenceForce
+            else:
+                finiteDifference[i] = self.finiteDifferenceTorque
+            # evaluate the ODE at a forwards and backwards step
+            errBack, resG = self.optimization_integration(ODE, SF-finiteDifference, lalb0, torqueTarg, startingIndex)
+            errForw, resG = self.optimization_integration(ODE, SF+finiteDifference, lalb0, torqueTarg, startingIndex)
+            # assign row of jacobian
+            Jac[0,i]     = (errForw[0]-errBack[0])/(2*lin.norm(finiteDifference))
+            Jac[1,i]     = (errForw[1]-errBack[1])/(2*lin.norm(finiteDifference))
+            Jac[2,i]     = (errForw[2]-errBack[2])/(2*lin.norm(finiteDifference))
+        # this line included in case you ever want to use a partial jacobian
+        Jac = Jac[0:n,0:n]
+
+        return Jac
+
     def BC_jacobian(self, ODE, SF, torqueTarg, n=3):
 
         """
@@ -487,6 +482,58 @@ class Spring:
         Jac = Jac[0:n,0:n]
 
         return Jac
+
+    def opt_deform_by_torque(self, torqueTarg, ODE,
+                         SF=np.array([0,0,0]),
+                         lalb0=np.array([0.1,0.099]), startingIndex=1,
+                         breakBool=False, plotBool=False):
+
+        """
+        THIS FUNCTION:
+            Solves for a deformation given a certain torque loading condition
+        """
+
+        # the err is a two vector, so make it arbitrarily high to enter loop
+        err = np.ones(2)*float('inf')
+        # 0th iteration
+        i = 0
+        divergeFlag = 0
+        # limit to 100 iterations to converge
+        while i <100:
+            errPrev = err
+            # determine boundary condition compliance, estimate jacobian
+            err, self.res = self.optimization_integration(ODE,SF,lalb0,torqueTarg,startingIndex)
+            J = self.opt_BC_jacobian(ODE,SF,lalb0,torqueTarg,startingIndex)
+            # print(J)
+            # freak out if it didnt work
+            if lin.norm(err)>lin.norm(errPrev):
+                # print information on what is happening
+                print("torque deform diverging", i)
+                print(J)
+                print(err, errPrev)
+                print(SF)
+                divergeFlag = 1
+                # If break bool is true, break if you diverge even once
+                # usually for debug purposes, I just let it run, and see if
+                # it can find its way back to a convergent solution
+                if breakBool:
+                    break
+            # no matter what, make a new guess
+            if lin.norm(err,2) > 10e-10:
+                # (according to a newton's method)
+                SF = SF-lin.pinv(J).dot(err)
+            # and if the error is small enough to converge, break out
+            else:
+                break
+            if plotBool:
+                plt.figure("solution progression")
+                plt.plot(self.res[1,:],self.res[2,:])
+            i+=1
+        # store the final solution in the object
+        self.solnSF = SF
+        self.solnerr = lin.norm(err)
+        self.solnerrVec = err
+        return self.res, self.solnSF, divergeFlag, i
 
     def deform_by_torque(self, torqueTarg, ODE,
                          SF=np.array([0,0,0]),
@@ -547,7 +594,13 @@ class Spring:
         for step in  steps:
             print("trying", step, "inlb")
             print("initial guess:", solnSF)
-            gres, solnSF, divergeFlag, i = self.deform_by_torque(step, 
+            if ODE != self.full_ODE:
+                gres, solnSF, divergeFlag, i = self.deform_by_torque(step,
+                                                                 ODE,
+                                                                 SF=solnSF,
+                                                                 breakBool=False)
+            else:
+                gres, solnSF, divergeFlag, i = self.opt_deform_by_torque(step,
                                                                  ODE,
                                                                  SF=solnSF,
                                                                  breakBool=False)
@@ -555,16 +608,16 @@ class Spring:
             Fys.append(solnSF[1])
             # mags.append(lin.norm(solnSF))
             # angles.append(np.arctan2(solnSF[1],solnSF[0]))
-            # recreateSolnSF = [lin.norm(solnSF)*np.cos(np.arctan2(solnSF[1],solnSF[0])), 
+            # recreateSolnSF = [lin.norm(solnSF)*np.cos(np.arctan2(solnSF[1],solnSF[0])),
             #                     lin.norm(solnSF)*np.sin(np.arctan2(solnSF[1],solnSF[0]))]
             # print("next initial guess should be (real answer):", solnSF)
             # print("next initial guess should be:", recreateSolnSF)
             # self.plot_deform(showBool=False)
             # print(self.solnerr)
-        
+
         FxRegress = stat.linregress(steps, Fxs)
         FyRegress = stat.linregress(steps[1:], Fys[1:])
-        
+
         # Plotting for debug
         plt.figure("Fx regression")
         plt.scatter(steps, Fxs)
@@ -579,13 +632,13 @@ class Spring:
         Fxs   = []
         Fys = []
         for step in  steps:
-            gres, solnSF, divergeFlag, i = self.deform_by_torque(step, 
+            gres, solnSF, divergeFlag, i = self.deform_by_torque(step,
                                                                  ODE,
                                                                  breakBool=defBreakBool)
             Fxs.append(solnSF[0])
             Fys.append(solnSF[1])
             # self.plot_deform(showBool=False)
-        
+
         FxRegress = stat.linregress(steps, Fxs)
         FyRegress = stat.linregress(steps, Fys)
 
@@ -604,12 +657,12 @@ class Spring:
         # plt.scatter(stepsPlot, angsPlot)
         # plt.plot(stepsPlot, FyRegress.slope*np.array(stepsPlot)+FyRegress.intercept)
 
-        SFPredict = np.array([FxPredict, 
+        SFPredict = np.array([FxPredict,
                               FyPredict,
                               torqueTarg])
         print("Predicted Guess:", SFPredict)
 
-        res, solnSF, divergeFlag, i = self.deform_by_torque(torqueTarg, ODE, 
+        res, solnSF, divergeFlag, i = self.deform_by_torque(torqueTarg, ODE,
                                                             SF=SFPredict,
                                                             breakBool=True) # Not sure about this one
 
@@ -622,13 +675,13 @@ class Spring:
         mags   = []
         angles = []
         for step in  steps:
-            gres, solnSF, divergeFlag, i = self.deform_by_torque(step, 
+            gres, solnSF, divergeFlag, i = self.deform_by_torque(step,
                                                                  ODE,
                                                                  breakBool=defBreakBool)
             mags.append(lin.norm(solnSF))
             angles.append(np.arctan2(solnSF[1],solnSF[0]))
             self.plot_deform(showBool=False)
-        
+
         magRegress = stat.linregress(steps, mags)
         angRegress = stat.linregress(steps, angles)
 
@@ -650,12 +703,12 @@ class Spring:
         plt.plot(stepsPlot, angRegress.slope*np.array(stepsPlot)+angRegress.intercept)
 
         print(magPredict, angPredict)
-        SFPredict = np.array([magPredict*np.cos(angPredict), 
+        SFPredict = np.array([magPredict*np.cos(angPredict),
                             magPredict*np.sin(angPredict),
                             torqueTarg])
         print(SFPredict)
 
-        res, solnSF, divergeFlag, i = self.deform_by_torque(torqueTarg, ODE, 
+        res, solnSF, divergeFlag, i = self.deform_by_torque(torqueTarg, ODE,
                                                             SF=SFPredict,
                                                             breakBool=True) # Not sure about this one
 
@@ -876,6 +929,6 @@ class Spring:
             #     np.savetxt("./surfaces/"+self.name+"_A.sldcrv", A,
             #             fmt='%f',delimiter=',')
             #     np.savetxt("./surfaces/"+self.name+"_B.sldcrv", B,
-            #             fmt='%f',delimiter=',')                
+            #             fmt='%f',delimiter=',')
         else:
             print("Too early to call; please generate inner and outer surfaces before export")

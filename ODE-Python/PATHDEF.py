@@ -58,6 +58,20 @@ deg2rad = np.pi/180
 #
 """
 
+class linear_rn:
+    def __init__(self, start=10, end=15,
+                 n=2,
+                 fullParamLength = 6,
+                 rootRadius = 1):
+        self.start = start
+        self.end = end
+
+        self.n = n
+        self.fullParamLength = fullParamLength
+
+    def init(self, fullParamLength, start, end):
+        pass
+
 class Minimal_Polynomial_Definition:
     def __init__(self,
                  # whole bunch of default values:

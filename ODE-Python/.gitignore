@@ -3,3 +3,5 @@
 *.rpy.*
 # ignore surfaces directory
 surfaces
+# ignore temp files
+~*
