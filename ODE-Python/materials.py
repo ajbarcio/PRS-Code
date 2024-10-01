@@ -14,5 +14,6 @@ class Material:
 # Initialize other materials here
 
 Maraging300Steel = Material(27500000, 309700)
+TestMaterial     = Material(27000000, 200000)
 
 # Aluminum         = Material()

@@ -57,6 +57,11 @@ class Spring:
         self.finiteDifferenceIc     = 0.00001
         self.finiteDifferenceFactor = 0.001
 
+        self.laData = []
+        self.lbData = []
+        self.xiData = []
+        self.stressData=[]
+
         # fuck your memory, extract commonly used attributes from passed
         # definition objects:
         try:
@@ -123,8 +128,11 @@ class Spring:
                 print(states, rn)
                 raise Exception("Something has gone terribly wrong")
 
+        # # States and loads
+        # gamma, alpha, rn, x, y, la, lb = states
         # States and loads
-        gamma, alpha, rn, x, y, la, lb = states 
+        gamma, x, y, la, lb, rn, alpha = states
+        # print(states) 
         Fx, Fy, dgds0 = args[0]
         # distortion
         dxids = self.path.get_dxi_n(xi)
@@ -172,10 +180,6 @@ class Spring:
         Fx, Fy, dgds0 = args[0]
         # Get distortion derivative
         dxids = self.path.get_dxi_n(xi)
-
-        # get alpha (ensure transformation to s space)
-        dxds = self.path.get_dxdy_n(xi, 'x')*dxids
-        dyds = self.path.get_dxdy_n(xi, 'y')*dxids
         
         alpha = self.path.get_alpha(xi)
         # treating path as known (nominal)
@@ -207,7 +211,9 @@ class Spring:
         else:
             innerStressFactor = abs(la/(rn-la))
             outerStressFactor = abs(lb/(rn+lb))
-
+            # innerStressFactor = 1
+            # outerStressFactor = 0
+        
         if innerStressFactor==outerStressFactor:
             print("trivial case")
             pinvla = 0
@@ -215,14 +221,14 @@ class Spring:
         elif innerStressFactor>outerStressFactor:
             # a surface dominates
             # provide appropriate derivatives
-            pinvla = la*(lb**2-la**2)*(rn-la)/(-2*la**2*(rn-la)-rn)
-            pinvlb = (lb**2-la**2)/(2*lb)
-            # print("a surface dominates")
+            pinvla = (la*(lb**2-la**2)*(rn-la)/(-2*la**2*(rn-la)-rn))
+            pinvlb = ((lb**2-la**2)/(2*lb))
+            print("a surface dominates")
         elif innerStressFactor<outerStressFactor:
             # b surface dominates
-            pinvla = (lb**2-la**2)/(-2*la)
-            pinvlb = lb*(lb**2-la**2)*(rn+lb)/(2*lb**2*(rn+lb)-rn)
-            # print("b surface dominates")
+            pinvla = ((lb**2-la**2)/(-2*la))
+            pinvlb = (lb*(lb**2-la**2)*(rn+lb)/(2*lb**2*(rn+lb)-rn))
+            print("b surface dominates")
         else:
             print("States are wildly invalid")
             print(states, rn)
@@ -241,12 +247,103 @@ class Spring:
         # print("pinv", pinvla, pinvlb)
         # print("nfunc", nfunc)
         # print("derivs", LHS[3], LHS[4])
-
         # transfer back from s space to xi space
         LHS = LHS/dxids
+
+        print(states)
+        print(LHS)
         # print(dxids)
         # print("states:", states)
         # print("derivs:", LHS)
+        return LHS
+
+    def constr_deform_ODE(self, xi, states, *args):
+        # Deal with args in a way that is hopefully better
+
+        print("xi -----------", xi)
+
+        M, Fx, Fy, dgds0, la, lb = args[0]
+        gamma, x, y = states
+
+        if len(self.laData) > 0:
+            la = self.laData[-1]
+            lb = self.lbData[-1]
+
+        print(la, lb)
+
+        rn = self.path.get_rn(xi)
+        # Prepare moment dimensionalizer
+        # Evaluate update law:
+
+        # print(self.xL, self.yL, Fx, Fy, M, self.n)
+        T0 = (M/self.n + self.momentArmY*Fx - self.momentArmX*Fy)
+        Fstar = Fy*(x-self.x0) - Fx*(y-self.y0) + T0
+        # print(Fstar)
+
+        if rn==float('inf'):
+            innerStressFactor = la
+            outerStressFactor = innerStressFactor
+            Ic = self.t*(2*la)**3/12
+        else:
+            innerStressFactor = abs(la/(rn-la))
+            outerStressFactor = abs(lb/(rn+lb))
+            dominantStressFactor = max(innerStressFactor, outerStressFactor)
+            # print(dominantStressFactor)
+            if innerStressFactor>outerStressFactor:
+                print("a")
+                lb = np.sqrt(2*Fstar*dominantStressFactor/(self.t*self.designStress)+la**2)
+            if outerStressFactor>innerStressFactor:
+                print("b")
+                la = np.sqrt(lb**2-2*Fstar*dominantStressFactor/(self.t*self.designStress))
+            Ic = self.t*rn/2*(lb**2-la**2)
+            # check to make sure the equation is satisfied
+            assert(np.isclose(lb**2-la**2,
+                   2*Fstar*dominantStressFactor/(self.t*self.designStress)))
+        # print(la,lb)
+
+        Mdim = self.E*Ic
+
+        dxids = self.path.get_dxi_n(xi)
+
+        dxds = self.path.get_dxdy_n(xi, 'x')*dxids
+        dyds = self.path.get_dxdy_n(xi, 'y')*dxids
+
+        LHS = np.empty(3)
+
+        LHS[0] = Fstar/Mdim
+        # (dgds0 + Fy/Mdim*(x-self.x0) - Fx/Mdim*(y-self.y0))
+        if 'dominantStressFactor' in locals():
+            try:
+                assert(np.isclose(LHS[0],self.designStress/(self.E*rn*dominantStressFactor)))
+            except:
+                print("deflection condition not met")
+                print(LHS[0], self.designStress/(self.E*rn*dominantStressFactor))
+            
+        LHS[1] = np.cos(np.arctan2(dyds,dxds)+gamma)
+        LHS[2] = np.sin(np.arctan2(dyds,dxds)+gamma)
+        if not la==lb:
+            stress = abs(LHS[0]*self.E*rn*np.max([outerStressFactor, innerStressFactor]))
+        else:
+            stress = abs(M*la/Ic)    
+        if stress > self.designStress*1.01:
+            print(stress)
+            print(xi)
+            print("~~~~~~~~~~~~~~~~~~~~~YOU ABSOLUTE MORON~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+        else:
+            self.stressData.append(stress)
+            self.xiData.append(xi)
+            self.laData.append(la)
+            self.lbData.append(lb)
+        # print(la, lb)
+        # print("resultant stress:", stress)
+        # print(states)
+
+        # check to make sure the math makes sense (I.C. satisfied)
+        if xi==0:
+            # print(LHS[0], dgds0)
+            assert(np.isclose(LHS[0],dgds0,rtol=1e-5))
+        # transfer back from s space to xi space
+        LHS = LHS/dxids
         return LHS
 
     def deform_ODE(self, xi, deforms, *args):
@@ -441,7 +538,7 @@ class Spring:
 
     def free_optimization(self, torqueTarg, 
                                       SF  = np.array([0,0,0]),
-                                      RCs = np.array([0,0,float('inf'),1,0,.04,.05])):
+                                      RCs = np.array([0,1,0,.04,.05,10,0])):
                                       # gamma, alpha, rn, x0, y0, la, lb)
         # def jac(currAlpha0):
             # fd = 45
@@ -469,7 +566,10 @@ class Spring:
             # print("err rate of change", derrdalpha)
             # return derrdalpha
 
-        gamma0, alpha0, rn0, x0, y0, la0, lb0 = RCs
+
+        # gamma, x, y, la, lb, rn, alpha = states
+
+        gamma0, x0, y0, la0, lb0, rn0, alpha0   = RCs
         Ic0 = self.t*rn0/2*(lb0**2-la0**2)
         dgds0 = (SF[2]/self.n + self.momentArmY*SF[0] - self.momentArmX*SF[1])/ \
                       (self.E*Ic0)
@@ -510,7 +610,6 @@ class Spring:
         err = np.array([Rinitial-Rfinal, (self.res[0,-1])-(self.dBeta),
                                                               SF[2]-torqueTarg])
         return err, self.res
-
 
     def optimization_integration(self, ODE, SF, lalb0, torqueTarg, startingIndex):
 
@@ -554,6 +653,49 @@ class Spring:
         # perform forward integration
         self.res  = fixed_rk4(ODE, np.array([0,self.x0,self.y0]), self.ximesh,
                                                           (SF[0], SF[1], dgds0))
+        # calcualte error values (difference in pre-and post-iteration radii)
+        #                        (difference in final gamma and final beta)
+        Rinitial = lin.norm([self.xL,self.yL])
+        Rfinal   = lin.norm([self.res[1,-1],self.res[2,-1]])
+        # Calculate dBeta using arccos
+        ptInitial = np.array([self.xL, self.yL])/ \
+                                          lin.norm(np.array([self.xL, self.yL]))
+        ptFinal   = np.array([self.res[1,-1],self.res[2,-1]])/ \
+                             lin.norm(np.array([self.res[1,-1],self.res[2,-1]]))
+
+        cosAngle = min(ptFinal.dot(ptInitial),1.0)
+        self.dBeta    = np.arccos(cosAngle)*np.sign(torqueTarg)
+        # Err = diff. in radius, diff between gamma(L) and beta(L), distance
+        #       from target torque (just to make matrix square)
+        err = np.array([Rinitial-Rfinal, abs(self.res[0,-1])-abs(self.dBeta),
+                                                              SF[2]-torqueTarg])
+        return err, self.res
+
+    def forward_integration_constr(self, ODE, SF, torqueTarg, *args):
+
+        """
+        THIS FUNCTION:
+            Evaluates a spring's deflection under a certain loading condition
+            by integrating forward across a specified ODE (there is currently
+            only one supported)
+        """
+
+        la0, lb0 = args
+        print(la0, lb0)
+
+        if la0==lb0:
+            Ic0 = self.t*(2*la0)**3/12
+        else:
+            Ic0 = self.t*self.path.get_rn(0)/2*(lb0**2-la0**2)
+
+        # set up initial condition
+        dgds0 = (SF[2]/self.n + self.momentArmY*SF[0] - self.momentArmX*SF[1])/ \
+                      (self.E*Ic0)
+
+        # perform forward integration
+        # arguments: ODE, Initial Conditions, Mesh, args
+        self.res  = fixed_rk4(ODE, np.array([0,self.x0,self.y0]), self.ximesh,
+                                        (SF[2], SF[0], SF[1], dgds0, la0, lb0))
         # calcualte error values (difference in pre-and post-iteration radii)
         #                        (difference in final gamma and final beta)
         Rinitial = lin.norm([self.xL,self.yL])

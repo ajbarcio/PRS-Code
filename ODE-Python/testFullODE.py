@@ -29,7 +29,7 @@ testPath2.get_crscRef(testCrsc)
 
 testSpring = Spring(testCrsc, materials.Maraging300Steel, resolution=1000)
 
-testTorque = 500
+testTorque = 3000
 startingIndex = 1
 
 # res, solnSF, divergeFlag, i = testSpring.opt_deform_by_torque(testTorque, 
@@ -44,7 +44,7 @@ startingIndex = 1
 # for i in range(10):
     # for j in range(10):
 err, res = testSpring.optimization_integration(testSpring.full_ODE,
-                                        np.array([5,5,testTorque]),
+                                        np.array([5,-15,500]),
                                         np.array([0.04,0.05]),testTorque,
                                         startingIndex)
 
@@ -61,17 +61,21 @@ cmap = plt.get_cmap('rainbow')
 
 print(err)
 plt.figure("stress success")
-plt.plot(testSpring.ximesh[startingIndex:],stressInner)
-plt.plot(testSpring.ximesh[startingIndex:],stressOuter)
+plt.plot(testSpring.ximesh[startingIndex:],stressInner, label = "stress la")
+plt.plot(testSpring.ximesh[startingIndex:],stressOuter, label = "stress lb")
+plt.legend()
 plt.figure("deformed neutral surface")
-plt.plot(testSpring.path.get_neutralSurface(200)[:,0],testSpring.path.get_neutralSurface(200)[:,1],)
-plt.plot(testSpring.res[1,:],res[2,:])
+plt.plot(testSpring.path.get_neutralSurface(200)[:,0],testSpring.path.get_neutralSurface(200)[:,1], label = "original surface")
+plt.plot(testSpring.res[1,:],res[2,:], label = "deformed surface")
+plt.legend()
 plt.figure("gamma vs arc length")
 plt.plot(testSpring.ximesh[startingIndex:],res[0,:])
 plt.figure("la, lb")
-plt.plot(testSpring.ximesh[startingIndex:],-la)
-plt.plot(testSpring.ximesh[startingIndex:],lb)
+plt.plot(testSpring.ximesh[startingIndex:],-la, label = "la")
+plt.plot(testSpring.ximesh[startingIndex:],lb, label = "lb")
+plt.legend()
 plt.figure("la, lb derivs")
-plt.plot(testSpring.ximesh[startingIndex:],numerical_fixed_mesh_diff(res[3,:],testSpring.ximesh[startingIndex:]))
-plt.plot(testSpring.ximesh[startingIndex:],numerical_fixed_mesh_diff(res[4,:],testSpring.ximesh[startingIndex:]))
+plt.plot(testSpring.ximesh[startingIndex:],numerical_fixed_mesh_diff(res[3,:],testSpring.ximesh[startingIndex:])*dxids, label = "dlads")
+plt.plot(testSpring.ximesh[startingIndex:],numerical_fixed_mesh_diff(res[4,:],testSpring.ximesh[startingIndex:])*dxids, label = "dlbds")
+plt.legend()
 plt.show()

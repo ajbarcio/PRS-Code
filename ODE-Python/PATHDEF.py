@@ -12,7 +12,7 @@ deg2rad = np.pi/180
 
 """
 ##############################################
-# STANDARD INTERFACE FOR ALL PATHDEF OBJECTS #
+# STANDARD INTERFACE FOR ALL PalongTHDEF OBJECTS #
 ##############################################
 # Methods to include:
 #
@@ -62,21 +62,21 @@ deg2rad = np.pi/180
 """
 
 class Empty:
-    def __init__(self, n, x0, y0, xL, yL):
+    def __init__(self, n, x0, y0, arcLen):
         self.returnValue = 0
 
         self.n = n
 
         self.x0 = x0
         self.y0 = y0
-        self.xL = xL
-        self.yL = yL
+        self.xL = x0
+        self.yL = y0+arcLen
         self.momentArmX = self.xL - self.x0
         self.momentArmY = self.yL - self.y0
 
-        self.fullParamLength = 1
+        self.fullParamLength = arcLen
         self.innerRadius     = lin.norm([x0,y0])
-        self.outerRadius     = lin.norm([xL,yL])
+        self.outerRadius     = lin.norm([self.xL,self.yL])
 
     def measure_length(self):
         return self.returnValue
