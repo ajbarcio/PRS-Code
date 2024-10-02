@@ -1,4 +1,5 @@
 import numpy as np
+import numpy.linalg as lin
 from scipy import optimize as opt
 
 import materials
@@ -26,29 +27,43 @@ testCrsc = CRSCDEF.Piecewise_Ic_Control(pathDef=testPath,
 testPath.get_crscRef(testCrsc)
 testPath2.get_crscRef(testCrsc)
 
-testSpring = Spring(testCrsc, materials.TestMaterial, resolution=100)
+testSpring = Spring(testCrsc, materials.TestMaterial, torqueCapacity=3000, resolution=200)
 
 testTorque = 3000
-testSF     = np.array([50,-150,testTorque])
-print(testSpring.designStress)
+testSF     = np.array([0,0,testTorque])
+# print(testSpring.designStress)
 h0 = np.sqrt(6*testTorque/(testSpring.t*testSpring.designStress))
-print(h0)
+# print(h0)
 la0 = h0/2
-print(la0)
+# print(la0)
 confirmStress = testTorque*la0/(testSpring.t*h0**3/12)
-print(confirmStress)
+# print(confirmStress)
 
 
-err, res = testSpring.forward_integration_constr(testSpring.constr_deform_ODE,
+err, res = testSpring.forward_integration(testSpring.constr_deform_ODE,
                                                 testSF,
-                                                testTorque,
-                                                la0,la0)
+                                                testTorque)
 
-print(testSpring.designStress)
+fmesh = np.linspace(-testTorque/2,testTorque/2,1000)
+errs = np.empty([len(fmesh),len(fmesh)])
+for indexa, i in enumerate(fmesh):
+    for indexb, j in enumerate(fmesh):
+        err, res = testSpring.forward_integration(testSpring.constr_deform_ODE,
+                                                  np.array([i,j,testTorque]),testTorque)
+        errs[indexa,indexb] = lin.norm(err)
+        print(indexa, indexb)
+I, J = np.meshgrid(fmesh, fmesh)
+plt.figure()
+plt.plot_surface(I,J,errs)
+
+# print(testSpring.designStress)
+
+# res, solnSF, divergeFlag, i = testSpring.deform_by_torque_predict_forces(testTorque, 
+#                                                         testSpring.constr_deform_ODE)
 
 plt.figure()
-plt.plot(testSpring.xiData, [x * -1 for x in testSpring.laData])
-plt.plot(testSpring.xiData, testSpring.lbData)
+plt.plot(testSpring.xiData, [x - testSpring.laData[0] for x in testSpring.laData])
+plt.plot(testSpring.xiData, [x - testSpring.lbData[0] for x in testSpring.lbData])
 
 plt.figure()
 plt.plot(testSpring.xiData, testSpring.stressData)

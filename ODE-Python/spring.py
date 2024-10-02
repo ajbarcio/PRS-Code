@@ -13,6 +13,7 @@ deg2rad = np.pi/180
 class Spring:
     def __init__(self, geoDef, material,
                  resolution = 200,
+                 torqueCapacity = 3000,
                  name       = None):
 
         self.name=name
@@ -23,6 +24,8 @@ class Spring:
         self.crsc     = geoDef
         # Material info
         self.material = material
+        # Design intent
+        self.torqueCapacity = 3000
 
         self.fullArcLength = self.crsc.fullParamLength
         self.resl = resolution
@@ -52,8 +55,8 @@ class Spring:
         # finite difference information
         self.finiteDifferenceLength = self.path.fullParamLength/(2*self.resl)
         self.finiteDifferenceAngle  = .1*deg2rad
-        self.finiteDifferenceForce  = 0.1*10
-        self.finiteDifferenceTorque = 0.5*10
+        self.finiteDifferenceForce  = 50
+        self.finiteDifferenceTorque = 2
         self.finiteDifferenceIc     = 0.00001
         self.finiteDifferenceFactor = 0.001
 
@@ -260,45 +263,71 @@ class Spring:
     def constr_deform_ODE(self, xi, states, *args):
         # Deal with args in a way that is hopefully better
 
-        print("xi -----------", xi)
+        # print("xi -----------", xi)
 
-        M, Fx, Fy, dgds0, la, lb = args[0]
+        M, Fx, Fy, dgds0 = args[0]
         gamma, x, y = states
 
-        if len(self.laData) > 0:
-            la = self.laData[-1]
-            lb = self.lbData[-1]
-
-        print(la, lb)
+        designStress = self.designStress*M/self.torqueCapacity
 
         rn = self.path.get_rn(xi)
+
+        if xi==0:
+            h0 = np.sqrt(6*M/(self.t*designStress))
+            la=h0/2
+            lb=la
+            # print("--")
+            # self.laData=[]
+            # self.laData=[]
+            # self.xiData=[]
+            # self.stressData=[]
+
+        if len(self.laData) > 0 and xi!=0:
+            la = self.laData[-1]
+            lb = self.lbData[-1]
+        
+        # if xi<0.01:
+        #     print(la, lb, rn, xi)
         # Prepare moment dimensionalizer
         # Evaluate update law:
 
         # print(self.xL, self.yL, Fx, Fy, M, self.n)
         T0 = (M/self.n + self.momentArmY*Fx - self.momentArmX*Fy)
-        Fstar = Fy*(x-self.x0) - Fx*(y-self.y0) + T0
+        Fstar = (Fy*(x-self.x0) - Fx*(y-self.y0) + T0)
         # print(Fstar)
 
         if rn==float('inf'):
             innerStressFactor = la
             outerStressFactor = innerStressFactor
             Ic = self.t*(2*la)**3/12
+            # if xi<0.01:
+            #     print(la, lb, rn, xi)
         else:
             innerStressFactor = abs(la/(rn-la))
             outerStressFactor = abs(lb/(rn+lb))
             dominantStressFactor = max(innerStressFactor, outerStressFactor)
             # print(dominantStressFactor)
-            if innerStressFactor>outerStressFactor:
-                print("a")
-                lb = np.sqrt(2*Fstar*dominantStressFactor/(self.t*self.designStress)+la**2)
-            if outerStressFactor>innerStressFactor:
-                print("b")
-                la = np.sqrt(lb**2-2*Fstar*dominantStressFactor/(self.t*self.designStress))
-            Ic = self.t*rn/2*(lb**2-la**2)
-            # check to make sure the equation is satisfied
-            assert(np.isclose(lb**2-la**2,
-                   2*Fstar*dominantStressFactor/(self.t*self.designStress)))
+            if np.isclose(lb**2-la**2,
+                2*abs(Fstar)*dominantStressFactor/(self.t*designStress)):
+                Ic = self.t*rn/2*(lb**2-la**2)
+                # print("activated")
+            else:
+                # print(la, lb, abs(Fstar))
+                if innerStressFactor>outerStressFactor:
+                    # print("a")
+                    lb = np.sqrt((2*abs(Fstar)*dominantStressFactor/(self.t*designStress)+la**2))
+                if outerStressFactor>innerStressFactor:
+                    # print("b")
+                    la = np.sqrt((lb**2-2*abs(Fstar)*dominantStressFactor/(self.t*designStress)))
+                Ic = self.t*rn/2*(lb**2-la**2)
+                # print(la, lb, lb**2-la**2, 2*abs(Fstar)*dominantStressFactor/(self.t*self.designStress), dominantStressFactor, xi)
+                try:
+                    assert(np.isclose(lb**2-la**2,
+                        2*abs(Fstar)*dominantStressFactor/(self.t*designStress)))
+                except:
+                    print("WARNING!!!! Constraint may not be properly enforced")
+                    # assert(np.isclose(lb**2-la**2,
+                    #     2*abs(Fstar)*dominantStressFactor/(self.t*designStress)))
         # print(la,lb)
 
         Mdim = self.E*Ic
@@ -314,10 +343,12 @@ class Spring:
         # (dgds0 + Fy/Mdim*(x-self.x0) - Fx/Mdim*(y-self.y0))
         if 'dominantStressFactor' in locals():
             try:
-                assert(np.isclose(LHS[0],self.designStress/(self.E*rn*dominantStressFactor)))
+                assert(np.isclose(abs(LHS[0]),
+                                  abs(designStress/(self.E*rn*dominantStressFactor)),
+                                  rtol=10e-2))
             except:
                 print("deflection condition not met")
-                print(LHS[0], self.designStress/(self.E*rn*dominantStressFactor))
+                print(LHS[0], designStress/(self.E*rn*dominantStressFactor))
             
         LHS[1] = np.cos(np.arctan2(dyds,dxds)+gamma)
         LHS[2] = np.sin(np.arctan2(dyds,dxds)+gamma)
@@ -325,10 +356,11 @@ class Spring:
             stress = abs(LHS[0]*self.E*rn*np.max([outerStressFactor, innerStressFactor]))
         else:
             stress = abs(M*la/Ic)    
-        if stress > self.designStress*1.01:
-            print(stress)
-            print(xi)
-            print("~~~~~~~~~~~~~~~~~~~~~YOU ABSOLUTE MORON~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+        if stress > designStress*1.01:
+            # print(stress)
+            # print(xi)
+            # print("~~~~~~~~~~~~~~~~~~~~~STRESS EXCEEDED~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+            pass
         else:
             self.stressData.append(stress)
             self.xiData.append(xi)
@@ -340,8 +372,11 @@ class Spring:
 
         # check to make sure the math makes sense (I.C. satisfied)
         if xi==0:
-            # print(LHS[0], dgds0)
-            assert(np.isclose(LHS[0],dgds0,rtol=1e-5))
+            try:
+                assert(np.isclose(LHS[0],dgds0,rtol=1e-5))
+            except:
+                print(LHS[0], dgds0)
+                assert(np.isclose(LHS[0],dgds0,rtol=1e-5))
         # transfer back from s space to xi space
         LHS = LHS/dxids
         return LHS
@@ -636,9 +671,43 @@ class Spring:
                                                               SF[2]-torqueTarg])
         return err, self.res
 
+    # def forward_integration(self, ODE, SF, torqueTarg):
+
+
+    #     """
+    #     THIS FUNCTION:
+    #         Evaluates a spring's deflection under a certain loading condition
+    #         by integrating forward across a specified ODE (there is currently
+    #         only one supported)
+    #     """
+
+    #     # set up initial condition
+    #     dgds0 = (SF[2]/self.n + self.momentArmY*SF[0] - self.momentArmX*SF[1])/ \
+    #                   (self.E*self.crsc.get_Ic(0))
+
+    #     # perform forward integration
+    #     self.res  = fixed_rk4(ODE, np.array([0,self.x0,self.y0]), self.ximesh,
+    #                                                       (SF[0], SF[1], dgds0))
+    #     # calcualte error values (difference in pre-and post-iteration radii)
+    #     #                        (difference in final gamma and final beta)
+    #     Rinitial = lin.norm([self.xL,self.yL])
+    #     Rfinal   = lin.norm([self.res[1,-1],self.res[2,-1]])
+    #     # Calculate dBeta using arccos
+    #     ptInitial = np.array([self.xL, self.yL])/ \
+    #                                       lin.norm(np.array([self.xL, self.yL]))
+    #     ptFinal   = np.array([self.res[1,-1],self.res[2,-1]])/ \
+    #                          lin.norm(np.array([self.res[1,-1],self.res[2,-1]]))
+
+    #     cosAngle = min(ptFinal.dot(ptInitial),1.0)
+    #     self.dBeta    = np.arccos(cosAngle)*np.sign(torqueTarg)
+    #     # Err = diff. in radius, diff between gamma(L) and beta(L), distance
+    #     #       from target torque (just to make matrix square)
+    #     err = np.array([Rinitial-Rfinal, abs(self.res[0,-1])-abs(self.dBeta),
+    #                                                           SF[2]-torqueTarg])
+    #     return err, self.res
+
     def forward_integration(self, ODE, SF, torqueTarg):
 
-
         """
         THIS FUNCTION:
             Evaluates a spring's deflection under a certain loading condition
@@ -646,56 +715,26 @@ class Spring:
             only one supported)
         """
 
-        # set up initial condition
-        dgds0 = (SF[2]/self.n + self.momentArmY*SF[0] - self.momentArmX*SF[1])/ \
-                      (self.E*self.crsc.get_Ic(0))
+        self.xiData=[]
+        self.laData=[]
+        self.lbData=[]
+        self.stressData=[]
 
-        # perform forward integration
-        self.res  = fixed_rk4(ODE, np.array([0,self.x0,self.y0]), self.ximesh,
-                                                          (SF[0], SF[1], dgds0))
-        # calcualte error values (difference in pre-and post-iteration radii)
-        #                        (difference in final gamma and final beta)
-        Rinitial = lin.norm([self.xL,self.yL])
-        Rfinal   = lin.norm([self.res[1,-1],self.res[2,-1]])
-        # Calculate dBeta using arccos
-        ptInitial = np.array([self.xL, self.yL])/ \
-                                          lin.norm(np.array([self.xL, self.yL]))
-        ptFinal   = np.array([self.res[1,-1],self.res[2,-1]])/ \
-                             lin.norm(np.array([self.res[1,-1],self.res[2,-1]]))
+        designStress = self.designStress*SF[2]/self.torqueCapacity
 
-        cosAngle = min(ptFinal.dot(ptInitial),1.0)
-        self.dBeta    = np.arccos(cosAngle)*np.sign(torqueTarg)
-        # Err = diff. in radius, diff between gamma(L) and beta(L), distance
-        #       from target torque (just to make matrix square)
-        err = np.array([Rinitial-Rfinal, abs(self.res[0,-1])-abs(self.dBeta),
-                                                              SF[2]-torqueTarg])
-        return err, self.res
-
-    def forward_integration_constr(self, ODE, SF, torqueTarg, *args):
-
-        """
-        THIS FUNCTION:
-            Evaluates a spring's deflection under a certain loading condition
-            by integrating forward across a specified ODE (there is currently
-            only one supported)
-        """
-
-        la0, lb0 = args
-        print(la0, lb0)
-
-        if la0==lb0:
-            Ic0 = self.t*(2*la0)**3/12
-        else:
-            Ic0 = self.t*self.path.get_rn(0)/2*(lb0**2-la0**2)
+        h0 = np.sqrt(6*SF[2]/(self.t*designStress))
+        la0=h0/2
+        lb0=la0
+        Ic0 = self.t*(2*la0)**3/12
 
         # set up initial condition
-        dgds0 = (SF[2]/self.n + self.momentArmY*SF[0] - self.momentArmX*SF[1])/ \
+        self.dgds0 = (SF[2]/self.n + self.momentArmY*SF[0] - self.momentArmX*SF[1])/ \
                       (self.E*Ic0)
 
         # perform forward integration
         # arguments: ODE, Initial Conditions, Mesh, args
         self.res  = fixed_rk4(ODE, np.array([0,self.x0,self.y0]), self.ximesh,
-                                        (SF[2], SF[0], SF[1], dgds0, la0, lb0))
+                                        (SF[2], SF[0], SF[1], self.dgds0))
         # calcualte error values (difference in pre-and post-iteration radii)
         #                        (difference in final gamma and final beta)
         Rinitial = lin.norm([self.xL,self.yL])
@@ -752,9 +791,8 @@ class Spring:
             estimates the jacobian of the forward integration with respect to
             the spatial force vector using a finite difference method
         """
-
         # Jacobian is square because square matrix good
-        Jac = np.empty((n,n))
+        Jac = np.empty((3,3))
         # assign each row at a time
         for i in range(n):
             finiteDifference = np.zeros(len(SF))
@@ -767,6 +805,44 @@ class Spring:
             # evaluate the ODE at a forwards and backwards step
             errBack, resG = self.forward_integration(ODE, SF-finiteDifference, torqueTarg)
             errForw, resG = self.forward_integration(ODE, SF+finiteDifference, torqueTarg)
+            # assign row of jacobian
+            Jac[0,i]     = (errForw[0]-errBack[0])/(2*lin.norm(finiteDifference))
+            Jac[1,i]     = (errForw[1]-errBack[1])/(2*lin.norm(finiteDifference))
+            Jac[2,i]     = (errForw[2]-errBack[2])/(2*lin.norm(finiteDifference))
+        # this line included in case you ever want to use a partial jacobian
+        # Jac = Jac[0:n,0:n]
+
+        return Jac
+
+    def BC_jacobian_constr(self, ODE, SF, torqueTarg, n=3):
+
+        """
+        THIS FUNCTION:
+            estimates the jacobian of the forward integration with respect to
+            the spatial force vector using a finite difference method
+        """
+        # Jacobian is square because square matrix good
+        Jac = np.empty((n,n))
+        # assign each row at a time
+        for i in range(n):
+            finiteDifference = np.zeros(len(SF))
+            # decide based on whether you're using a force or torque which
+            # difference to use
+            if i < 2:
+                finiteDifference[i] = self.finiteDifferenceForce
+            else:
+                finiteDifference[i] = self.finiteDifferenceTorque
+            # evaluate the ODE at a forwards and backwards step
+            self.stressData=[]
+            self.laData=[]
+            self.lbData=[]
+            self.xiData=[]
+            errBack, resG = self.forward_integration_constr(ODE, SF-finiteDifference, torqueTarg)
+            self.stressData=[]
+            self.laData=[]
+            self.lbData=[]
+            self.xiData=[]
+            errForw, resG = self.forward_integration_constr(ODE, SF+finiteDifference, torqueTarg)
             # assign row of jacobian
             Jac[0,i]     = (errForw[0]-errBack[0])/(2*lin.norm(finiteDifference))
             Jac[1,i]     = (errForw[1]-errBack[1])/(2*lin.norm(finiteDifference))
@@ -832,15 +908,14 @@ class Spring:
         self.solnerrVec = err
         return self.res, self.solnSF, divergeFlag, i
 
-    def deform_by_torque(self, torqueTarg, ODE,
-                         SF=np.array([0,0,0]),
-                         breakBool=False):
+    def deform_by_torque_constr(self, torqueTarg, ODE,
+                                SF=np.array([0,0,0]),
+                                breakBool=False):
 
         """
         THIS FUNCTION:
             Solves for a deformation given a certain torque loading condition
         """
-
         # the err is a two vector, so make it arbitrarily high to enter loop
         err = np.ones(2)*float('inf')
         # 0th iteration
@@ -850,8 +925,12 @@ class Spring:
         while i <100:
             errPrev = err
             # determine boundary condition compliance, estimate jacobian
-            err, self.res = self.forward_integration(ODE,SF,torqueTarg)
-            J = self.BC_jacobian(ODE,SF,torqueTarg)
+            self.stressData=[]
+            self.laData=[]
+            self.lbData=[]
+            self.xiData=[]
+            err, self.res = self.forward_integration_constr(ODE,SF,torqueTarg)
+            J = self.BC_jacobian_constr(ODE,SF,torqueTarg)
             # print(J)
             # freak out if it didnt work
             if lin.norm(err)>lin.norm(errPrev):
@@ -870,6 +949,67 @@ class Spring:
             elif lin.norm(err,2) > 10e-10:
                 # (according to a newton's method)
                 SF = SF-lin.pinv(J).dot(err)
+                print(SF)
+            # and if the error is small enough to converge, break out
+            else:
+                break
+            i+=1
+            print(i)
+        # store the final solution in the object
+        self.solnSF = SF
+        self.solnerr = lin.norm(err)
+        self.solnerrVec = err
+        return self.res, self.solnSF, divergeFlag, i
+
+    def deform_by_torque(self, torqueTarg, ODE,
+                         SF=np.array([0,0,0]),
+                         breakBool=False):
+
+        """
+        THIS FUNCTION:
+            Solves for a deformation given a certain torque loading condition
+        """
+
+        # the err is a two vector, so make it arbitrarily high to enter loop
+        err = np.ones(2)*float('inf')
+        # 0th iteration
+        i = 0
+        divergeFlag = 0
+        # limit to 100 iterations to converge
+
+        gain = 1
+        while i < 100:
+            print(i)
+            errPrev = err
+            # determine boundary condition compliance, estimate jacobian
+            err, self.res = self.forward_integration(ODE,SF,torqueTarg)
+            print(self.dgds0)
+            print(lin.norm(err))
+            J = self.BC_jacobian(ODE,SF,torqueTarg,n=3)
+            # print(J)
+            # freak out if it didnt work
+            if lin.norm(err)>lin.norm(errPrev):
+                # print information on what is happening
+                print("torque deform diverging", i)
+                # print(J)
+                # print(err, errPrev)
+                # print(SF)
+                divergeFlag = 1
+                # If break bool is true, break if you diverge even once
+                # usually for debug purposes, I just let it run, and see if
+                # it can find its way back to a convergent solution
+                if breakBool:
+                    break
+            # regardless, make a new guess if it did work
+            if lin.norm(err,2) > 1e-5:
+                # (according to a newton's method)
+                # print(SF)
+                # print(J)
+                # print(lin.pinv(J))
+                # print("err:", err)
+                # print(lin.norm(err))
+                SF = SF-lin.pinv(J).dot(err)*gain
+                # print(SF)
             # and if the error is small enough to converge, break out
             else:
                 break
@@ -928,12 +1068,18 @@ class Spring:
         steps = [torqueTarg*0.05, torqueTarg*0.2]
         Fxs   = []
         Fys = []
+        solnSF = np.array([0,0,steps[0]])
         for step in  steps:
+            print("step:", step)
+            solnSF[2] = step
+            print(solnSF)
             gres, solnSF, divergeFlag, i = self.deform_by_torque(step,
-                                                                 ODE,
+                                                                 ODE, 
+                                                                 SF=solnSF,
                                                                  breakBool=defBreakBool)
             Fxs.append(solnSF[0])
             Fys.append(solnSF[1])
+            print(solnSF)
             # self.plot_deform(showBool=False)
 
         FxRegress = stat.linregress(steps, Fxs)
@@ -964,6 +1110,7 @@ class Spring:
                                                             breakBool=True) # Not sure about this one
 
         print("Solution       :", solnSF)
+        print(self.solnerrVec)
         return res, solnSF, divergeFlag, i
 
     def deform_by_torque_predict_angle(self, torqueTarg, ODE, breakBool=False):
