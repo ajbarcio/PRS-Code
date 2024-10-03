@@ -27,10 +27,10 @@ testCrsc = CRSCDEF.Piecewise_Ic_Control(pathDef=testPath,
 testPath.get_crscRef(testCrsc)
 testPath2.get_crscRef(testCrsc)
 
-testSpring = Spring(testCrsc, materials.Maraging300Steel, resolution=1000)
+testSpring = Spring(testCrsc, materials.Maraging300Steel, resolution=100)
 
 testTorque = 3000
-startingIndex = 1
+startingIndex = 0
 
 # res, solnSF, divergeFlag, i = testSpring.opt_deform_by_torque(testTorque, 
 #                                     testSpring.full_ODE,SF=np.array([0,0,testTorque]), 
@@ -44,13 +44,16 @@ startingIndex = 1
 # for i in range(10):
     # for j in range(10):
 err, res = testSpring.optimization_integration(testSpring.full_ODE,
-                                        np.array([5,-15,500]),
-                                        np.array([0.04,0.05]),testTorque,
+                                        np.array([5,-15,3000]),
+                                        np.array([0.2,0.2]),testTorque,
                                         startingIndex)
 
 rn = testSpring.path.get_rn(testSpring.ximesh[startingIndex:])
 la = res[3,:]
 lb = res[4,:]
+
+Ic = testSpring.t*rn/2*(lb**2-la**2)
+
 dgdxi = numerical_fixed_mesh_diff(res[0,:], testSpring.ximesh[startingIndex:])
 dxids = testSpring.path.get_dxi_n(testSpring.ximesh[startingIndex:])
 dgds = dgdxi*dxids
@@ -64,6 +67,8 @@ plt.figure("stress success")
 plt.plot(testSpring.ximesh[startingIndex:],stressInner, label = "stress la")
 plt.plot(testSpring.ximesh[startingIndex:],stressOuter, label = "stress lb")
 plt.legend()
+plt.figure("Ic")
+plt.plot(testSpring.ximesh[startingIndex:], Ic)
 plt.figure("deformed neutral surface")
 plt.plot(testSpring.path.get_neutralSurface(200)[:,0],testSpring.path.get_neutralSurface(200)[:,1], label = "original surface")
 plt.plot(testSpring.res[1,:],res[2,:], label = "deformed surface")

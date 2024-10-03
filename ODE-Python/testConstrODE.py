@@ -15,7 +15,9 @@ OR = 2
 
 testTorque = 2500
 
-testSF     = np.array([0, 0,testTorque])
+testSF     = np.array([1000, -150, testTorque])
+
+testResl   = 200
 
 testPath = PATHDEF.Minimal_Polynomial_Definition4(n=2, fullParamLength=4,
                                        radii = np.array([IR,(IR+OR)/2*1.15,OR]),
@@ -46,12 +48,12 @@ constCrsc = CRSCDEF.Constant_Ic(pathDef=testPath,t=0.375,h0=h0)
 testPath.get_crscRef(testCrsc)
 testPath2.get_crscRef(testCrsc)
 
-testSpring = Spring(constCrsc, materials.TestMaterial, torqueCapacity=testTorque, resolution=5000)
+testSpring = Spring(constCrsc, materials.TestMaterial, torqueCapacity=testTorque, resolution=testResl)
 
-res, solnSFstraight, divergeFlag, i = testSpring.deform_by_torque(testTorque, testSpring.deform_ODE, SF=testSF)
+# res, solnSFstraight, divergeFlag, i = testSpring.deform_by_torque(testTorque, testSpring.deform_ODE, SF=testSF)
 
 err, res = testSpring.forward_integration(testSpring.constr_deform_ODE,
-                                                solnSFstraight,
+                                                testSF,
                                                 testTorque)
 
 print(lin.norm(err))
@@ -59,7 +61,7 @@ print(lin.norm(err))
 # res, solnSF, divergeFlag, i = testSpring.deform_by_torque(testTorque, testSpring.constr_deform_ODE, SF=solnSFstraight)
 
 # print(testSpring.solnerr)
-print(solnSFstraight)
+# print(solnSFstraight)
 
 
 # fxmesh = np.linspace(-3000,3000,100)
@@ -91,15 +93,15 @@ print(solnSFstraight)
 
 # res, solnSF, divergeFlag, i = testSpring.deform_by_torque(testTorque, testSpring.constr_deform_ODE, testSF)
 
-plt.figure()
+plt.figure("la, lb")
 plt.plot(testSpring.xiData, [x for x in testSpring.laData], label="la")
 plt.plot(testSpring.xiData, [x for x in testSpring.lbData], label="lb")
 plt.plot(testSpring.ximesh, testSpring.crsc.get_lalb(testSpring.ximesh).T, "--")
 
-plt.figure()
+plt.figure("stress success")
 plt.plot(testSpring.xiData, testSpring.stressData)
 
-plt.figure()
+plt.figure("Ic")
 plt.plot(testSpring.xiData, testSpring.IcData)
 plt.plot(testSpring.ximesh, testSpring.crsc.get_Ic(testSpring.ximesh))
 

@@ -17,6 +17,7 @@ class Spring:
                  name       = None):
 
         self.name=name
+        
         # Parameters and data structures from passed objects
         # Path accessor from path definition
         self.path     = geoDef.path
@@ -60,11 +61,14 @@ class Spring:
         self.finiteDifferenceIc     = 0.00001
         self.finiteDifferenceFactor = 0.001
 
+        # Everything related to optimization problem
         self.laData = []
         self.lbData = []
         self.IcData = []
         self.xiData = []
         self.stressData=[]
+        
+        self.differenceThreshold = 0.0001
 
         # fuck your memory, extract commonly used attributes from passed
         # definition objects:
@@ -206,9 +210,10 @@ class Spring:
             nfunc = 0
 
         if xi==0:
-            la0 = la
-            lb0 = lb
-            rn0 = rn        
+            self.la0 = la
+            self.lb0 = lb
+            self.rn0 = rn        
+            print("set")
 
         # Check for EXPECTED dominating stress case:
         # print(la,lb)
@@ -227,24 +232,43 @@ class Spring:
             # designStress = self.designStress*M/self.torqueCapacity
             if xi != 0:
                 Fstar = (Fy*(x-self.x0) - Fx*(y-self.y0) + T0)
-                designStress = dgds0*self.E*rn0*max(la0/(rn0-la0),lb0/(rn0+lb0))
-                err = (lb**2-la**2)-2*abs(Fstar)*dominantStressFactor/(self.t*designStress)
-                KBC = 2*abs(Fstar)/(self.t*designStress)
-                if innerStressFactor==dominantStressFactor:
-                    def jac(la, lb):
-                        return np.array([[(lb**2-2*la)-KBC*(rn/(rn-la)**2)],[(2*lb-la**2)-KBC*(la/(rn-la))]])
-                elif outerStressFactor==dominantStressFactor:
-                    def jac(la, lb):
-                        return np.array([[(lb**2-2*la)-KBC*(lb/(rn+lb))],[(2*lb-la**2)-KBC*(rn/(rn+lb)**2)]])
-                corr = lin.pinv(jac(la, lb)).dot(np.array(err))
-                la+= corr[0]
-                lb+= corr[0]
+                if np.isfinite(self.rn0):
+                    designStress = dgds0*self.E*self.rn0*max(self.la0/(self.rn0-self.la0),self.lb0/(self.rn0+self.lb0))
+                else:
+                    designStress = dgds0*self.E*self.la0
+                err = 1
+                while err > 1e-5:
+                    err = (lb**2-la**2)-2*abs(Fstar)*dominantStressFactor/(self.t*designStress)
+                    # print(Fstar)
+                    # print(designStress, self.t)
+                    KBC = 2*abs(Fstar)/(self.t*designStress)
+                    # print(KBC)
+                    if innerStressFactor==dominantStressFactor:
+                        # print("innerStress jac")
+                        def jac(la, lb):
+                            return np.array([[(lb**2-2*la)-KBC*(rn/(rn-la)**2)],[(2*lb-la**2)-KBC*(la/(rn-la))]])
+                    elif outerStressFactor==dominantStressFactor:
+                        # print("outerStress jac")
+                        # print(rn+lb)
+                        def jac(la, lb):
+                            return np.array([[(lb**2-2*la)-KBC*(lb/(rn+lb))],[(2*lb-la**2)-KBC*(rn/(rn+lb)**2)]])
+                    # print(lin.pinv(jac(la, lb)))
+                    corr = lin.pinv(jac(la, lb))*err*1
+                    corr = corr.flatten()
+                    # print("corr vector:", corr)
+                    # print(err)
+                    print("original states: ", la, lb)
+                    print("original error:", err)
+                    la+= corr[0]
+                    lb+= corr[1]
+                    print("corrected states:", la, lb)
+                    print("resultant error:", (lb**2-la**2)-2*abs(Fstar)*dominantStressFactor/(self.t*designStress))
 
             # innerStressFactor = 1
             # outerStressFactor = 0
         
         if innerStressFactor==outerStressFactor:
-            print("trivial case")
+            # print("trivial case")
             pinvla = 0
             pinvlb = 0
         elif innerStressFactor>outerStressFactor:
@@ -279,8 +303,8 @@ class Spring:
         # transfer back from s space to xi space
         LHS = LHS/dxids
 
-        print(states)
-        print(LHS)
+        # print(states)
+        # print(LHS)
         # print(dxids)
         # print("states:", states)
         # print("derivs:", LHS)
@@ -289,7 +313,7 @@ class Spring:
     def constr_deform_ODE(self, xi, states, *args):
         # Deal with args in a way that is hopefully better
 
-        # print("xi -----------", xi)
+        print("xi -----------", xi)
 
         M, Fx, Fy, dgds0 = args[0]
         gamma, x, y = states
@@ -335,64 +359,114 @@ class Spring:
             innerStressFactor = abs(la/(rn-la))
             outerStressFactor = abs(lb/(rn+lb))
             dominantStressFactor = max(innerStressFactor, outerStressFactor)
+            err = (lb**2-la**2)-2*abs(Fstar)*dominantStressFactor/(self.t*designStress)
+            print("starting err", err)
+            print("original states: ", la, lb)
+            i = 0
+            while abs(err) > 1e-5:
+                    err = (lb**2-la**2)-2*abs(Fstar)*dominantStressFactor/(self.t*designStress)
+                    if i==0:
+                        print("~~~~~~~~~~~entered~~~~~~~~~~~~~~~~~~~~")
+                        print("original err", err)
+                        i+=1
+                        la = self.crsc.get_lalb(xi)[0][0]+.001
+                        lb = self.crsc.get_lalb(xi)[1][0]
+                        print("original guess perturbed states:", la, lb)
+                    # print(Fstar)
+                    # print(designStress, self.t)
+                    KBC = 2*abs(Fstar)/(self.t*designStress)
+                    # print(KBC)
+                    if innerStressFactor==dominantStressFactor:
+                        # print("innerStress jac")
+                        def jac(la, lb):
+                            return np.array([[(lb**2-2*la)-KBC*(rn/(rn-la)**2)],[(2*lb-la**2)-KBC*(la/(rn-la))]])
+                    elif outerStressFactor==dominantStressFactor:
+                        # print("outerStress jac")
+                        # print(rn+lb)
+                        def jac(la, lb):
+                            return np.array([[(lb**2-2*la)-KBC*(lb/(rn+lb))],[(2*lb-la**2)-KBC*(rn/(rn+lb)**2)]])
+                    # print(lin.pinv(jac(la, lb)))
+                    corr = lin.pinv(jac(la, lb))*err*-1
+                    corr = corr.flatten()
+                    # print("corr vector:", corr)
+                    # print(err)
+                    
+                    # print("original error:", err)
+                    la += corr[0]
+                    lb += corr[1]
+            print("corrected states:", la, lb)
+            print("resultant error:", (lb**2-la**2)-2*abs(Fstar)*dominantStressFactor/(self.t*designStress))
+            
+            # prevent impossible beams
+            delta = lb-la
+            if delta < self.differenceThreshold:
+                thicknessCorr = self.differenceThreshold - delta
+                lb = lb+thicknessCorr
+                la = la-thicknessCorr
+            
+            Ic = self.t*rn/2*(lb**2-la**2)
+            # if Ic<0:
+            #     print(self.t, rn, lb, la)
+            #     print("WTF")
+            Ic = abs(Ic)
             # print(dominantStressFactor)
-            if  np.isclose(lb**2-la**2 , 2*abs(Fstar)*dominantStressFactor/(self.t*designStress)):
-                Ic = self.t*rn/2*(lb**2-la**2)
-                # if Ic<0:
-                #     print(self.t, rn, lb, la)
-                #     print("WTF")
-                Ic = abs(Ic)
-                print("activated")
-            else:
-                # print(la, lb, abs(Fstar))
-                lbprev = lb
-                laprev = la
-                if innerStressFactor>outerStressFactor:
-                    lb = self.crsc.get_lalb(xi)[1][0]
-                    # la = self.crsc.get_lalb(xi)[0][0]
-                    # print("a")
-                    # la = laprev-(xi-self.xiData[-1])*2
-                    # la = laprev-(h0)/10
-                    la = np.sqrt((lb**2-2*abs(Fstar)*dominantStressFactor/(self.t*designStress)))
-                    # lb = np.sqrt((2*abs(Fstar)*dominantStressFactor/(self.t*designStress)+la**2))
-                    # la = np.sqrt((lb**2-2*abs(Fstar)*dominantStressFactor/(self.t*designStress)))
-                    # if np.isclose(lb, la, atol=0.0001):
-                    #     print("triggered ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-                    #     lb = lbprev
-                    #     # la = laprev
-                    #     la = np.sqrt((lb**2-2*abs(Fstar)*dominantStressFactor/(self.t*designStress)))
-                    #     # lb = np.sqrt((2*abs(Fstar)*dominantStressFactor/(self.t*designStress)+la**2))
-                if outerStressFactor>innerStressFactor:
-                    la = self.crsc.get_lalb(xi)[0][0]
-                    # lb = self.crsc.get_lalb(xi)[1][0]
-                    # print("b")
-                    # lb = lbprev+(xi-self.xiData[-1])*2
-                    # lb = lbprev+(h0)/10
-                    lb = np.sqrt((2*abs(Fstar)*dominantStressFactor/(self.t*designStress)+la**2))
-                    # la = np.sqrt((lb**2-2*abs(Fstar)*dominantStressFactor/(self.t*designStress)))
-                    # lb = np.sqrt((2*abs(Fstar)*dominantStressFactor/(self.t*designStress)+la**2))
-                    # if np.isclose(lb, la, atol=0.0001):
-                    #     print("triggered ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-                    #     la = laprev
-                    #     # lb = lbprev
-                    #     lb = np.sqrt((2*abs(Fstar)*dominantStressFactor/(self.t*designStress)+la**2))
-                    #     # la = np.sqrt((lb**2-2*abs(Fstar)*dominantStressFactor/(self.t*designStress)))
-                Ic = self.t*rn/2*(lb**2-la**2)
-                Ic = abs(Ic)
-                # print(la, lb, lb**2-la**2, 2*abs(Fstar)*dominantStressFactor/(self.t*self.designStress), dominantStressFactor, xi)
-                try:
-                    assert(np.isclose(lb**2-la**2,
-                        2*abs(Fstar)*dominantStressFactor/(self.t*designStress)))
-                except:
-                    print("WARNING!!!! Constraint may not be properly enforced")
-                    # assert(np.isclose(lb**2-la**2,
-                    #     2*abs(Fstar)*dominantStressFactor/(self.t*designStress)))
+            # if  np.isclose(lb**2-la**2 , 2*abs(Fstar)*dominantStressFactor/(self.t*designStress)):
+            #     Ic = self.t*rn/2*(lb**2-la**2)
+            #     # if Ic<0:
+            #     #     print(self.t, rn, lb, la)
+            #     #     print("WTF")
+            #     Ic = abs(Ic)
+            #     print("activated")
+            # else:
+            #     # print(la, lb, abs(Fstar))
+            #     lbprev = lb
+            #     laprev = la
+            #     if innerStressFactor>outerStressFactor:
+            #         lb = self.crsc.get_lalb(xi)[1][0]
+            #         # la = self.crsc.get_lalb(xi)[0][0]
+            #         # print("a")
+            #         # la = laprev-(xi-self.xiData[-1])*2
+            #         # la = laprev-(h0)/10
+            #         la = np.sqrt((lb**2-2*abs(Fstar)*dominantStressFactor/(self.t*designStress)))
+            #         # lb = np.sqrt((2*abs(Fstar)*dominantStressFactor/(self.t*designStress)+la**2))
+            #         # la = np.sqrt((lb**2-2*abs(Fstar)*dominantStressFactor/(self.t*designStress)))
+            #         # if np.isclose(lb, la, atol=0.0001):
+            #         #     print("triggered ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+            #         #     lb = lbprev
+            #         #     # la = laprev
+            #         #     la = np.sqrt((lb**2-2*abs(Fstar)*dominantStressFactor/(self.t*designStress)))
+            #         #     # lb = np.sqrt((2*abs(Fstar)*dominantStressFactor/(self.t*designStress)+la**2))
+            #     if outerStressFactor>innerStressFactor:
+            #         la = self.crsc.get_lalb(xi)[0][0]
+            #         # lb = self.crsc.get_lalb(xi)[1][0]
+            #         # print("b")
+            #         # lb = lbprev+(xi-self.xiData[-1])*2
+            #         # lb = lbprev+(h0)/10
+            #         lb = np.sqrt((2*abs(Fstar)*dominantStressFactor/(self.t*designStress)+la**2))
+            #         # la = np.sqrt((lb**2-2*abs(Fstar)*dominantStressFactor/(self.t*designStress)))
+            #         # lb = np.sqrt((2*abs(Fstar)*dominantStressFactor/(self.t*designStress)+la**2))
+            #         # if np.isclose(lb, la, atol=0.0001):
+            #         #     print("triggered ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+            #         #     la = laprev
+            #         #     # lb = lbprev
+            #         #     lb = np.sqrt((2*abs(Fstar)*dominantStressFactor/(self.t*designStress)+la**2))
+            #         #     # la = np.sqrt((lb**2-2*abs(Fstar)*dominantStressFactor/(self.t*designStress)))
+            #     Ic = self.t*rn/2*(lb**2-la**2)
+            #     Ic = abs(Ic)
+            #     # print(la, lb, lb**2-la**2, 2*abs(Fstar)*dominantStressFactor/(self.t*self.designStress), dominantStressFactor, xi)
+            #     try:
+            #         assert(np.isclose(lb**2-la**2,
+            #             2*abs(Fstar)*dominantStressFactor/(self.t*designStress)))
+            #     except:
+            #         print("WARNING!!!! Constraint may not be properly enforced")
+            #         # assert(np.isclose(lb**2-la**2,
+            #         #     2*abs(Fstar)*dominantStressFactor/(self.t*designStress)))
         # print(la,lb)
 
-        if np.isclose(la, lb, atol=.0001) and rn != float('inf'):
-            print(xi)
-            print("INVALID STATES ~~~~~~~~~~~~~~~~~~~~~")
-            print(la, lb, rn)
+        # if np.isclose(la, lb, atol=.0001) and rn != float('inf'):
+        #     print(xi)
+        #     print("INVALID STATES ~~~~~~~~~~~~~~~~~~~~~")
+        #     print(la, lb, rn)
             # la = lb-0.01
 
         Mdim = self.E*Ic
