@@ -23,17 +23,21 @@ testTorque = springData.loc['Size 6','Max Torque (in.lbs)']
 
 testPath = PATHDEF.Minimal_Polynomial_Definition4(n=2, fullParamLength=4,
                                        radii = np.array([IR,(IR+OR)/2*1.15,OR]),
-                                       ffradii = np.array([1.14, 2.113]),
-                                       alphaAngles = np.array([45,45])*deg2rad,
-                                       betaAngles = np.array([0,87.5,175])*deg2rad,
+                                       # ffradii = np.array([1.14, 2.113]),
+                                       ffradii = np.array([1.14, 2.5]),
+                                       # alphaAngles = np.array([45,45])*deg2rad,
+                                       alphaAngles = np.array([55,0])*deg2rad,
+                                    #    betaAngles = np.array([0,87.5,175])*deg2rad,
+                                       betaAngles = np.array([0,95,175])*deg2rad,
                                        XYFactors = np.array([0.5]))
 testCrsc = CRSCDEF.Piecewise_Ic_Control(pathDef=testPath,
-                       IcPts = np.array([.002, .000026, .000026, .0003]),
-                       IcParamLens = np.array([.50, .6]))
+                                        # IcPts = np.array([.002, .000026, .000026, .0003]),
+                       IcPts = np.array([.0038, .000025, .000015, .00001, .00015])*2,
+                       IcParamLens = np.array([.45, .50, .65]))
 # fuck this
 testPath.get_crscRef(testCrsc)
 
-testSpring = Spring(testCrsc, materials.Maraging300Steel, name="G2S6_spring")
+testSpring = Spring(testCrsc, materials.Titanium5, name="G2S6_spring_Titanium")
 
 # Actually try to deform it
 # res, SF, divergeFlag, i = testSpring.deform_by_torque(-4549,
