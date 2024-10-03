@@ -25,7 +25,7 @@ class Spring:
         # Material info
         self.material = material
         # Design intent
-        self.torqueCapacity = 3000
+        self.torqueCapacity = torqueCapacity
 
         self.fullArcLength = self.crsc.fullParamLength
         self.resl = resolution
@@ -62,6 +62,7 @@ class Spring:
 
         self.laData = []
         self.lbData = []
+        self.IcData = []
         self.xiData = []
         self.stressData=[]
 
@@ -203,6 +204,12 @@ class Spring:
         if np.isnan(nfunc):
             # print("nfunc is nan")
             nfunc = 0
+
+        if xi==0:
+            la0 = la
+            lb0 = lb
+            rn0 = rn        
+
         # Check for EXPECTED dominating stress case:
         # print(la,lb)
         # print(xi)
@@ -214,6 +221,25 @@ class Spring:
         else:
             innerStressFactor = abs(la/(rn-la))
             outerStressFactor = abs(lb/(rn+lb))
+            dominantStressFactor = max(innerStressFactor, outerStressFactor)
+
+            # State sanitization
+            # designStress = self.designStress*M/self.torqueCapacity
+            if xi != 0:
+                Fstar = (Fy*(x-self.x0) - Fx*(y-self.y0) + T0)
+                designStress = dgds0*self.E*rn0*max(la0/(rn0-la0),lb0/(rn0+lb0))
+                err = (lb**2-la**2)-2*abs(Fstar)*dominantStressFactor/(self.t*designStress)
+                KBC = 2*abs(Fstar)/(self.t*designStress)
+                if innerStressFactor==dominantStressFactor:
+                    def jac(la, lb):
+                        return np.array([[(lb**2-2*la)-KBC*(rn/(rn-la)**2)],[(2*lb-la**2)-KBC*(la/(rn-la))]])
+                elif outerStressFactor==dominantStressFactor:
+                    def jac(la, lb):
+                        return np.array([[(lb**2-2*la)-KBC*(lb/(rn+lb))],[(2*lb-la**2)-KBC*(rn/(rn+lb)**2)]])
+                corr = lin.pinv(jac(la, lb)).dot(np.array(err))
+                la+= corr[0]
+                lb+= corr[0]
+
             # innerStressFactor = 1
             # outerStressFactor = 0
         
@@ -272,10 +298,13 @@ class Spring:
 
         rn = self.path.get_rn(xi)
 
+        h0 = np.sqrt(6*M/(self.t*designStress))
+        la0=h0/2
+        lb0=la0
+
         if xi==0:
-            h0 = np.sqrt(6*M/(self.t*designStress))
-            la=h0/2
-            lb=la
+            la=la0
+            lb=lb0
             # print("--")
             # self.laData=[]
             # self.laData=[]
@@ -307,19 +336,49 @@ class Spring:
             outerStressFactor = abs(lb/(rn+lb))
             dominantStressFactor = max(innerStressFactor, outerStressFactor)
             # print(dominantStressFactor)
-            if np.isclose(lb**2-la**2,
-                2*abs(Fstar)*dominantStressFactor/(self.t*designStress)):
+            if  np.isclose(lb**2-la**2 , 2*abs(Fstar)*dominantStressFactor/(self.t*designStress)):
                 Ic = self.t*rn/2*(lb**2-la**2)
-                # print("activated")
+                # if Ic<0:
+                #     print(self.t, rn, lb, la)
+                #     print("WTF")
+                Ic = abs(Ic)
+                print("activated")
             else:
                 # print(la, lb, abs(Fstar))
+                lbprev = lb
+                laprev = la
                 if innerStressFactor>outerStressFactor:
+                    lb = self.crsc.get_lalb(xi)[1][0]
+                    # la = self.crsc.get_lalb(xi)[0][0]
                     # print("a")
-                    lb = np.sqrt((2*abs(Fstar)*dominantStressFactor/(self.t*designStress)+la**2))
-                if outerStressFactor>innerStressFactor:
-                    # print("b")
+                    # la = laprev-(xi-self.xiData[-1])*2
+                    # la = laprev-(h0)/10
                     la = np.sqrt((lb**2-2*abs(Fstar)*dominantStressFactor/(self.t*designStress)))
+                    # lb = np.sqrt((2*abs(Fstar)*dominantStressFactor/(self.t*designStress)+la**2))
+                    # la = np.sqrt((lb**2-2*abs(Fstar)*dominantStressFactor/(self.t*designStress)))
+                    # if np.isclose(lb, la, atol=0.0001):
+                    #     print("triggered ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+                    #     lb = lbprev
+                    #     # la = laprev
+                    #     la = np.sqrt((lb**2-2*abs(Fstar)*dominantStressFactor/(self.t*designStress)))
+                    #     # lb = np.sqrt((2*abs(Fstar)*dominantStressFactor/(self.t*designStress)+la**2))
+                if outerStressFactor>innerStressFactor:
+                    la = self.crsc.get_lalb(xi)[0][0]
+                    # lb = self.crsc.get_lalb(xi)[1][0]
+                    # print("b")
+                    # lb = lbprev+(xi-self.xiData[-1])*2
+                    # lb = lbprev+(h0)/10
+                    lb = np.sqrt((2*abs(Fstar)*dominantStressFactor/(self.t*designStress)+la**2))
+                    # la = np.sqrt((lb**2-2*abs(Fstar)*dominantStressFactor/(self.t*designStress)))
+                    # lb = np.sqrt((2*abs(Fstar)*dominantStressFactor/(self.t*designStress)+la**2))
+                    # if np.isclose(lb, la, atol=0.0001):
+                    #     print("triggered ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+                    #     la = laprev
+                    #     # lb = lbprev
+                    #     lb = np.sqrt((2*abs(Fstar)*dominantStressFactor/(self.t*designStress)+la**2))
+                    #     # la = np.sqrt((lb**2-2*abs(Fstar)*dominantStressFactor/(self.t*designStress)))
                 Ic = self.t*rn/2*(lb**2-la**2)
+                Ic = abs(Ic)
                 # print(la, lb, lb**2-la**2, 2*abs(Fstar)*dominantStressFactor/(self.t*self.designStress), dominantStressFactor, xi)
                 try:
                     assert(np.isclose(lb**2-la**2,
@@ -329,6 +388,12 @@ class Spring:
                     # assert(np.isclose(lb**2-la**2,
                     #     2*abs(Fstar)*dominantStressFactor/(self.t*designStress)))
         # print(la,lb)
+
+        if np.isclose(la, lb, atol=.0001) and rn != float('inf'):
+            print(xi)
+            print("INVALID STATES ~~~~~~~~~~~~~~~~~~~~~")
+            print(la, lb, rn)
+            # la = lb-0.01
 
         Mdim = self.E*Ic
 
@@ -356,16 +421,17 @@ class Spring:
             stress = abs(LHS[0]*self.E*rn*np.max([outerStressFactor, innerStressFactor]))
         else:
             stress = abs(M*la/Ic)    
-        if stress > designStress*1.01:
-            # print(stress)
-            # print(xi)
-            # print("~~~~~~~~~~~~~~~~~~~~~STRESS EXCEEDED~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+        if stress > designStress*1.01 and stress != float('inf'):
+            print(stress)
+            print(xi)
+            print("~~~~~~~~~~~~~~~~~~~~~STRESS EXCEEDED~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
             pass
         else:
             self.stressData.append(stress)
             self.xiData.append(xi)
             self.laData.append(la)
             self.lbData.append(lb)
+            self.IcData.append(Ic)
         # print(la, lb)
         # print("resultant stress:", stress)
         # print(states)
@@ -714,18 +780,21 @@ class Spring:
             by integrating forward across a specified ODE (there is currently
             only one supported)
         """
+        if ODE==self.constr_deform_ODE:
+            self.xiData=[]
+            self.laData=[]
+            self.lbData=[]
+            self.stressData=[]
 
-        self.xiData=[]
-        self.laData=[]
-        self.lbData=[]
-        self.stressData=[]
+            designStress = self.designStress*SF[2]/self.torqueCapacity
 
-        designStress = self.designStress*SF[2]/self.torqueCapacity
-
-        h0 = np.sqrt(6*SF[2]/(self.t*designStress))
-        la0=h0/2
-        lb0=la0
-        Ic0 = self.t*(2*la0)**3/12
+            h0 = np.sqrt(6*SF[2]/(self.t*designStress))
+            la0=h0/2
+            lb0=la0
+            # print("init thickness:", la0)
+            Ic0 = self.t*(2*la0)**3/12
+        else:
+            Ic0 = self.crsc.get_Ic(0)
 
         # set up initial condition
         self.dgds0 = (SF[2]/self.n + self.momentArmY*SF[0] - self.momentArmX*SF[1])/ \
@@ -733,7 +802,12 @@ class Spring:
 
         # perform forward integration
         # arguments: ODE, Initial Conditions, Mesh, args
-        self.res  = fixed_rk4(ODE, np.array([0,self.x0,self.y0]), self.ximesh,
+        if ODE==self.deform_ODE:
+            self.res  = fixed_rk4(ODE, np.array([0,self.x0,self.y0]), self.ximesh,
+                                            # (SF[2], 
+                                            (SF[0], SF[1], self.dgds0))
+        else:    
+            self.res  = fixed_rk4(ODE, np.array([0,self.x0,self.y0]), self.ximesh,
                                         (SF[2], SF[0], SF[1], self.dgds0))
         # calcualte error values (difference in pre-and post-iteration radii)
         #                        (difference in final gamma and final beta)
@@ -966,6 +1040,8 @@ class Spring:
                          breakBool=False):
 
         """
+        return self.res, self.solnSF, divergeFlag, i
+
         THIS FUNCTION:
             Solves for a deformation given a certain torque loading condition
         """
@@ -977,17 +1053,23 @@ class Spring:
         divergeFlag = 0
         # limit to 100 iterations to converge
 
-        gain = 1
+        if ODE==self.constr_deform_ODE:
+            gain = 0.1
+        else:
+            gain = 1
         while i < 100:
             print(i)
             errPrev = err
             # determine boundary condition compliance, estimate jacobian
             err, self.res = self.forward_integration(ODE,SF,torqueTarg)
-            print(self.dgds0)
+            # print(self.dgds0)
             print(lin.norm(err))
             J = self.BC_jacobian(ODE,SF,torqueTarg,n=3)
             # print(J)
             # freak out if it didnt work
+            if np.any((SF > 10*10**5)):
+                print("I frew up")
+                break
             if lin.norm(err)>lin.norm(errPrev):
                 # print information on what is happening
                 print("torque deform diverging", i)
@@ -1001,13 +1083,16 @@ class Spring:
                 if breakBool:
                     break
             # regardless, make a new guess if it did work
-            if lin.norm(err,2) > 1e-5:
+            if lin.norm(err,2) > 1e-10:
                 # (according to a newton's method)
                 # print(SF)
                 # print(J)
                 # print(lin.pinv(J))
                 # print("err:", err)
                 # print(lin.norm(err))
+                print(SF)
+                if ODE==self.constr_deform_ODE:
+                    gain=lin.norm(err)
                 SF = SF-lin.pinv(J).dot(err)*gain
                 # print(SF)
             # and if the error is small enough to converge, break out
@@ -1157,6 +1242,71 @@ class Spring:
                                                             breakBool=True) # Not sure about this one
 
         return res, solnSF, divergeFlag, i
+
+    # def deform_by_torque_straightProto(self, torqueTarg, ODE,
+    #                      SF=np.array([0,0,0]),
+    #                      breakBool=False):
+        
+    #     # Determine thickness for constant IC prototype beam:
+    #     designStress = self.designStress*torqueTarg/self.torqueCapacity
+
+    #     h0 = np.sqrt(6*SF[2]/(self.t*designStress))
+    #     la0=h0/2
+    #     lb0=la0
+    #     # print("init thickness:", la0)
+    #     Ic0 = self.t*(2*la0)**3/12
+
+    #     # the err is a two vector, so make it arbitrarily high to enter loop
+    #     err = np.ones(2)*float('inf')
+    #     # 0th iteration
+    #     i = 0
+    #     divergeFlag = 0
+    #     # limit to 100 iterations to converge
+
+    #     gain = 0.1
+    #     while i < 100:
+    #         print(i)
+    #         errPrev = err
+    #         # determine boundary condition compliance, estimate jacobian
+    #         err, self.res = self.forward_integration(ODE,SF,torqueTarg)
+    #         # print(self.dgds0)
+    #         print(lin.norm(err))
+    #         J = self.BC_jacobian(ODE,SF,torqueTarg,n=3)
+    #         # print(J)
+    #         # freak out if it didnt work
+    #         if lin.norm(err)>lin.norm(errPrev):
+    #             # print information on what is happening
+    #             print("torque deform diverging", i)
+    #             # print(J)
+    #             # print(err, errPrev)
+    #             # print(SF)
+    #             divergeFlag = 1
+    #             # If break bool is true, break if you diverge even once
+    #             # usually for debug purposes, I just let it run, and see if
+    #             # it can find its way back to a convergent solution
+    #             if breakBool:
+    #                 break
+    #         # regardless, make a new guess if it did work
+    #         if lin.norm(err,2) > 1e-5:
+    #             # (according to a newton's method)
+    #             # print(SF)
+    #             # print(J)
+    #             # print(lin.pinv(J))
+    #             # print("err:", err)
+    #             # print(lin.norm(err))
+    #             print(SF)
+    #             SF = SF-lin.pinv(J).dot(err)*gain
+    #             # print(SF)
+    #         # and if the error is small enough to converge, break out
+    #         else:
+    #             break
+    #         i+=1
+    #     # store the final solution in the object
+    #     self.solnSF = SF
+    #     self.solnerr = lin.norm(err)
+    #     self.solnerrVec = err
+    #     return self.res, self.solnSF, divergeFlag, i
+    #     pass
 
     def calculate_stresses(self):
 

@@ -30,6 +30,134 @@ deg2rad = np.pi/180
 #
 """
 
+class Constant_Ic():
+    def __init__(self, pathDef, t, h0):
+        self.path = pathDef
+        self.t    = t
+        self.h0 = h0
+        self.la = h0/2
+        self.lb = self.la
+        self.Ic0     = 1/12.0*self.t*self.h0**3
+
+        self.fullParamLength = self.path.fullParamLength
+        self.returnValue = 1
+    
+    def l_a_l_b_rootfinding(self, coord, lABPrev, printBool=0):
+
+        """
+        THIS FUNCTION:
+            Uses newton's method to solve the nonlinear system of equations
+            which defines the thickness of a bent beam with a given netural
+            radius and second moment of area
+        """
+
+        # get the relevant values at a given point
+        rn = self.path.get_rn(coord)
+        Ic = self.get_Ic(coord)
+        # define the system to be solved
+        def func(x, rn, Ic):
+            f1 = (x[0]+x[1])/(np.log((rn+x[1])/(rn-x[0])))-rn
+            f2 = self.t*rn*(x[0]+x[1])*(x[1]/2-x[0]/2)-Ic
+            return np.array([f1, f2])
+        def jac(x, rn, Ic): # IC doesn't happen to occur in the derivatives
+            return np.array([[1/(np.log((rn+x[1])/(rn-x[0])))-(x[0]+x[1])/(((np.log((rn+x[1])/(rn-x[0])))**2)*(rn-x[0])), \
+                            1/(np.log((rn+x[1])/(rn-x[0])))-(x[0]+x[1])/(((np.log((rn+x[1])/(rn-x[0])))**2)*(rn+x[1]))], \
+                            [-rn*self.t*x[0], rn*self.t*x[1]]])
+        # some error checking and escapes for possible non-convergent cases
+        if not(np.isinf(rn) or abs(rn) > 10e10): # TODO: change this to some large finite threshold
+            # check for if the beam was locally straight on the last iteration
+            # print(lABPrev)
+            if lABPrev[0]==lABPrev[1]:
+                # perturb the initial guess a bit to avoid convergence issues
+                x0 = [lABPrev[0], lABPrev[1]+0.001]
+            else:
+                # THIS IS THE "NORMAL" CASE (in which the previous step was curved)
+                x0 = lABPrev
+            err = 1
+        # escape for locally straight beam
+        else:
+            # set the error to 0 to not enter the root finder
+            err = 0
+            # use the straight beam definition of I to find the thickness
+            l = np.cbrt(12*Ic/self.t)/2
+            x0 = [l, l]
+        x = x0
+
+        self.iii = 0
+        # solve the problem (do newtons method to rootfind)
+        while err > 10**-6 and self.iii <500:
+            # newtons method
+            xprev = x
+            x = x - np.transpose(lin.inv(jac(x, rn, Ic)).dot(func(x, rn, Ic)))
+            # error to track convergence
+            err = lin.norm(x-xprev)
+            self.iii+=1
+        # escape if convergence goes towards beam so uncurved that
+        # its _basically_ straight (this results in very high thicknesses):
+        # this threshold is arbitrary
+
+        # TODO: Delete this
+        # if(lin.norm(x)>lin.norm(lABPrev)*100):
+        #     # use straight beam definition
+        #     l = np.cbrt(12*Ic/self.t)/2
+        #     x = [l,l]
+        # boolean value used to print out debug info
+        if(printBool):
+            print(x0)
+            print(x)
+            print(self.iii)
+            print(rn)
+            print(err)
+        return x    # here x is [la, lb]
+##### Standard Interface #####
+
+    def get_neturalDistances(self, resolution):
+        # shouldn't need this for now
+        return self.returnValue
+
+    def get_outer_geometry_ODE(self, resolution, lalb):
+        # shouldn't need this for now
+        return self.returnValue
+
+    def get_outer_geometry(self, resolution):
+        # shouldn't need this for now
+        return self.returnValue
+
+    def get_Thk(self, coord, hasPrev=False):
+        lalb = self.get_lalb
+        h = lalb[0]+lalb[1]
+        return h
+
+    def get_lalb(self, coord, hasPrev=False):
+        coord = np.atleast_1d(coord)
+        if not hasPrev:
+            hPrev = np.cbrt(12*self.get_Ic(coord[0])/self.t)
+            lABPrev = np.array([hPrev/2, hPrev/2])
+        else:
+            lABPrev = hasPrev
+
+        la = np.empty_like(coord)
+        lb = np.empty_like(coord)
+        h  = np.empty_like(coord)
+        i = 0
+        for value in coord:
+            lAB = self.l_a_l_b_rootfinding(value, lABPrev)
+            lABPrev = lAB
+            la[i] = lAB[0]
+            lb[i] = lAB[1]
+            i+=1
+        lalb = np.array([la, lb])
+        return lalb
+    
+    def get_Ic(self, coord):
+        if hasattr(coord, "__len__"):
+            return np.ones_like(coord)*self.Ic0
+        else:
+            return self.Ic0
+    
+    def get_dIc(self, coord):
+        return 0
+
 class Empty():
     def __init__(self,
                  pathDef, t):

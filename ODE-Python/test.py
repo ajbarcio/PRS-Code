@@ -19,10 +19,19 @@ import sympy as sp
 # data =df.loc['Size 5', 'ID lim (in)']
 # print(data)
 
-states = [0,1,2,3,4]
-gamma, x, y, la, lb = states
-print(gamma)
-print(la)
+x = [0, 1]
+y = [0, 1]
+X, Y = np.meshgrid(x, y)
+z = np.zeros_like(X)
+fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+
+ax.plot_surface(X,Y,z)
+plt.show()
+
+# states = [0,1,2,3,4]
+# gamma, x, y, la, lb = states
+# print(gamma)
+# print(la)
 
 # a,b,c,d,e = sp.symbols("a,b,c,d,e")
 # x,y = sp.symbols("x,y")
