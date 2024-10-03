@@ -409,65 +409,12 @@ class Spring:
             #     print(self.t, rn, lb, la)
             #     print("WTF")
             Ic = abs(Ic)
-            # print(dominantStressFactor)
-            # if  np.isclose(lb**2-la**2 , 2*abs(Fstar)*dominantStressFactor/(self.t*designStress)):
-            #     Ic = self.t*rn/2*(lb**2-la**2)
-            #     # if Ic<0:
-            #     #     print(self.t, rn, lb, la)
-            #     #     print("WTF")
-            #     Ic = abs(Ic)
-            #     print("activated")
-            # else:
-            #     # print(la, lb, abs(Fstar))
-            #     lbprev = lb
-            #     laprev = la
-            #     if innerStressFactor>outerStressFactor:
-            #         lb = self.crsc.get_lalb(xi)[1][0]
-            #         # la = self.crsc.get_lalb(xi)[0][0]
-            #         # print("a")
-            #         # la = laprev-(xi-self.xiData[-1])*2
-            #         # la = laprev-(h0)/10
-            #         la = np.sqrt((lb**2-2*abs(Fstar)*dominantStressFactor/(self.t*designStress)))
-            #         # lb = np.sqrt((2*abs(Fstar)*dominantStressFactor/(self.t*designStress)+la**2))
-            #         # la = np.sqrt((lb**2-2*abs(Fstar)*dominantStressFactor/(self.t*designStress)))
-            #         # if np.isclose(lb, la, atol=0.0001):
-            #         #     print("triggered ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-            #         #     lb = lbprev
-            #         #     # la = laprev
-            #         #     la = np.sqrt((lb**2-2*abs(Fstar)*dominantStressFactor/(self.t*designStress)))
-            #         #     # lb = np.sqrt((2*abs(Fstar)*dominantStressFactor/(self.t*designStress)+la**2))
-            #     if outerStressFactor>innerStressFactor:
-            #         la = self.crsc.get_lalb(xi)[0][0]
-            #         # lb = self.crsc.get_lalb(xi)[1][0]
-            #         # print("b")
-            #         # lb = lbprev+(xi-self.xiData[-1])*2
-            #         # lb = lbprev+(h0)/10
-            #         lb = np.sqrt((2*abs(Fstar)*dominantStressFactor/(self.t*designStress)+la**2))
-            #         # la = np.sqrt((lb**2-2*abs(Fstar)*dominantStressFactor/(self.t*designStress)))
-            #         # lb = np.sqrt((2*abs(Fstar)*dominantStressFactor/(self.t*designStress)+la**2))
-            #         # if np.isclose(lb, la, atol=0.0001):
-            #         #     print("triggered ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-            #         #     la = laprev
-            #         #     # lb = lbprev
-            #         #     lb = np.sqrt((2*abs(Fstar)*dominantStressFactor/(self.t*designStress)+la**2))
-            #         #     # la = np.sqrt((lb**2-2*abs(Fstar)*dominantStressFactor/(self.t*designStress)))
-            #     Ic = self.t*rn/2*(lb**2-la**2)
-            #     Ic = abs(Ic)
-            #     # print(la, lb, lb**2-la**2, 2*abs(Fstar)*dominantStressFactor/(self.t*self.designStress), dominantStressFactor, xi)
-            #     try:
-            #         assert(np.isclose(lb**2-la**2,
-            #             2*abs(Fstar)*dominantStressFactor/(self.t*designStress)))
-            #     except:
-            #         print("WARNING!!!! Constraint may not be properly enforced")
-            #         # assert(np.isclose(lb**2-la**2,
-            #         #     2*abs(Fstar)*dominantStressFactor/(self.t*designStress)))
-        # print(la,lb)
 
-        # if np.isclose(la, lb, atol=.0001) and rn != float('inf'):
-        #     print(xi)
-        #     print("INVALID STATES ~~~~~~~~~~~~~~~~~~~~~")
-        #     print(la, lb, rn)
-            # la = lb-0.01
+        if np.isclose(la, lb, atol=.0001) and rn != float('inf'):
+            print(xi)
+            print("INVALID STATES ~~~~~~~~~~~~~~~~~~~~~")
+            print(la, lb, rn)
+            la = lb-0.01
 
         Mdim = self.E*Ic
 
