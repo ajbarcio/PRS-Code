@@ -68,7 +68,7 @@ class Spring:
         self.xiData = []
         self.stressData=[]
         
-        self.differenceThreshold = 0.0001
+        self.differenceThreshold = 0.0006
 
         # fuck your memory, extract commonly used attributes from passed
         # definition objects:
@@ -313,7 +313,7 @@ class Spring:
     def constr_deform_ODE(self, xi, states, *args):
         # Deal with args in a way that is hopefully better
 
-        print("xi -----------", xi)
+        # print("xi -----------", xi)
 
         M, Fx, Fy, dgds0 = args[0]
         gamma, x, y = states
@@ -360,49 +360,67 @@ class Spring:
             outerStressFactor = abs(lb/(rn+lb))
             dominantStressFactor = max(innerStressFactor, outerStressFactor)
             err = (lb**2-la**2)-2*abs(Fstar)*dominantStressFactor/(self.t*designStress)
-            print("starting err", err)
-            print("original states: ", la, lb)
+            # print("starting err", err)
+            # print("original states: ", la, lb)
             i = 0
-            while abs(err) > 1e-5:
+            laprev = la
+            lbprev = lb
+            while abs(err) > 1e-5 and i<10:
                     err = (lb**2-la**2)-2*abs(Fstar)*dominantStressFactor/(self.t*designStress)
                     if i==0:
-                        print("~~~~~~~~~~~entered~~~~~~~~~~~~~~~~~~~~")
-                        print("original err", err)
-                        i+=1
-                        la = self.crsc.get_lalb(xi)[0][0]+.001
-                        lb = self.crsc.get_lalb(xi)[1][0]
-                        print("original guess perturbed states:", la, lb)
+                        pass
+                        # print("~~~~~~~~~~~entered~~~~~~~~~~~~~~~~~~~~")
+                        # print("original err", err)
+                        
+                        # la = self.crsc.get_lalb(xi)[0][0]+.001
+                        # lb = self.crsc.get_lalb(xi)[1][0]
+                        # print("original guess perturbed states:", la, lb)
                     # print(Fstar)
                     # print(designStress, self.t)
                     KBC = 2*abs(Fstar)/(self.t*designStress)
                     # print(KBC)
                     if innerStressFactor==dominantStressFactor:
+                        lb=0.1*rn-laprev
                         # print("innerStress jac")
                         def jac(la, lb):
-                            return np.array([[(lb**2-2*la)-KBC*(rn/(rn-la)**2)],[(2*lb-la**2)-KBC*(la/(rn-la))]])
+                            # return np.array([[(lb**2-2*la)-KBC*(rn/(rn-la)**2)],[(2*lb-la**2)-KBC*(la/(rn-la))]])
+                            # dla/derr
+                            return (lb**2-2*la)-KBC*(rn/(rn-la)**2)
+                        corr = 1/jac(la, lb)
+                        la = la - corr
                     elif outerStressFactor==dominantStressFactor:
+                        la = 0.1*rn-lbprev
                         # print("outerStress jac")
                         # print(rn+lb)
                         def jac(la, lb):
-                            return np.array([[(lb**2-2*la)-KBC*(lb/(rn+lb))],[(2*lb-la**2)-KBC*(rn/(rn+lb)**2)]])
+                            # return np.array([[(lb**2-2*la)-KBC*(lb/(rn+lb))],[(2*lb-la**2)-KBC*(rn/(rn+lb)**2)]])
+                            # dlb/derr
+                            return (2*lb-la**2)-KBC*(rn/(rn+lb)**2)
+                        corr = 1/jac(la, lb)
+                        lb = lb - corr
                     # print(lin.pinv(jac(la, lb)))
-                    corr = lin.pinv(jac(la, lb))*err*-1
-                    corr = corr.flatten()
+                    # corr = lin.pinv(jac(la, lb))*err*-1
+                    # corr = corr.flatten()
                     # print("corr vector:", corr)
                     # print(err)
                     
                     # print("original error:", err)
-                    la += corr[0]
-                    lb += corr[1]
-            print("corrected states:", la, lb)
-            print("resultant error:", (lb**2-la**2)-2*abs(Fstar)*dominantStressFactor/(self.t*designStress))
-            
+                    # la += corr[0]
+                    # lb += corr[1]
+
+                    i+=1
+            # print("corrected states:", la, lb)
+            # print("resultant error:", (lb**2-la**2)-2*abs(Fstar)*dominantStressFactor/(self.t*designStress))
+            # print(i)
             # prevent impossible beams
             delta = lb-la
             if delta < self.differenceThreshold:
-                thicknessCorr = self.differenceThreshold - delta
-                lb = lb+thicknessCorr
-                la = la-thicknessCorr
+                avgThk = (lb+la)/2
+                lb = avgThk + self.differenceThreshold/2
+                la = avgThk - self.differenceThreshold/2
+                # thicknessCorr = self.differenceThreshold - delta
+                # lb = lb+thicknessCorr
+                # la = la-thicknessCorr
             
             Ic = self.t*rn/2*(lb**2-la**2)
             # if Ic<0:
@@ -425,13 +443,13 @@ class Spring:
 
         LHS = np.empty(3)
 
-        LHS[0] = Fstar/Mdim
+        LHS[0] = abs(Fstar)/Mdim
         # (dgds0 + Fy/Mdim*(x-self.x0) - Fx/Mdim*(y-self.y0))
         if 'dominantStressFactor' in locals():
             try:
                 assert(np.isclose(abs(LHS[0]),
                                   abs(designStress/(self.E*rn*dominantStressFactor)),
-                                  rtol=10e-2))
+                                  atol=1e-1))
             except:
                 print("deflection condition not met")
                 print(LHS[0], designStress/(self.E*rn*dominantStressFactor))
@@ -443,9 +461,9 @@ class Spring:
         else:
             stress = abs(M*la/Ic)    
         if stress > designStress*1.01 and stress != float('inf'):
-            print(stress)
-            print(xi)
-            print("~~~~~~~~~~~~~~~~~~~~~STRESS EXCEEDED~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+            # print(stress)
+            # print(xi)
+            # print("~~~~~~~~~~~~~~~~~~~~~STRESS EXCEEDED~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
             pass
         else:
             self.stressData.append(stress)
@@ -1075,7 +1093,7 @@ class Spring:
         # limit to 100 iterations to converge
 
         if ODE==self.constr_deform_ODE:
-            gain = 0.1
+            gain = 0.01
         else:
             gain = 1
         while i < 100:

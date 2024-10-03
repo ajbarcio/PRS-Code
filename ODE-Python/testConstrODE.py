@@ -15,7 +15,7 @@ OR = 2
 
 testTorque = 2500
 
-testSF     = np.array([1000, -150, testTorque])
+testSF     = np.array([0, 0, testTorque])
 
 testResl   = 200
 
@@ -50,18 +50,19 @@ testPath2.get_crscRef(testCrsc)
 
 testSpring = Spring(constCrsc, materials.TestMaterial, torqueCapacity=testTorque, resolution=testResl)
 
-# res, solnSFstraight, divergeFlag, i = testSpring.deform_by_torque(testTorque, testSpring.deform_ODE, SF=testSF)
+res, solnSFstraight, divergeFlag, i = testSpring.deform_by_torque(testTorque, testSpring.deform_ODE, SF=testSF)
 
 err, res = testSpring.forward_integration(testSpring.constr_deform_ODE,
-                                                testSF,
+                                                solnSFstraight,
                                                 testTorque)
 
 print(lin.norm(err))
 
-# res, solnSF, divergeFlag, i = testSpring.deform_by_torque(testTorque, testSpring.constr_deform_ODE, SF=solnSFstraight)
+# res, solnSF, divergeFlag, i = testSpring.deform_by_torque(testTorque, testSpring.constr_deform_ODE, SF=testSF)
 
-# print(testSpring.solnerr)
-# print(solnSFstraight)
+print(testSpring.solnerr)
+print(solnSFstraight)
+# print(solnSF)
 
 
 # fxmesh = np.linspace(-3000,3000,100)
@@ -98,6 +99,19 @@ plt.plot(testSpring.xiData, [x for x in testSpring.laData], label="la")
 plt.plot(testSpring.xiData, [x for x in testSpring.lbData], label="lb")
 plt.plot(testSpring.ximesh, testSpring.crsc.get_lalb(testSpring.ximesh).T, "--")
 
+plt.figure("beam geometry")
+arrayla = np.array(testSpring.laData)
+arraylb = np.array(testSpring.lbData)
+e = (arraylb-arrayla)/2
+plt.plot(testSpring.xiData, -arrayla-e, label="a")
+plt.plot(testSpring.xiData, arraylb-e, label="b")
+plt.plot(testSpring.xiData, -e, label="rn")
+
+plt.figure("thickness")
+h=arrayla+arraylb
+plt.plot(testSpring.xiData, h)
+
+
 plt.figure("stress success")
 plt.plot(testSpring.xiData, testSpring.stressData)
 
@@ -105,8 +119,10 @@ plt.figure("Ic")
 plt.plot(testSpring.xiData, testSpring.IcData)
 plt.plot(testSpring.ximesh, testSpring.crsc.get_Ic(testSpring.ximesh))
 
+
+
 # plt.show()
-#res: gamma, x, y, la, lb
+# res: gamma, x, y, la, lb
 # rn = testSpring.path.get_rn(testSpring.ximesh)
 # la = res[3,:]
 # lb = res[4,:]
