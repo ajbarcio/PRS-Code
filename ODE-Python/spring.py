@@ -70,6 +70,8 @@ class Spring:
         
         self.differenceThreshold = 0.0006
 
+        self.prepare_weighting_parameters()
+
         # fuck your memory, extract commonly used attributes from passed
         # definition objects:
         try:
@@ -97,6 +99,53 @@ class Spring:
 
     class Error(Exception):
         pass
+
+    def prepare_weighting_parameters(self):
+        self.threshold  = 13
+        self.transition = 4
+
+    def weighted_ODE(self, xi, states, *args):
+        # Repackage states
+        gamma, x, y, la, lb = states
+        # Repackage loads (IC)
+        Fx, Fy, dgds0 = args[0]
+        # Get distortion derivative
+        dxids = self.path.get_dxi_n(xi)
+        
+        alpha = self.path.get_alpha(xi)
+        # treating path as known (nominal)
+        rn = self.path.get_rn(xi)
+        # print(states, rn)
+
+        # Prepare moment dimensionalizer
+        if not lb==la:
+            Ic = self.t*rn/2*(lb**2-la**2)
+        else:
+            Ic = 1/12*self.t*(2*la)**3
+        Mdim = self.E*Ic
+
+        T0 = dgds0*Mdim
+
+        LHS = np.empty(5)
+        # Solve deformation ODE step
+        LHS[0] = (dgds0 + Fy/Mdim*(x-self.x0) - Fx/Mdim*(y-self.y0))
+        LHS[1] = np.cos(alpha+gamma)
+        LHS[2] = np.sin(alpha+gamma)
+
+        # check to make sure the math makes sense (I.C. satisfied)
+        if xi==0:
+            assert(np.isclose(LHS[0],dgds0,rtol=1e-5))
+
+        # Translate LHS of deformation ODE for use in geo ODE
+        dgammads = LHS[0]
+        dxds     = LHS[1]
+        dyds     = LHS[2]
+
+        # Prepare forcing function F*
+        FStar = Fy*(x-self.x0)-Fx*(y-self.y0)+T0
+        # Prepare weighting matrix W
+        lambda1 = 
+
 
     def free_ODE(self, xi, states, *args):
 
