@@ -70,7 +70,7 @@ class Spring:
         
         self.differenceThreshold = 0.0006
 
-        self.prepare_weighting_parameters()
+        self.prepare_weightings()
 
         # fuck your memory, extract commonly used attributes from passed
         # definition objects:
@@ -100,22 +100,32 @@ class Spring:
     class Error(Exception):
         pass
 
-    def prepare_weighting_parameters(self):
-        self.threshold  = 13
-        self.transition = 4
+    def prepare_weightings(self):
+        threshold  = 500
+        transition = 2
+        self.lambda1 = lambda x : threshold**transition/(x**transition+threshold**transition)
+        self.lambda2 = lambda x : 1-self.lambda1(x)
 
-    def weighted_ODE(self, xi, states, *args):
+        # self.lambda2 = lambda x : 1/np.pi*(np.arctan(transition*np.pi*(x-threshold))
+        #                                    -np.arctan(transition*np.pi*(-threshold)))
+        # self.lambda1 = lambda x : -self.lambda2(x) + 1
+
+        self.switching = lambda x : (-1)**x/2+1/2
+
+    def weighted_ODE(self, xi, states, *loads):
+        # print("----------------------------------")
+        # print(states)
         # Repackage states
         gamma, x, y, la, lb = states
         # Repackage loads (IC)
-        Fx, Fy, dgds0 = args[0]
+        Fx, Fy, dgds0 = loads[0]
         # Get distortion derivative
         dxids = self.path.get_dxi_n(xi)
         
         alpha = self.path.get_alpha(xi)
         # treating path as known (nominal)
         rn = self.path.get_rn(xi)
-        # print(states, rn)
+        drnds = self.path.get_drn(xi)
 
         # Prepare moment dimensionalizer
         if not lb==la:
@@ -124,10 +134,10 @@ class Spring:
             Ic = 1/12*self.t*(2*la)**3
         Mdim = self.E*Ic
 
-        T0 = dgds0*Mdim
+        # T0 = dgds0*Mdim
 
         LHS = np.empty(5)
-        # Solve deformation ODE step
+        # Solve deformation ODE (one step)
         LHS[0] = (dgds0 + Fy/Mdim*(x-self.x0) - Fx/Mdim*(y-self.y0))
         LHS[1] = np.cos(alpha+gamma)
         LHS[2] = np.sin(alpha+gamma)
@@ -141,11 +151,85 @@ class Spring:
         dxds     = LHS[1]
         dyds     = LHS[2]
 
-        # Prepare forcing function F*
-        FStar = Fy*(x-self.x0)-Fx*(y-self.y0)+T0
-        # Prepare weighting matrix W
-        lambda1 = 
+        # Prepare forcing function F* and its derivative
+        FStar    = Fy*(x-self.x0)-Fx*(y-self.y0)
+        dFStards = Fy*dxds - Fx*dyds
 
+        # Prepare weighting matrix W
+        lam1 = self.lambda1(rn)
+        lam2 = self.lambda2(rn)
+        W = np.array([[lam1, 0, 0, 0],[0, lam1, 0, 0],[0, 0, lam2, 0],[0, 0, 0, lam2]])
+        # print(rn, lam1, lam2)
+
+        # Determine stress case
+        innerStressFactor = abs(la/(rn-la))
+        outerStressFactor = abs(lb/(rn+lb))
+        dominantStressFactor = max(innerStressFactor, outerStressFactor)
+
+        if dominantStressFactor==innerStressFactor:
+            dDen  = rn-la
+            dSide = la
+            phi   = 0
+            # print("a case")
+        elif dominantStressFactor==outerStressFactor:
+            dDen  = rn+lb
+            dSide = lb
+            phi   = 1
+            # print("b case")
+        else:
+            print("OH MY GOD ~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+            assert(False)
+        # Just give us nice, short symbols to use
+        sigma = self.designStress
+        t = self.t
+
+        # Prepare full system:
+        stressConstrDenominator = t*(dDen*sigma - dgds0*dSide)**2
+        stressConstrNumerator   = sigma*dSide*(FStar*drnds-dFStards*dDen)+dSide**2*dFStards*dgds0
+
+        if np.isinf(rn):
+            # print("should be finite:", stressConstrDenominator)
+            QFrac = FStar/(stressConstrDenominator)
+            if FStar==0:
+                stressConstrNumerator = 0 + dSide**2*dFStards*dgds0
+        else:
+            QFrac = FStar*sigma*rn/(stressConstrDenominator)
+
+        Q = np.array([[la/(rn*(rn-la)),lb/(rn*(rn+lb))], \
+                     [-(la+(QFrac)),   lb+(QFrac)]])
+        
+        P = np.array([[1,0],[-1,1]])
+        QP = np.vstack((Q,P))
+
+        qStar = np.array([[drnds*(1/(rn+lb)-1/(rn-la)+(la+lb)/(rn**2))],
+                          [stressConstrNumerator/stressConstrDenominator]])
+        pStar = np.array([[3/4*dFStards/la],[0]])
+        qStarPStar = np.vstack((qStar,pStar))
+        # print(drnds, rn)
+        # print(dFStards, FStar)
+        # print(qStarPStar)
+
+        # Solve geometry portion of ODE (one step)
+        if rn==float('inf'):
+            print(states)
+            print(la, lb, QFrac)
+            print(Q, P)
+            print(qStar, pStar)
+        qdot = lin.pinv(W.dot(QP)).dot(W).dot(qStarPStar)
+        # print(qdot)
+        LHS[3] = qdot[0]
+        LHS[4] = qdot[1]
+
+        # print(LHS)
+
+        # transfer back from s space to xi space
+        LHS = LHS/dxids
+
+        stress = dgammads*self.E*rn*dominantStressFactor
+        self.stressData.append(stress)
+        self.xiData.append(xi)
+
+        return LHS
 
     def free_ODE(self, xi, states, *args):
 
@@ -860,7 +944,7 @@ class Spring:
     #                                                           SF[2]-torqueTarg])
     #     return err, self.res
 
-    def forward_integration(self, ODE, SF, torqueTarg):
+    def forward_integration(self, ODE, SF, torqueTarg, startingIndex=0):
 
         """
         THIS FUNCTION:
@@ -868,7 +952,7 @@ class Spring:
             by integrating forward across a specified ODE (there is currently
             only one supported)
         """
-        if ODE==self.constr_deform_ODE:
+        if not ODE==self.deform_ODE:
             self.xiData=[]
             self.laData=[]
             self.lbData=[]
@@ -876,17 +960,51 @@ class Spring:
 
             designStress = self.designStress*SF[2]/self.torqueCapacity
 
-            h0 = np.sqrt(6*SF[2]/(self.t*designStress))
-            la0=h0/2
-            lb0=la0
-            # print("init thickness:", la0)
-            Ic0 = self.t*(2*la0)**3/12
+            if self.path.get_rn(0)==float('inf'):
+                h0 = np.sqrt(6*SF[2]/(self.t*designStress))
+                la0=h0/2
+                lb0=la0
+                # print("init thickness:", la0)
+                Ic0 = self.t*(2*la0)**3/12
+            else:
+                Fx, Fy, M = SF
+                rn0 = self.path.get_rn(0)
+                from scipy.optimize import fsolve
+                def nonsingular_ICs(w):
+                    la0, lb0, dgds0, Ic0 = w
+                    F=np.zeros(4)
+                    F[0] = designStress-self.E*rn0*dgds0*la0/(rn0-la0)
+                    F[1] = rn0-(la0+lb0)/np.log((rn0+lb0)/(rn0-la0))
+                    F[2] = dgds0-(M/self.n+Fx*self.momentArmY-Fy*self.momentArmX)/(self.E*Ic0)
+                    F[3] = Ic0-self.t*rn0/2*(lb0**2-la0**2)
+                    return F
+                initialGuessla0   = .2
+                initialGuesslb0   = .22
+                initialGuessIc0   = self.t*rn0/2*(initialGuesslb0**2-initialGuessla0**2)
+                initialGuessdgds0 = (M/self.n+Fx*self.momentArmY-Fy*self.momentArmX)/(self.E*initialGuessIc0)
+                initialGuess=np.array([initialGuessla0,initialGuesslb0,initialGuessdgds0,initialGuessIc0])
+                # initialGuess=np.random.rand(4)
+                solutionInfo=fsolve(nonsingular_ICs,initialGuess,full_output=1)
+                print(solutionInfo)
+                solution = solutionInfo[0]
+                la0=solution[0]
+                lb0=solution[1]
+                dgds0Calc = solution[2]
+                Ic0Calc=solution[3]
+                print(la0, lb0)
+                Ic0 = self.t*rn0/2*(lb0**2-la0**2)
+                print("Ic error", Ic0-Ic0Calc)
+                print("initial rn error", rn0-(la0+lb0)/(np.log((rn0+lb0)/(rn0-la0))))
         else:
             Ic0 = self.crsc.get_Ic(0)
 
         # set up initial condition
         self.dgds0 = (SF[2]/self.n + self.momentArmY*SF[0] - self.momentArmX*SF[1])/ \
                       (self.E*Ic0)
+        dgds0Error = dgds0Calc-self.dgds0
+        print("deflection rate error", self.dgds0-dgds0Calc)
+        # print("designStress", designStress)
+        # print("initial Stress", self.E*rn0*self.dgds0*(la0/(rn0-la0)))
 
         # perform forward integration
         # arguments: ODE, Initial Conditions, Mesh, args
@@ -895,8 +1013,8 @@ class Spring:
                                             # (SF[2], 
                                             (SF[0], SF[1], self.dgds0))
         else:    
-            self.res  = fixed_rk4(ODE, np.array([0,self.x0,self.y0]), self.ximesh,
-                                        (SF[2], SF[0], SF[1], self.dgds0))
+            self.res  = fixed_rk4(ODE, np.array([0,self.x0,self.y0,la0,lb0]), self.ximesh,
+                                        (SF[0], SF[1], self.dgds0))
         # calcualte error values (difference in pre-and post-iteration radii)
         #                        (difference in final gamma and final beta)
         Rinitial = lin.norm([self.xL,self.yL])

@@ -1523,9 +1523,10 @@ class Minimal_Polynomial_Definition4:
         coord = np.atleast_1d(coord)
         out = self.drnds(coord)
         if len(out)==1:
-            return out[0]
-        else:
-            return out
+            out = out[0]
+        if np.isnan(out):
+            out = 0
+        return out
 
     def get_alpha(self, coord):
         if hasattr(coord, "__len__"):

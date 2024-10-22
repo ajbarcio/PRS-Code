@@ -19,14 +19,62 @@ import sympy as sp
 # data =df.loc['Size 5', 'ID lim (in)']
 # print(data)
 
-x = [0, 1]
-y = [0, 1]
-X, Y = np.meshgrid(x, y)
-z = np.zeros_like(X)
-fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+from scipy.optimize import fsolve
+designStress = 180000
+rn = 5
+E = 27500000
+M = 2500
+Fx = 150
+Fy = -50
+n=2
+t=0.375
+momentArmY=2
+momentArmX=1
+def nonlinear(w):
+    la, lb, dgds0, Ic0 = w
+    F=np.zeros(4)
+    F[0] = designStress-E*rn*dgds0*la/(rn-la)
+    F[1] = rn-(la+lb)/np.log((rn+lb)/(rn-la))
+    F[2] = dgds0-(M/n+Fx*momentArmY-Fy*momentArmX)/(E*Ic0)
+    F[3] = Ic0-t*rn/2*(lb**2-la**2)
+    return F
+# generate an initial guess
+initialGuess=np.random.rand(4)    
+ 
+# solve the problem    
+solutionInfo=fsolve(nonlinear,initialGuess,full_output=1)
+print(solutionInfo)
+# W = np.array([[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]])
+# Q = np.array([[1,2],[3,4]])
+# P = np.array([[1,0],[-1,1]])
+# qStar = np.array([[1],[2]])
+# pStar = np.array([[3],[0]])
 
-ax.plot_surface(X,Y,z)
-plt.show()
+# QP = np.vstack((Q,P))
+# qStarPStar = np.vstack((qStar,pStar))
+# qdot = lin.pinv(W.dot(QP)).dot(W).dot(qStarPStar)
+# print(qdot)
+# print(qdot[0])
+# print(qdot[1])
+
+# class TestClass:
+#     def __init__(self):
+#         self.a = 2
+#         self.b = 3
+
+# test = TestClass()
+# test.define_some_stuff()
+# # test.define_some_stuff.add_stuff()
+# print(test.c)
+
+# x = [0, 1]
+# y = [0, 1]
+# X, Y = np.meshgrid(x, y)
+# z = np.zeros_like(X)
+# fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+
+# ax.plot_surface(X,Y,z)
+# plt.show()
 
 # states = [0,1,2,3,4]
 # gamma, x, y, la, lb = states
