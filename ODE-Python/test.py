@@ -2,6 +2,7 @@ import numpy as np
 from numpy import linalg as lin
 from scipy import optimize as opt
 from matplotlib import pyplot as plt
+import scipy.special as spec
 import os
 import pandas as pd
 
@@ -21,29 +22,75 @@ import sympy as sp
 
 from scipy.optimize import fsolve
 designStress = 180000
-rn = 5
+rn0 = 5
 E = 27500000
 M = 2500
-Fx = 150
-Fy = -50
+Fx = 0
+Fy = 0
 n=2
 t=0.375
 momentArmY=2
 momentArmX=1
-def nonlinear(w):
-    la, lb, dgds0, Ic0 = w
-    F=np.zeros(4)
-    F[0] = designStress-E*rn*dgds0*la/(rn-la)
-    F[1] = rn-(la+lb)/np.log((rn+lb)/(rn-la))
-    F[2] = dgds0-(M/n+Fx*momentArmY-Fy*momentArmX)/(E*Ic0)
-    F[3] = Ic0-t*rn/2*(lb**2-la**2)
+
+la0 = np.linspace(0,0.5,100)
+lb0 = lb0   = rn0*-spec.lambertw((np.exp(la0/rn0-1)*(la0-rn0))/rn0,-1)-rn0
+lb0 = np.real(lb0)
+Ic0   = t*rn0/2*(lb0**2-la0**2)
+dgds0 = (M/n + momentArmY*Fx - momentArmX*Fy)/(E*Ic0)
+
+designStress = E*rn0*dgds0*np.maximum(la0/(rn0-la0),lb0/(rn0+lb0))
+
+plt.figure("solution")
+plt.plot(la0,lb0)
+plt.figure("difference")
+plt.plot(la0,lb0-la0)
+plt.figure("root stress")
+plt.plot(la0,designStress)
+plt.plot(la0,180000*np.ones_like(la0))
+
+def findTargetRootStress(w):
+    la = w
+    F = np.array(1)
+    lb = rn0*-spec.lambertw((np.exp(la/rn0-1)*(la-rn0))/rn0,-1)-rn0
+    lb = np.real(lb)
+    Ic = self.t*rn0/2*(lb**2-la**2)
+    dgds0 = 
+    F = self.E*rn0*dgds0*max(la0/(rn0-la),lb/(rn0+lb))-self.designStress
     return F
-# generate an initial guess
-initialGuess=np.random.rand(4)    
+la0   = .32
+solutionInfo = fsolve(findTargetRootStress,la0,full_output=1)
+solution = solutionInfo[0]
+la0 = solution[0]
+lb0   = rn0*-spec.lambertw((np.exp(la0/rn0-1)*(la0-rn0))/rn0,-1)-rn0
+lb0 = np.real(lb0)
+print(lb0)
+
+
+plt.show()
+
+
+
+
+
+# def nonlinear(w):
+#     la, lb, dgds0, Ic0 = w
+#     F=np.zeros(4)
+#     F[0] = designStress-E*rn*dgds0*la/(rn-la)
+#     F[1] = rn-(la+lb)/np.log((rn+lb)/(rn-la))
+#     F[2] = dgds0-(M/n+Fx*momentArmY-Fy*momentArmX)/(E*Ic0)
+#     F[3] = Ic0-t*rn/2*(lb**2-la**2)
+#     return F
+# # generate an initial guess
+# initialGuess=np.random.rand(4)    
  
-# solve the problem    
-solutionInfo=fsolve(nonlinear,initialGuess,full_output=1)
-print(solutionInfo)
+# # solve the problem    
+# solutionInfo=fsolve(nonlinear,initialGuess,full_output=1)
+# print(solutionInfo)
+
+
+
+
+
 # W = np.array([[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]])
 # Q = np.array([[1,2],[3,4]])
 # P = np.array([[1,0],[-1,1]])

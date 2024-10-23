@@ -120,8 +120,39 @@ class Constant_Ic():
         return self.returnValue
 
     def get_outer_geometry(self, resolution):
-        # shouldn't need this for now
-        return self.returnValue
+        undeformedNeutralSurface = self.path.get_neutralSurface(resolution)
+        ximesh = np.linspace(0,self.fullParamLength,resolution+1)
+
+        Ic0 = self.get_Ic(0)
+
+        hPrev = np.cbrt(12*Ic0/self.t)
+        lABPrev = np.array([hPrev/2, hPrev/2])
+        self.la = np.empty(len(ximesh))
+        self.lb = np.empty(len(ximesh))
+        self.h = np.empty(len(ximesh))
+
+        # print(rn[-5:])
+        # perform la/lb rootfinding for each step in the xi mesh
+        for i in range(len(ximesh)):
+            SSProfile("lAB rootfinding").tic()
+            lAB = self.l_a_l_b_rootfinding(ximesh[i], lABPrev)
+            SSProfile("lAB rootfinding").toc()
+            self.la[i] = lAB[0]
+            self.lb[i] = lAB[1]
+            # calculate overall thickness
+            self.h[i] = self.lb[i]+self.la[i]
+            lABPrev = lAB
+        # print(h[-5:])
+        alpha = self.path.get_alpha(ximesh)
+        # generate xy paths for surfaces
+        self.undeformedBSurface = undeformedNeutralSurface + \
+                                  np.hstack((np.atleast_2d(-self.lb*np.sin(alpha)).T,
+                                             np.atleast_2d(self.lb*np.cos(alpha)).T))
+        self.undeformedASurface = undeformedNeutralSurface - \
+                                np.hstack((np.atleast_2d(-self.la*np.sin(alpha)).T,
+                                           np.atleast_2d(self.la*np.cos(alpha)).T))
+
+        return self.undeformedASurface, self.undeformedBSurface
 
     def get_Thk(self, coord, hasPrev=False):
         lalb = self.get_lalb

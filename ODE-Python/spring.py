@@ -1,6 +1,7 @@
 import numpy as np
 import scipy as scp
 import scipy.stats as stat
+import scipy.special as spec
 import numpy.linalg as lin
 import matplotlib.pyplot as plt
 import os
@@ -101,8 +102,8 @@ class Spring:
         pass
 
     def prepare_weightings(self):
-        threshold  = 500
-        transition = 2
+        threshold  = 1e5
+        transition = 8
         self.lambda1 = lambda x : threshold**transition/(x**transition+threshold**transition)
         self.lambda2 = lambda x : 1-self.lambda1(x)
 
@@ -195,13 +196,13 @@ class Spring:
         else:
             QFrac = FStar*sigma*rn/(stressConstrDenominator)
 
-        Q = np.array([[la/(rn*(rn-la)),lb/(rn*(rn+lb))], \
+        Q = np.array([[la/(rn*(rn-la)),-lb/(rn*(rn+lb))], \
                      [-(la+(QFrac)),   lb+(QFrac)]])
         
         P = np.array([[1,0],[-1,1]])
         QP = np.vstack((Q,P))
 
-        qStar = np.array([[drnds*(1/(rn+lb)-1/(rn-la)+(la+lb)/(rn**2))],
+        qStar = np.array([[drnds*(1/(rn-la)-1/(rn+lb)-(la+lb)/(rn**2))],
                           [stressConstrNumerator/stressConstrDenominator]])
         pStar = np.array([[3/4*dFStards/la],[0]])
         qStarPStar = np.vstack((qStar,pStar))
@@ -970,39 +971,65 @@ class Spring:
                 Fx, Fy, M = SF
                 rn0 = self.path.get_rn(0)
                 from scipy.optimize import fsolve
-                def nonsingular_ICs(w):
-                    la0, lb0, dgds0, Ic0 = w
-                    F=np.zeros(4)
-                    F[0] = designStress-self.E*rn0*dgds0*la0/(rn0-la0)
-                    F[1] = rn0-(la0+lb0)/np.log((rn0+lb0)/(rn0-la0))
-                    F[2] = dgds0-(M/self.n+Fx*self.momentArmY-Fy*self.momentArmX)/(self.E*Ic0)
-                    F[3] = Ic0-self.t*rn0/2*(lb0**2-la0**2)
+                # def findTargetRootStress(w):
+                #     la = w
+                #     F = np.array(1)
+                #     lb = rn0*-spec.lambertw((np.exp(la/rn0-1)*(la-rn0))/rn0,-1)-rn0
+                #     lb = np.real(lb)
+                #     Ic = self.t*rn0/2*(lb**2-la**2)
+                #     dgds0 = (M/self.n + self.momentArmY*Fx - self.momentArmX*Fy)/(self.E*Ic)
+                #     F = self.E*rn0*dgds0*max(la/(rn0-la),lb/(rn0+lb))-self.designStress
+                #     # print(F)
+                #     return F
+                def findInitialConditions(w):
+                    la, lb = w
+                    F = np.empty(2)
+                    Ic0 = self.t*rn0*(lb**2-la**2)
+                    dgds0 = (M/self.n + self.momentArmY*Fx - self.momentArmX*Fy)/(self.E*Ic0)
+                    F[0] = rn0-(la+lb)/(np.log((rn0+lb)/(rn0-la)))
+                    F[1] = la-self.designStress/(self.E*dgds0+self.designStress/rn0)
                     return F
-                initialGuessla0   = .2
-                initialGuesslb0   = .22
-                initialGuessIc0   = self.t*rn0/2*(initialGuesslb0**2-initialGuessla0**2)
-                initialGuessdgds0 = (M/self.n+Fx*self.momentArmY-Fy*self.momentArmX)/(self.E*initialGuessIc0)
-                initialGuess=np.array([initialGuessla0,initialGuesslb0,initialGuessdgds0,initialGuessIc0])
-                # initialGuess=np.random.rand(4)
-                solutionInfo=fsolve(nonsingular_ICs,initialGuess,full_output=1)
+                # initialGuess = np.random.rand(2)
+                initialGuess = np.array([.12,.13])
+                solutionInfo = fsolve(findInitialConditions, initialGuess, full_output=1)
                 print(solutionInfo)
                 solution = solutionInfo[0]
-                la0=solution[0]
-                lb0=solution[1]
-                dgds0Calc = solution[2]
-                Ic0Calc=solution[3]
+                la0      = solution[0]
+                lb0      = solution[1]
                 print(la0, lb0)
-                Ic0 = self.t*rn0/2*(lb0**2-la0**2)
-                print("Ic error", Ic0-Ic0Calc)
-                print("initial rn error", rn0-(la0+lb0)/(np.log((rn0+lb0)/(rn0-la0))))
+                Ic0 = self.t*rn0*(lb0**2-la0**2)
+                dgds0 = (M/self.n + self.momentArmY*Fx - self.momentArmX*Fy)/(self.E*Ic0)
+                # la0      = self.designStress/(self.E*)
+                # exitFlag = 0
+                # i        = 0
+                # while not exitFlag:
+                #     solutionInfo = fsolve(findTargetRootStress,la0,full_output=1)
+                #     # print(solutionInfo)
+                #     solution = solutionInfo[0]
+                #     exitFlag = np.isclose(findTargetRootStress(solution),0,atol=1e-6)
+                #     # exitFlag = 1
+                #     # print(findTargetRootStress(solution))
+                #     la0 += .05
+                #     i+=1
+                #     # print("going", i, end="\r")
+                # la0 = solution[0]
+                # lb0   = rn0*-spec.lambertw((np.exp(la0/rn0-1)*(la0-rn0))/rn0,-1)-rn0
+                # lb0 = np.real(lb0)
+                # print(lb0)
+                print("interior dgds0", dgds0)
+                print("resultant Stress", self.E*rn0*dgds0*la0/(rn0-la0))
         else:
             Ic0 = self.crsc.get_Ic(0)
 
         # set up initial condition
         self.dgds0 = (SF[2]/self.n + self.momentArmY*SF[0] - self.momentArmX*SF[1])/ \
                       (self.E*Ic0)
-        dgds0Error = dgds0Calc-self.dgds0
-        print("deflection rate error", self.dgds0-dgds0Calc)
+        print("exterior dgds0", self.dgds0)
+        insideDesignStress = self.E*rn0*self.dgds0*max(la0/(rn0-la0),lb0/(rn0+lb0))
+        print("inside design stress", insideDesignStress)
+        print("target design stress", self.designStress)
+        # dgds0Error = dgds0Calc-self.dgds0
+        # print("deflection rate error", self.dgds0-dgds0Calc)
         # print("designStress", designStress)
         # print("initial Stress", self.E*rn0*self.dgds0*(la0/(rn0-la0)))
 
@@ -1623,7 +1650,7 @@ class Spring:
         plt.plot(self.B[:,0],self.B[:,1],"k", alpha=trans)
         plt.plot(self.Sn[:,0],self.Sn[:,1],"--b",label="netural", alpha=trans)
         plt.plot(self.Sc[:,0],self.Sc[:,1],"--r",label="centroidal", alpha=trans)
-        plt.plot(self.path.pts[:,0],self.path.pts[:,1])
+        # plt.plot(self.path.pts[:,0],self.path.pts[:,1])
         plt.axis("equal")
         plt.legend()
 
@@ -1643,7 +1670,7 @@ class Spring:
 
         # plot geometry of inner and outer rotor of spring
         outerCircle = plt.Circle([0,0],self.outerRadius,color ="k",fill=False)
-        innerCircle = plt.Circle([0,0],self.innerRadius,color ="k",fill=True)
+        innerCircle = plt.Circle([0,0],self.innerRadius,color ="k",fill=False)
         fig = plt.gcf()
         ax = fig.gca()
         ax.add_patch(outerCircle)

@@ -24,7 +24,7 @@ testPath = PATHDEF.Minimal_Polynomial_Definition4(n=2, fullParamLength=4,
                                        betaAngles = np.array([0,87.5,175])*deg2rad,
                                        XYFactors = np.array([0.5]))
 # some spiral that linearly increases r_n
-testPath2 = PATHDEF.Linear_Rn_Spiral(start=5, end=5)
+testPath2 = PATHDEF.Linear_Rn_Spiral(start=3, end=5, xiRange=np.pi)
 # design a cross section to test: this one uses a constant I_c at all points
 testCrsc = CRSCDEF.Piecewise_Ic_Control(pathDef=testPath,
                                         IcPts=np.array([0.0025,0.0025]),
@@ -33,7 +33,7 @@ testCrsc = CRSCDEF.Piecewise_Ic_Control(pathDef=testPath,
 # Determine loading conditions
 testTorque = 2500
 
-testSF     = np.array([150, -50, testTorque])
+testSF     = np.array([0, 0, testTorque])
 
 testResl   = 1000
 
@@ -87,18 +87,25 @@ rn = testSpring.path.get_rn(testSpring.ximesh)
 # plt.plot(testSpring.ximesh, (la+lb)/(np.log((rn+lb)/(rn-la))))
 plt.plot(testSpring.ximesh, rn-(la+lb)/(np.log((rn+lb)/(rn-la))))
 
+plt.figure("stress is correct")
+stressFactor = np.maximum(la/(rn-la),lb/(rn+lb))
+print(dgds[0], testSpring.dgds0)
+stress = testSpring.E*rn*dgds*stressFactor
+# plt.plot(testSpring.ximesh, stress)
+plt.plot(testSpring.xiData, testSpring.stressData)
+
 plt.figure("eqn 2 (lb^2-la^2) error")
 Fx = testSF[0]
 Fy = testSF[1]
-sigma = preDesignStress
+sigma = stress
 fsigd = np.maximum(la/(rn-la),lb/(rn+lb))
 FStar = Fy*(x-testSpring.x0)-Fx*(y-testSpring.y0)
 diffTarget = 2*FStar/(testSpring.t*(sigma/fsigd-testSpring.dgds0))
 plt.plot(testSpring.ximesh, (lb**2-la**2)-diffTarget)
 
-plt.figure("weights")
-plt.plot(testSpring.ximesh, testSpring.lambda1(rn))
-plt.plot(testSpring.ximesh, testSpring.lambda2(rn))
+# plt.figure("weights")
+# plt.plot(testSpring.ximesh, testSpring.lambda1(rn))
+# plt.plot(testSpring.ximesh, testSpring.lambda2(rn))
 
 plt.figure("la, lb")
 # plt.plot(testSpring.xiData, [x for x in testSpring.laData], label="la")
@@ -106,12 +113,7 @@ plt.figure("la, lb")
 plt.plot(testSpring.ximesh, lalb.T, label="ODE SOLN")
 # plt.plot(testSpring.ximesh, testSpring.crsc.get_lalb(testSpring.ximesh).T, "--", label="CONSTANT IC SOLN")
 
-plt.figure("stress is correct")
-stressFactor = np.maximum(la/(rn-la),lb/(rn+lb))
-print(dgds[0], testSpring.dgds0)
-stress = testSpring.E*rn*dgds*stressFactor
-# plt.plot(testSpring.ximesh, stress)
-plt.plot(testSpring.xiData, testSpring.stressData)
+testSpring.plot_spring(showBool=False)
 
 # plt.figure("beam geometry")
 # arrayla = np.array(testSpring.laData)
@@ -140,4 +142,4 @@ plt.plot(testSpring.xiData, testSpring.stressData)
 # plt.figure("gamma vs arc length")
 # plt.plot(testSpring.ximesh,res[0,:])
 
-# plt.show()
+plt.show()
