@@ -208,7 +208,6 @@ class Empty():
     def get_outer_geometry_ODE(self, resolution, lalb):
         return self.returnValue
 
-
     def get_outer_geometry(self, resolution):
 
         return self.returnValue

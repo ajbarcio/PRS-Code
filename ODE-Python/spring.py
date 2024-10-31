@@ -6,10 +6,36 @@ import numpy.linalg as lin
 import matplotlib.pyplot as plt
 import os
 
-from materials import Maraging300Steel
+import materials
 from utils import fixed_rk4, numerical_fixed_mesh_diff, colorline
 
 deg2rad = np.pi/180
+
+class Optimized_Spring:
+    def __init__(self, pathDef, material: materials.Material, 
+                 resolution=200, 
+                 torqueCapacity=3000, 
+                 stiffness=52000, 
+                 useFatigue=False,
+                 name = None):
+        # Name the spring
+        self.name = name
+        # "inherit" the path definition
+        self.path=pathDef
+        # Assign Material
+        self.material = material
+        # Design intent
+        self.fullTorque   = torqueCapacity
+        self.desStiffness = stiffness
+        # Material
+        self.E = material.E
+        self.yieldStress = material.yieldStress
+        # Stress constraints
+        if useFatigue:
+            material.reset_designStress()
+        self.designStress = material.designStress
+
+
 
 class Spring:
     def __init__(self, geoDef, material,
@@ -910,41 +936,6 @@ class Spring:
                                                               SF[2]-torqueTarg])
         return err, self.res
 
-    # def forward_integration(self, ODE, SF, torqueTarg):
-
-
-    #     """
-    #     THIS FUNCTION:
-    #         Evaluates a spring's deflection under a certain loading condition
-    #         by integrating forward across a specified ODE (there is currently
-    #         only one supported)
-    #     """
-
-    #     # set up initial condition
-    #     dgds0 = (SF[2]/self.n + self.momentArmY*SF[0] - self.momentArmX*SF[1])/ \
-    #                   (self.E*self.crsc.get_Ic(0))
-
-    #     # perform forward integration
-    #     self.res  = fixed_rk4(ODE, np.array([0,self.x0,self.y0]), self.ximesh,
-    #                                                       (SF[0], SF[1], dgds0))
-    #     # calcualte error values (difference in pre-and post-iteration radii)
-    #     #                        (difference in final gamma and final beta)
-    #     Rinitial = lin.norm([self.xL,self.yL])
-    #     Rfinal   = lin.norm([self.res[1,-1],self.res[2,-1]])
-    #     # Calculate dBeta using arccos
-    #     ptInitial = np.array([self.xL, self.yL])/ \
-    #                                       lin.norm(np.array([self.xL, self.yL]))
-    #     ptFinal   = np.array([self.res[1,-1],self.res[2,-1]])/ \
-    #                          lin.norm(np.array([self.res[1,-1],self.res[2,-1]]))
-
-    #     cosAngle = min(ptFinal.dot(ptInitial),1.0)
-    #     self.dBeta    = np.arccos(cosAngle)*np.sign(torqueTarg)
-    #     # Err = diff. in radius, diff between gamma(L) and beta(L), distance
-    #     #       from target torque (just to make matrix square)
-    #     err = np.array([Rinitial-Rfinal, abs(self.res[0,-1])-abs(self.dBeta),
-    #                                                           SF[2]-torqueTarg])
-    #     return err, self.res
-
     def forward_integration(self, ODE, SF, torqueTarg, startingIndex=0):
 
         """
@@ -1475,71 +1466,6 @@ class Spring:
                                                             breakBool=True) # Not sure about this one
 
         return res, solnSF, divergeFlag, i
-
-    # def deform_by_torque_straightProto(self, torqueTarg, ODE,
-    #                      SF=np.array([0,0,0]),
-    #                      breakBool=False):
-        
-    #     # Determine thickness for constant IC prototype beam:
-    #     designStress = self.designStress*torqueTarg/self.torqueCapacity
-
-    #     h0 = np.sqrt(6*SF[2]/(self.t*designStress))
-    #     la0=h0/2
-    #     lb0=la0
-    #     # print("init thickness:", la0)
-    #     Ic0 = self.t*(2*la0)**3/12
-
-    #     # the err is a two vector, so make it arbitrarily high to enter loop
-    #     err = np.ones(2)*float('inf')
-    #     # 0th iteration
-    #     i = 0
-    #     divergeFlag = 0
-    #     # limit to 100 iterations to converge
-
-    #     gain = 0.1
-    #     while i < 100:
-    #         print(i)
-    #         errPrev = err
-    #         # determine boundary condition compliance, estimate jacobian
-    #         err, self.res = self.forward_integration(ODE,SF,torqueTarg)
-    #         # print(self.dgds0)
-    #         print(lin.norm(err))
-    #         J = self.BC_jacobian(ODE,SF,torqueTarg,n=3)
-    #         # print(J)
-    #         # freak out if it didnt work
-    #         if lin.norm(err)>lin.norm(errPrev):
-    #             # print information on what is happening
-    #             print("torque deform diverging", i)
-    #             # print(J)
-    #             # print(err, errPrev)
-    #             # print(SF)
-    #             divergeFlag = 1
-    #             # If break bool is true, break if you diverge even once
-    #             # usually for debug purposes, I just let it run, and see if
-    #             # it can find its way back to a convergent solution
-    #             if breakBool:
-    #                 break
-    #         # regardless, make a new guess if it did work
-    #         if lin.norm(err,2) > 1e-5:
-    #             # (according to a newton's method)
-    #             # print(SF)
-    #             # print(J)
-    #             # print(lin.pinv(J))
-    #             # print("err:", err)
-    #             # print(lin.norm(err))
-    #             print(SF)
-    #             SF = SF-lin.pinv(J).dot(err)*gain
-    #             # print(SF)
-    #         # and if the error is small enough to converge, break out
-    #         else:
-    #             break
-    #         i+=1
-    #     # store the final solution in the object
-    #     self.solnSF = SF
-    #     self.solnerr = lin.norm(err)
-    #     self.solnerrVec = err
-    #     return self.res, self.solnSF, divergeFlag, i
-    #     pass
 
     def calculate_stresses(self):
 

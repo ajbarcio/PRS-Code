@@ -17,7 +17,7 @@ class Material:
         self.ultimateStress = ultimateStress
         self.fatigueStress  = 0.5*ultimateStress
 
-    def reset_designStrength(self):
+    def reset_designStress(self):
         if self.ultimateStress:
             self.designStress=self.fatigueStress
         else:

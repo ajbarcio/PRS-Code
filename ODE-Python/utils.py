@@ -1,7 +1,29 @@
 import numpy as np
 import matplotlib.collections as mcoll
-
+from numpy import linalg as lin
 import matplotlib.pyplot as plt
+
+## Function to find intersection between two circles closer to origin
+
+def circle_intersection(radius1, radius2, point1, point2):
+    distance = lin.norm(np.subtract(point1, point2))
+    if distance > radius1+radius2:
+        raise ValueError("Impossible Circles")
+    else:    
+        # a is the distance from center 1 to the line connecting the intersection points
+        a = (radius1**2 - radius2**2 + distance**2) / (2 * distance)
+        # h is the height from the line to the intersection points
+        h = np.sqrt(radius1**2 - a**2)
+        # Find the midpoint between the two centers
+        x0 = point1[0] + a * (point2[0] - point1[0]) / distance
+        y0 = point1[1] + a * (point2[1] - point1[1]) / distance
+        intersection1 = (x0 + h * (point2[1] - point1[1]) / distance, y0 - h * (point2[0] - point1[0]) / distance)
+        intersection2 = (x0 - h * (point2[1] - point1[1]) / distance, y0 + h * (point2[0] - point1[0]) / distance)
+        if lin.norm(intersection1)<lin.norm(intersection2):
+            center=intersection1
+        else:
+            center=intersection2
+    return center
 
 ## Function to evaluate piecewise polynomials
 
