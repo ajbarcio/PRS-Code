@@ -4,37 +4,55 @@ import numpy.linalg as lin
 from utils import PPoly_Eval
 from StatProfiler import SSProfile
 
-deg2rad = np.pi/180
+from abc import ABC, abstractmethod
+from typing import Optional
 
-"""
-##############################################
-# STANDARD INTERFACE FOR ALL CRSCDEF OBJECTS #
-##############################################
-# Methods to include:
-#
-#   get_outer_geometry(resolution):
-#           resolution as int
-#
-#   get_Ic(coord):
-#           coord as scalar or vector float
-#
-#   get_Thk(coord, #hasPrev#):
-#           hasPrev as boolean/float if prev exists
-#
-# Attributes to include:
-#
-#   self.t
-#
-#   self.fullParamLength (SHOULD BE "INHERITED" FROM PREVIOUSLY DEFINED PATHDEF)
-#
-#
-"""
+from spring import deg2rad
+
+## LEGACY BELOW ##
+
+class IcDef(ABC):
+    def __init__(self, path):
+        self.path = path
+        pass
+
+    @abstractmethod
+    def get_neturalDistances(self, resolution):
+        pass
+
+    @abstractmethod
+    def get_outer_geometry_ODE(self, resolution, lalb):
+        pass
+
+    @abstractmethod
+    def get_outer_geometry(self, resolution):
+        pass
+
+    @abstractmethod
+    def get_Thk(self, coord, hasPrev=False):
+        pass
+
+    @abstractmethod
+    def get_lalb(self, coord, hasPrev=False):
+        pass
+    
+    @abstractmethod    
+    def get_Ic(self, coord):
+        pass
+    
+    @abstractmethod    
+    def get_dIc(self, coord):
+        pass
+
+    @abstractmethod
+    def get_eccentricity(self, coord):
+        pass
 
 class Constant_Ic():
-    def __init__(self, pathDef, t, h0):
-        self.path = pathDef
-        self.t    = t
+    def __init__(self, path, t, h0, Ic0=None):
+        super().__init__(self, path)
         self.h0 = h0
+        self.t = t
         self.la = h0/2
         self.lb = self.la
         self.Ic0     = 1/12.0*self.t*self.h0**3
@@ -189,49 +207,14 @@ class Constant_Ic():
     def get_dIc(self, coord):
         return 0
 
-class Empty():
-    def __init__(self,
-                 pathDef, t):
-
-        self.path = pathDef
-        self.fullParamLength = self.path.fullParamLength
-        self.returnValue = 0
-        self.t = t
-
-        self.returnValue=0
-
-#### STANDARD INTERFACE ####
-
-    def get_neturalDistances(self, resolution):
-        return self.returnValue
-
-    def get_outer_geometry_ODE(self, resolution, lalb):
-        return self.returnValue
-
-    def get_outer_geometry(self, resolution):
-
-        return self.returnValue
-
-    def get_Thk(self, coord, hasPrev=False):
-        return self.returnValue
-
-    def get_lalb(self, coord, hasPrev=False):
-        return self.returnValue
-
-    def get_Ic(self, coord):
-        return self.returnValue
-    
-    def get_dIc(self, coord):
-        return self.returnValue
-
 class Piecewise_Ic_Control():
     def __init__(self,
-                 pathDef,
+                 path,
                  outPlaneThickness = 0.375,
                  IcPts             = np.array([0.008, 0.001, 0.008]),
                  IcParamLens       = np.array([0.5])):
 
-        self.path = pathDef
+        super().__init__(self, path)
 
         self.fullParamLength = self.path.fullParamLength
 
