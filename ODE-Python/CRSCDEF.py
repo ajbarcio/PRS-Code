@@ -7,22 +7,21 @@ from StatProfiler import SSProfile
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from spring import deg2rad
+from utils import deg2rad
+from PATHDEF import Path
 
 ## LEGACY BELOW ##
 
-class IcDef(ABC):
-    def __init__(self, path):
+class Crsc(ABC):
+    def __init__(self, path: Path, t):
         self.path = path
+        self.t    = t
         pass
 
     @abstractmethod
-    def get_neturalDistances(self, resolution):
-        pass
-
-    @abstractmethod
-    def get_outer_geometry_ODE(self, resolution, lalb):
-        pass
+    def get_neutralDistances(self, resolution):
+        self.get_outer_geometry(resolution)
+        return self.la, self.lb
 
     @abstractmethod
     def get_outer_geometry(self, resolution):
@@ -30,7 +29,9 @@ class IcDef(ABC):
 
     @abstractmethod
     def get_Thk(self, coord, hasPrev=False):
-        pass
+        lalb = self.get_lalb(coord, hasPrev=hasPrev)
+        h = lalb[0]+lalb[1]
+        return h
 
     @abstractmethod
     def get_lalb(self, coord, hasPrev=False):
@@ -46,18 +47,29 @@ class IcDef(ABC):
 
     @abstractmethod
     def get_eccentricity(self, coord):
-        pass
+        lalb = self.get_lalb(coord)
+        eccentricity = (lalb[1]-lalb[0])/2
+        return eccentricity
 
-class Constant_Ic():
-    def __init__(self, path, t, h0, Ic0=None):
-        super().__init__(self, path)
-        self.h0 = h0
-        self.t = t
-        self.la = h0/2
-        self.lb = self.la
-        self.Ic0     = 1/12.0*self.t*self.h0**3
+class Constant_Ic(Crsc):
+    def __init__(self, path: Path, t, h0=None, Ic0=None):
+        super().__init__(path, t)
+        if h0 is None:
+            self.Ic0 = Ic0
+            self.h0 = np.cbrt(12.0*self.Ic0/(self.t))
+            self.mode = "Ic"
+        if Ic0 is None:
+            self.mode = "h"
+            rn0 = self.path.get_rn(0)
+            if not rn0==float('inf'):
+                raise ValueError("too hard :( poopy")
+            else:
+                self.h0 = h0
+                self.la = self.h0/2
+                self.lb = self.la
+                self.Ic0     = 1/12.0*self.t*self.h0**3
 
-        self.fullParamLength = self.path.fullParamLength
+        self.arcLen = self.path.arcLen
         self.returnValue = 1
     
     def l_a_l_b_rootfinding(self, coord, lABPrev, printBool=0):
@@ -103,7 +115,7 @@ class Constant_Ic():
 
         self.iii = 0
         # solve the problem (do newtons method to rootfind)
-        while err > 10**-6 and self.iii <500:
+        while err > 10**-10 and self.iii <500:
             # newtons method
             xprev = x
             x = x - np.transpose(lin.inv(jac(x, rn, Ic)).dot(func(x, rn, Ic)))
@@ -129,53 +141,30 @@ class Constant_Ic():
         return x    # here x is [la, lb]
 ##### Standard Interface #####
 
-    def get_neturalDistances(self, resolution):
-        # shouldn't need this for now
-        return self.returnValue
+    def get_neutralDistances(self, resolution):
+        return super().get_neutralDistances(resolution)
 
-    def get_outer_geometry_ODE(self, resolution, lalb):
-        # shouldn't need this for now
-        return self.returnValue
-
-    def get_outer_geometry(self, resolution):
+    def get_outer_geometry(self, resolution):        
         undeformedNeutralSurface = self.path.get_neutralSurface(resolution)
-        ximesh = np.linspace(0,self.fullParamLength,resolution+1)
+        ximesh = np.linspace(0,self.arcLen,resolution+1)
 
-        Ic0 = self.get_Ic(0)
-
-        hPrev = np.cbrt(12*Ic0/self.t)
-        lABPrev = np.array([hPrev/2, hPrev/2])
-        self.la = np.empty(len(ximesh))
-        self.lb = np.empty(len(ximesh))
-        self.h = np.empty(len(ximesh))
-
-        # print(rn[-5:])
-        # perform la/lb rootfinding for each step in the xi mesh
-        for i in range(len(ximesh)):
-            SSProfile("lAB rootfinding").tic()
-            lAB = self.l_a_l_b_rootfinding(ximesh[i], lABPrev)
-            SSProfile("lAB rootfinding").toc()
-            self.la[i] = lAB[0]
-            self.lb[i] = lAB[1]
-            # calculate overall thickness
-            self.h[i] = self.lb[i]+self.la[i]
-            lABPrev = lAB
-        # print(h[-5:])
+        lalb = self.get_lalb(ximesh)
+        self.la = lalb[0,:]
+        self.lb = lalb[1,:]
+        # print(la, lb)
         alpha = self.path.get_alpha(ximesh)
         # generate xy paths for surfaces
-        self.undeformedBSurface = undeformedNeutralSurface + \
+        self.undeformedBSurface = undeformedNeutralSurface - \
                                   np.hstack((np.atleast_2d(-self.lb*np.sin(alpha)).T,
                                              np.atleast_2d(self.lb*np.cos(alpha)).T))
-        self.undeformedASurface = undeformedNeutralSurface - \
+        self.undeformedASurface = undeformedNeutralSurface + \
                                 np.hstack((np.atleast_2d(-self.la*np.sin(alpha)).T,
                                            np.atleast_2d(self.la*np.cos(alpha)).T))
 
         return self.undeformedASurface, self.undeformedBSurface
 
     def get_Thk(self, coord, hasPrev=False):
-        lalb = self.get_lalb
-        h = lalb[0]+lalb[1]
-        return h
+        return super().get_Thk(coord)
 
     def get_lalb(self, coord, hasPrev=False):
         coord = np.atleast_1d(coord)
@@ -187,7 +176,6 @@ class Constant_Ic():
 
         la = np.empty_like(coord)
         lb = np.empty_like(coord)
-        h  = np.empty_like(coord)
         i = 0
         for value in coord:
             lAB = self.l_a_l_b_rootfinding(value, lABPrev)
@@ -207,18 +195,20 @@ class Constant_Ic():
     def get_dIc(self, coord):
         return 0
 
-class Piecewise_Ic_Control():
+    def get_eccentricity(self, coord):
+        return super().get_eccentricity(coord)
+    
+class Piecewise_Ic_Control(Crsc):
     def __init__(self,
-                 path,
-                 outPlaneThickness = 0.375,
-                 IcPts             = np.array([0.008, 0.001, 0.008]),
-                 IcParamLens       = np.array([0.5])):
+                 path: Path,
+                 t           = 0.375,
+                 IcPts       = np.array([0.008, 0.001, 0.008]),
+                 IcParamLens = np.array([0.5])):
 
-        super().__init__(self, path)
+        super().__init__(path, t)
 
-        self.fullParamLength = self.path.fullParamLength
+        self.arcLen = self.path.arcLen
 
-        self.t         = outPlaneThickness
         self.IcFactors = IcParamLens
         self.IcPts = IcPts
 
@@ -229,9 +219,9 @@ class Piecewise_Ic_Control():
             if i==0:
                 self.IcParamLens[i] = 0
             elif i==len(IcPts)-1:
-                self.IcParamLens[i] = self.fullParamLength
+                self.IcParamLens[i] = self.arcLen
             else:
-                self.IcParamLens[i] = self.fullParamLength*IcParamLens[i-1]
+                self.IcParamLens[i] = self.arcLen*IcParamLens[i-1]
 
         self.IcCoeffs, self.domains = self.Ic_multiPoly()
 
@@ -323,7 +313,7 @@ class Piecewise_Ic_Control():
 
         self.iii = 0
         # solve the problem (do newtons method to rootfind)
-        while err > 10**-6 and self.iii <500:
+        while err > 10**-10 and self.iii <500:
             # newtons method
             xprev = x
             x = x - np.transpose(lin.inv(jac(x, rn, Ic)).dot(func(x, rn, Ic)))
@@ -350,14 +340,13 @@ class Piecewise_Ic_Control():
 
 #### STANDARD INTERFACE ####
 
-    def get_neturalDistances(self, resolution):
-        self.get_outer_geometry(resolution)
-        return self.la, self.lb
+    def get_neutralDistances(self, resolution):
+        return super().get_neutralDistances(resolution)
 
     def get_outer_geometry_ODE(self, resolution, lalb):
 
         undeformedNeutralSurface = self.path.get_neutralSurface(resolution)
-        ximesh = np.linspace(0,self.fullParamLength,resolution+1)
+        ximesh = np.linspace(0,self.arcLen,resolution+1)
 
         y0 = self.l_a_l_b_rootfinding(0, np.array([0,0]))
 
@@ -384,32 +373,13 @@ class Piecewise_Ic_Control():
 
         return self.undeformedASurface, self.undeformedBSurface
 
-
     def get_outer_geometry(self, resolution):
 
         undeformedNeutralSurface = self.path.get_neutralSurface(resolution)
-        ximesh = np.linspace(0,self.fullParamLength,resolution+1)
+        ximesh = np.linspace(0,self.arcLen,resolution+1)
 
-        Ic0 = self.get_Ic(0)
-
-        hPrev = np.cbrt(12*Ic0/self.t)
-        lABPrev = np.array([hPrev/2, hPrev/2])
-        self.la = np.empty(len(ximesh))
-        self.lb = np.empty(len(ximesh))
-        self.h = np.empty(len(ximesh))
-
-        # print(rn[-5:])
-        # perform la/lb rootfinding for each step in the xi mesh
-        for i in range(len(ximesh)):
-            SSProfile("lAB rootfinding").tic()
-            lAB = self.l_a_l_b_rootfinding(ximesh[i], lABPrev)
-            SSProfile("lAB rootfinding").toc()
-            self.la[i] = lAB[0]
-            self.lb[i] = lAB[1]
-            # calculate overall thickness
-            self.h[i] = self.lb[i]+self.la[i]
-            lABPrev = lAB
-        # print(h[-5:])
+        la, lb = self.get_neutralDistances(resolution)
+        print(la, lb)
         alpha = self.path.get_alpha(ximesh)
         # generate xy paths for surfaces
         self.undeformedBSurface = undeformedNeutralSurface + \
@@ -475,3 +445,6 @@ class Piecewise_Ic_Control():
     def get_dIc(self, coord):
         out = PPoly_Eval(coord, self.IcCoeffs, ranges=self.domains, deriv=1)
         return out
+    
+    def get_eccentricity(self, coord):
+        return super().get_eccentricity(coord)

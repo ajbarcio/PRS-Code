@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 
 ## Function to find intersection between two circles closer to origin
 
+deg2rad = np.pi/180
+
 def circle_intersection(radius1, radius2, point1, point2):
     distance = lin.norm(np.subtract(point1, point2))
     if distance > radius1+radius2:

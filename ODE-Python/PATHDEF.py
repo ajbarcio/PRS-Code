@@ -5,13 +5,11 @@ import scipy
 import sympy as sp
 import warnings
 warnings.filterwarnings("ignore")
-from utils import PPoly_Eval, numerical_fixed_mesh_diff, circle_intersection
+from utils import PPoly_Eval, numerical_fixed_mesh_diff, circle_intersection, deg2rad
 from StatProfiler import SSProfile
 
 from abc import ABC, abstractmethod
 from typing import Optional
-
-deg2rad = np.pi/180
 
 class Path(ABC):
     def __init__(self, n: int, arcLen: float,
@@ -66,14 +64,20 @@ class Path(ABC):
         raise NotImplementedError("This method is not implemented for this path type. You are using a path type which defines the NEUTRAL radius.")
 
     def get_neutralSurface(self, resl):
-        """Optional method, can be overridden by subclasses if applicable.
-           Only used if this path type defines the netural radius"""
-        raise NotImplementedError("This method is not implemented for this path type. You are using a path type which defines the CENTROIDAL radius.")
+        ximesh = np.linspace(0,self.arcLen,resl+1)
+        x = self.get_xy_n(ximesh, 'x')
+        y = self.get_xy_n(ximesh, 'y')
+        neutralSurface = np.hstack((np.atleast_2d(x).T,
+                                    np.atleast_2d(y).T))
+        return neutralSurface
 
     def get_centroidalSurface(self, resl):
-        """Optional method, can be overridden by subclasses if applicable.
-           Only used if this path type defines the centroidal radius"""
-        raise NotImplementedError("This method is not implemented for this path type. You are using a path type which defines the NEUTRAL radius.")
+        ximesh = np.linspace(0,self.arcLen,resl)
+        x = self.get_xy_c(ximesh, 'x')
+        y = self.get_xy_c(ximesh, 'x')
+        centroidalSurface = np.hstack((np.atleast_2d(x).T,
+                                       np.atleast_2d(y).T))
+        return centroidalSurface
 
     @abstractmethod
     def get_dxi_n(self, point):
@@ -198,11 +202,11 @@ class LinearRnSpiral(Path):
             return self.get_rn(point)*np.cos(point+self.startingAngle)
 
     def get_neutralSurface(self, resl):
-        pass
+        return super().get_neutralSurface(resl)
 
     def get_dxi_n(self, point):
-        dxdxi = self.get_dxdy_n(xi, 'x')
-        dydxi = self.get_dxdy_n(xi, 'y')
+        dxdxi = self.get_dxdy_n(point, 'x')
+        dydxi = self.get_dxdy_n(point, 'y')
         dxids = 1/np.sqrt(dxdxi**2+dydxi**2)
         return dxids
 
@@ -250,7 +254,7 @@ class RadiallyEndedPolynomial(Path):
                  # whole bunch of default values:
                  radii: float        = np.array([1.1,2.025,2.025,2.95]),
                  ffradii: float      = np.array([1, 2.5]),
-                 alphaAngles         = np.array([45,90])*deg2rad,
+                 alphaAngles         = np.array([45,0])*deg2rad,
                  betaAngles          = np.array([0,50,100,150])*deg2rad, # FIRST VALUE IS ALWAYS 0 !!!!, same length as radii
                  XYFactors         = np.array([0.333,0.667])):
         self.alphaAngles = alphaAngles
@@ -262,7 +266,7 @@ class RadiallyEndedPolynomial(Path):
         i = 0
         # iterate until you converge on a value
         while conv>10e-6:
-            SSProfile("reinit").tic()
+            SSProfile("reinit", loud=False).tic()
             errPrev = err
             # measure real arc length each time
             correctedFullLength = self.measure_length()
@@ -440,7 +444,7 @@ class RadiallyEndedPolynomial(Path):
         return out
 
     def get_neutralSurface(self, resl):
-        pass
+        return super().get_neutralSurface(resl)
 
     def get_dxi_n(self, point):
         dxdxi = self.get_dxdy_n(point, 'x')
@@ -477,21 +481,38 @@ class RadiallyEndedPolynomial(Path):
     
     def get_alpha(self, point):
         point = np.atleast_1d(point)
+        # print(point)
         alphaList = np.arctan2(PPoly_Eval(point, self.YCoeffs, deriv=1),
                                PPoly_Eval(point, self.XCoeffs, deriv=1))
+        
         for i in range(len(alphaList)):
             if alphaList[i]<0:
                 alphaList[i]=alphaList[i]+2*np.pi
-        if len(alphaList==1):
+        if len(alphaList)==1:
             return alphaList[0]
         else:
             return alphaList
 
     def get_dalpha(self, point):
-        pass
+        if hasattr(point, "__len__"):
+            alphaList = np.arctan2(PPoly_Eval(point, self.YCoeffs, deriv=1),
+                                       PPoly_Eval(point, self.XCoeffs, deriv=1))
+            for i in range(len(alphaList)):
+                if alphaList[i]<0:
+                    alphaList[i]=alphaList[i]+2*np.pi
+            return alphaList
+        else:
+            alpha = np.arctan2(PPoly_Eval(point, self.YCoeffs, deriv=1),
+                                       PPoly_Eval(point, self.XCoeffs, deriv=1))
+            if alpha<0:
+                alpha=alpha+2*np.pi
+            return alpha
 
     def get_d2alpha(self, point):
-        pass
+        d2ads2 = -self.get_dalpha(point)**2*self.get_drn(point)
+        if np.isnan(d2ads2):
+            d2ads2 = 0
+        return d2ads2
 
 ## LEGACY BELOW THIS POINT ##
 
