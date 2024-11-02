@@ -159,7 +159,7 @@ class Constant_Ic(Crsc):
                                              np.atleast_2d(self.lb*np.cos(alpha)).T))
         self.undeformedASurface = undeformedNeutralSurface + \
                                 np.hstack((np.atleast_2d(-self.la*np.sin(alpha)).T,
-                                           np.atleast_2d(self.la*np.cos(alpha)).T))
+                                           np.atleast_2d(self.get_dIcla*np.cos(alpha)).T))
 
         return self.undeformedASurface, self.undeformedBSurface
 
@@ -378,8 +378,9 @@ class Piecewise_Ic_Control(Crsc):
         undeformedNeutralSurface = self.path.get_neutralSurface(resolution)
         ximesh = np.linspace(0,self.arcLen,resolution+1)
 
-        la, lb = self.get_neutralDistances(resolution)
-        print(la, lb)
+        lalb = self.get_lalb(ximesh)
+        self.la = lalb[0,:]
+        self.lb = lalb[1,:]
         alpha = self.path.get_alpha(ximesh)
         # generate xy paths for surfaces
         self.undeformedBSurface = undeformedNeutralSurface + \

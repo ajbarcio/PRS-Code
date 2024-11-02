@@ -6,8 +6,11 @@ import numpy.linalg as lin
 import matplotlib.pyplot as plt
 import os
 
+from typing import Optional
+from StatProfiler import SSProfile
+
 import materials
-from utils import fixed_rk4, numerical_fixed_mesh_diff, colorline
+from utils import fixed_rk4, numerical_fixed_mesh_diff, colorline, identify_quadrant
 
 from PATHDEF import Path
 from CRSCDEF import Crsc
@@ -80,6 +83,9 @@ class Spring:
         self.finiteDifferenceFactor = 0.001
         
         self.differenceThreshold = 0.0006
+
+        # Default deforming mode:
+        self.deformMode = self.deform_by_torque
 
         # fuck your memory, extract commonly used attributes from passed
         # definition objects:
@@ -166,10 +172,29 @@ class Spring:
         ptFinal   = np.array([self.res[1,-1],self.res[2,-1]])/ \
                              lin.norm(np.array([self.res[1,-1],self.res[2,-1]]))
 
-        cosAngle = min(ptFinal.dot(ptInitial),1.0)
-        self.dBeta    = np.arccos(cosAngle)*np.sign(torqueTarg)
+        quadInitial = identify_quadrant(ptInitial)
+        quadFinal   = identify_quadrant(ptFinal)
+
+        if quadFinal < quadInitial:
+            quad = quadFinal
+        else:
+            quad = quadInitial
+        
+        if quad%2:
+            axis=np.array([1,0])
+        else:
+            axis=np.array([0,1])
+        if quad>=3:
+            axis=axis*-1
+        
+
+        Angle1 = np.arccos(min(ptInitial.dot(axis),1.0))
+        Angle2 = np.arccos(min(ptFinal.dot(axis),1.0))
+
+        # cosAngle = min(ptFinal.dot(ptInitial),1.0)
+        self.dBeta    = Angle2-Angle1
         # Err = diff. in radius, diff between gamma(L) and beta(L), distance
-        #       from target torque (just to make matrix square)
+        #       from target torque (just to make matrix square) 
         err = np.array([Rinitial-Rfinal, (self.res[0,-1])-(self.dBeta),
                                                               SF[2]-torqueTarg])
         return err, self.res
@@ -280,18 +305,14 @@ class Spring:
         Fys = []
         solnSF = np.array([0,0,steps[0]])
         for step in  steps:
+            solnSF[2]=step
             print("trying", step, "inlb")
             print("initial guess:", solnSF)
-            if ODE != self.full_ODE:
-                gres, solnSF, divergeFlag, i = self.deform_by_torque(step,
+            gres, solnSF, divergeFlag, i = self.deform_by_torque(step,
                                                                  ODE,
                                                                  SF=solnSF,
                                                                  breakBool=False)
-            else:
-                gres, solnSF, divergeFlag, i = self.opt_deform_by_torque(step,
-                                                                 ODE,
-                                                                 SF=solnSF,
-                                                                 breakBool=False)
+            print("close?", self.solnerr)
             Fxs.append(solnSF[0])
             Fys.append(solnSF[1])
             # mags.append(lin.norm(solnSF))
@@ -313,6 +334,8 @@ class Spring:
         plt.figure("Fy regression")
         plt.scatter(steps, Fys)
         plt.plot(steps, FyRegress.slope*np.array(steps)+FyRegress.intercept)
+        plt.figure("regression graphics")
+        self.plot_deform(showBool=False)
 
     def deform_by_torque_predict_forces(self, torqueTarg, ODE, breakBool=False):
         defBreakBool = breakBool
@@ -358,7 +381,7 @@ class Spring:
 
         res, solnSF, divergeFlag, i = self.deform_by_torque(torqueTarg, ODE,
                                                             SF=SFPredict,
-                                                            breakBool=True) # Not sure about this one
+                                                            breakBool=False) # Not sure about this one
 
         # print("Solution       :", solnSF)
         # print(self.solnerrVec)
@@ -588,3 +611,30 @@ class Spring:
             #             fmt='%f',delimiter=',')
         else:
             print("Too early to call; please generate inner and outer surfaces before export")
+
+def determineFastestSolver(spring: Spring, torqueGain=1):
+    testDeformLevel = spring.torqueCapacity*torqueGain
+
+    testFailed = np.zeros(3)
+    testTime = np.zeros(3)
+    testModes = [spring.deform_by_torque, spring.deform_by_torque_predict_forces, spring.deform_by_torque_predict_angle]
+    testNames = ["nonlinear", "predict forces", "predict angles"]
+
+    for j in range(len(testNames)):
+        # Test each mode of solving for full-torque deformation:
+        SSProfile(testNames[j]).tic()
+        res, solnSF, divergeFlag, i = testModes[j](testDeformLevel,spring.deform_ODE)
+        err, res = spring.forward_integration(spring.deform_ODE, solnSF, testDeformLevel)
+        # print(err)
+        # print(testNames[j])
+        SSProfile(testNames[j]).toc()
+        if not np.isclose(lin.norm(err),0):
+            testFailed[j]=1
+            testTime[j]=1000
+        else:
+            testTime[j]=SSProfile(testNames[j]).agg
+
+    fastest = testTime.argmin()
+    spring.deformMode = testModes[fastest]
+
+    return str(testModes[fastest])

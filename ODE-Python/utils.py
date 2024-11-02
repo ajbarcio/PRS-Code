@@ -7,6 +7,19 @@ import matplotlib.pyplot as plt
 
 deg2rad = np.pi/180
 
+def identify_quadrant(point):
+    if point[0] >= 0 and point[1] > 0:
+        quadrant = 1
+    elif point[0] < 0 and point[1] >= 0:
+        quadrant = 2
+    elif point[0] <= 0 and point[1] < 0:
+        quadrant = 3
+    elif point[0] >0 and point[1] <= 0:
+        quadrant = 4
+    else:
+        raise ValueError(" QUADRANT EDGE CASE ")
+    return quadrant
+
 def circle_intersection(radius1, radius2, point1, point2):
     distance = lin.norm(np.subtract(point1, point2))
     if distance > radius1+radius2:

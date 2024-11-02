@@ -52,8 +52,8 @@ class SSProfile(StatProfiler):
     _instances = dict()
     def __new__(cls, name, **kwargs):
         if name not in cls._instances:
-            if "loud" in (kwargs.keys()) and kwargs["loud"]:
-                print("instantiating singleton StatProfiler %s"%name)
+            # if "loud" in (kwargs.keys()) and kwargs["loud"]:
+            print("instantiating singleton StatProfiler %s"%name)
             cls._instances[name] = StatProfiler(name)
         return cls._instances[name]
 
