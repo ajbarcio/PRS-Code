@@ -5,14 +5,14 @@ import numpy as np
 from numpy import linalg as lin
 from matplotlib import pyplot as plt
 
-from PATHDEF import Path, TestPath, LinearRnSpiral, RadiallyEndedPolynomial
-from CRSCDEF import Crsc, Constant_Ic, Piecewise_Ic_Control
-from materials import TestMaterial
-from spring import Spring, determineFastestSolver
+from modules.PATHDEF import Path, TestPath, LinearRnSpiral, RadiallyEndedPolynomial
+from modules.CRSCDEF import Crsc, Constant_Ic, Piecewise_Ic_Control
+from modules.materials import TestMaterial
+from modules.spring import Spring, determineFastestSolver
 
-from utils import deg2rad
+from modules.utils import deg2rad
 
-from StatProfiler import SSProfile
+from modules.StatProfiler import SSProfile
 
 @pytest.mark.skip(reason="don't need to run this every time (main functionality included in test_classFunctionality)")
 def test_modeSelector():

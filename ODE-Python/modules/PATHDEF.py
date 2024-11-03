@@ -5,8 +5,9 @@ import scipy
 import sympy as sp
 import warnings
 warnings.filterwarnings("ignore")
-from utils import PPoly_Eval, numerical_fixed_mesh_diff, circle_intersection, deg2rad
-from StatProfiler import SSProfile
+
+from modules.utils import PPoly_Eval, numerical_fixed_mesh_diff, circle_intersection, deg2rad
+from modules.StatProfiler import SSProfile
 
 from abc import ABC, abstractmethod
 from typing import Optional

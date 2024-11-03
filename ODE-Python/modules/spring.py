@@ -7,15 +7,13 @@ import matplotlib.pyplot as plt
 import os
 
 from typing import Optional
-from StatProfiler import SSProfile
 
-import materials
-from utils import fixed_rk4, numerical_fixed_mesh_diff, colorline, identify_quadrant
+from modules.StatProfiler import SSProfile
+from modules.utils import fixed_rk4, numerical_fixed_mesh_diff, colorline, identify_quadrant, deg2rad
+from modules.PATHDEF import Path
+from modules.CRSCDEF import Crsc
 
-from PATHDEF import Path
-from CRSCDEF import Crsc
-
-from utils import deg2rad
+import modules.materials as materials
 
 class Optimized_Spring:
     def __init__(self, pathDef, material: materials.Material, 

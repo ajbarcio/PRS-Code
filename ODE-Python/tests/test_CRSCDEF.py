@@ -1,12 +1,12 @@
 import pytest
 import inspect
-from PATHDEF import Path, TestPath, LinearRnSpiral, RadiallyEndedPolynomial
-from CRSCDEF import Crsc, Constant_Ic, Piecewise_Ic_Control
+from modules.PATHDEF import Path, TestPath, LinearRnSpiral, RadiallyEndedPolynomial
+from modules.CRSCDEF import Crsc, Constant_Ic, Piecewise_Ic_Control
 
 import numpy as np
 from numpy import linalg as lin
 
-from spring import deg2rad
+from modules.utils import deg2rad
 
 # @pytest.mark.skip(reason="This test is temporarily skipped")
 # @pytest.mark.order(5)

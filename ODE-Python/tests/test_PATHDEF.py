@@ -1,12 +1,12 @@
 import pytest
 import inspect
-from PATHDEF import Path, TestPath, LinearRnSpiral, RadiallyEndedPolynomial
-from CRSCDEF import Crsc, Constant_Ic, Piecewise_Ic_Control
+from modules.PATHDEF import Path, TestPath, LinearRnSpiral, RadiallyEndedPolynomial
+from modules.CRSCDEF import Crsc, Constant_Ic, Piecewise_Ic_Control
 
 import numpy as np
 from numpy import linalg as lin
 
-from utils import deg2rad
+from modules.utils import deg2rad
 
 """
 This test file tests all of the currently active path definitions you can choose from. To make your own test, definitely include the last line of each test

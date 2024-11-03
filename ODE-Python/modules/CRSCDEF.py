@@ -1,14 +1,13 @@
 import numpy as np
 import numpy.linalg as lin
 
-from utils import PPoly_Eval
-from StatProfiler import SSProfile
+from modules.utils import PPoly_Eval, deg2rad
+from modules.PATHDEF import Path
+from modules.StatProfiler import SSProfile
 
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from utils import deg2rad
-from PATHDEF import Path
 
 ## LEGACY BELOW ##
 
