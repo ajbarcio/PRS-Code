@@ -3,10 +3,11 @@ from math import sqrt
 
 class StatProfiler():
     """ Profiler class with statistics"""
-    def __init__(self, name):
+    def __init__(self, name, loud=True):
         self.N, self.agg, self.aggvar = 0, 0.0, 0.0
         self.name=name
         self.t0 = None
+        self.loud=loud
 
     def __del__(self):
         try:
@@ -15,7 +16,8 @@ class StatProfiler():
         except ZeroDivisionError:
             mean = float('NaN')
             stddev=float('NaN')
-        print(f"StatProfiler {self.name}: {self.N} reps, avg: {mean*1e3} ms, stddev: {stddev*1e3} ms, total: {self.agg} s")
+        if self.loud:
+            print(f"StatProfiler {self.name}: {self.N} reps, avg: {mean*1e3} ms, stddev: {stddev*1e3} ms, total: {self.agg} s")
 
     def tic(self):
         """ Matlab style """
@@ -45,12 +47,12 @@ class StatProfiler():
             return x
         return ret
 
-
 class SSProfile(StatProfiler):
     """ Singleton Stat Profilers """
     _instances = dict()
     def __new__(cls, name, **kwargs):
         if name not in cls._instances:
+            # if "loud" in (kwargs.keys()) and kwargs["loud"]:
             print("instantiating singleton StatProfiler %s"%name)
             cls._instances[name] = StatProfiler(name)
         return cls._instances[name]

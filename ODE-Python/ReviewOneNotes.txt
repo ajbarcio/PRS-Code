@@ -1,0 +1,24 @@
+try to take ximesh out of math
+	abstractify dxids out
+
+Keep track of condition of my polynomial
+	Bernstein Basis (LOW PRIORITY)
+
+Add object for the type of functions you use to keep track of spring geometry
+
+Remember that we make assumpions on the way that Ic affects stress; that some
+	sort of ideal bending is continuously going on
+
+automate with something that interfaces with python
+	use abaqus! lmao
+
+Change la/lb threshold to apply to rn instead of the difference DONE
+
+Check and make sure that this doesn't rely on initial straightness
+
+Don't rely on positive torque; recall sign conventions for forces and keep track
+
+Use unit vector for angles DONE
+
+GA to map space?
+LHC to map space?
