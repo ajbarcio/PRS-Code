@@ -17,9 +17,9 @@ Todo: Make this into an installable python package
 
 ### FOR NOW:
 
-#### Folders required for use:
+#### Important folders:
 
-##### Modules Folder
+##### modules Folder
 
 Contains any custom modules needed for this simulator. 
 
@@ -32,3 +32,19 @@ materials is a database of materials to use. Currently it is very limited.
 utils contains various mathematical and graphical utilities (plotting colorful lines, numerical methods, geometry math) used in the simulator
 
 StatProfile is a module written by Dr. Gray Thomas used for timing iterative methods.
+
+##### tests folder
+
+the tests folder contains tests which can be run with pytest (if you have it installed). This should not require any plugins, let me know if it does. Currently, this tests the included crsc classes, path classes, and spring deformation methods.
+
+##### debugAndLearning folder
+
+this test contains some debugging/test scripts that don't run when pytest is used, as well as random scripts that I use to teach myself how computers work while I write this simulator.
+
+#### TOP DIRECTORY SCRIPTS
+
+I will add to these as time goes on
+
+##### manualSpringDesigner
+
+This script can be run to design any spring whos form factor restrictions are outlined in Spring_Constraints.ods. You have to manually adjust the parameters of whatever thickness, path definitions you choose to use.
