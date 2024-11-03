@@ -1,5 +1,6 @@
 class Foo():
     def __init__(self, a, b):
+        self.parameters = {key: value for key, value in locals().items() if not key.startswith('__') and key != 'self'}
         self.a = a
         self.b = b
 
@@ -10,3 +11,4 @@ class Foo():
         print("zip", self.b)
 
 foo = Foo(1,2)
+print(foo.parameters)

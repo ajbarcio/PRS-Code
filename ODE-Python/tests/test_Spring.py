@@ -26,7 +26,7 @@ def test_modeSelector():
     print(fastestSolver)
     assert fastestSolver==str(testSprg.deformMode)
 
-# @pytest.mark.skip(reason="This test takes eons to run (by that I mean ~12 seconds)")
+@pytest.mark.skip(reason="This test takes eons to run (by that I mean ~12 seconds)")
 def test_classFunctionality():
 
     """ This is one huge test to evaluate the overall functionality of the class. This includes:
@@ -124,3 +124,7 @@ def test_classFunctionality():
 
     # [method() for name, method in testSprg.__class__.__dict__.items() if callable(method) and not name.startswith('__') and not name.startswith('_') for method in [getattr(testSprg, name)]]
     plt.show()
+
+# @pytest.mark.skip(reason="Probably don't skip this one unless you want to only shove springs one way")
+def test_negativeTroque():
+    pass

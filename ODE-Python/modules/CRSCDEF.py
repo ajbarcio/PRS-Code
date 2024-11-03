@@ -52,6 +52,7 @@ class Crsc(ABC):
 
 class Constant_Ic(Crsc):
     def __init__(self, path: Path, t, h0=None, Ic0=None):
+        self.parameters = {key: value for key, value in locals().items() if not key.startswith('__') and key != 'self'}
         super().__init__(path, t)
         if h0 is None:
             self.Ic0 = Ic0
@@ -203,7 +204,7 @@ class Piecewise_Ic_Control(Crsc):
                  t           = 0.375,
                  IcPts       = np.array([0.008, 0.001, 0.008]),
                  IcParamLens = np.array([0.5])):
-
+        self.parameters = {key: value for key, value in locals().items() if not key.startswith('__') and key != 'self'}
         super().__init__(path, t)
 
         self.arcLen = self.path.arcLen

@@ -14,6 +14,7 @@ from modules.PATHDEF import Path
 from modules.CRSCDEF import Crsc
 
 import modules.materials as materials
+from modules.materials import Material
 
 class Optimized_Spring:
     def __init__(self, pathDef, material: materials.Material, 
@@ -46,7 +47,7 @@ class Spring:
                  resolution = 200,
                  torqueCapacity = 3000,
                  name       = None):
-
+        self.parameters = {key: value for key, value in locals().items() if not key.startswith('__') and key != 'self'}
         self.name = name
         # Parameters and data structures from passed objects
         # Path accessor from path definition
@@ -498,7 +499,7 @@ class Spring:
         plt.plot(self.Sn[:,0],self.Sn[:,1],"--b",label="netural", alpha=trans)
         if "self.Sc" in locals():
             plt.plot(self.Sc[:,0],self.Sc[:,1],"--r",label="centroidal", alpha=trans)
-        # plt.plot(self.path.pts[:,0],self.path.pts[:,1])
+        plt.plot(self.path.pts[:,0],self.path.pts[:,1])
         plt.axis("equal")
         plt.legend()
 
@@ -578,37 +579,32 @@ class Spring:
                     path = os.path.join(
                          os.path.relpath(currDir),"surfaces",self.name+surf+ext)
                     np.savetxt(path, surfacesData[i],fmt='%f',delimiter=',')
-            #         i+=1
-            # if platform.system()=='Windows':
-            #     # Use the windows format for path names (ewwwwww)
-            #     np.savetxt(".\\surfaces\\"+self.name+"_A.csv", A,
-            #             fmt='%f',delimiter=',')
-            #     np.savetxt(".\\surfaces\\"+self.name+"_Bcsv", B,
-            #             fmt='%f',delimiter=',').
-            #     np.savetxt(".\\surfaces\\"+self.name+"_A.txt", A,
-            #             fmt='%f',delimiter=',')
-            #     np.savetxt(".\\surfaces\\"+self.name+"_B.txt", B,
-            #             fmt='%f',delimiter=',')
-            #     np.savetxt(".\\surfaces\\"+self.name+"_A.sldcrv", A,
-            #             fmt='%f',delimiter=',')
-            #     np.savetxt(".\\surfaces\\"+self.name+"_B.sldcrv", B,
-            #             fmt='%f',delimiter=',')
-            # elif platform.system()=='Linux':
-            #     # Use the linux format for path names (yay!)
-            #     np.savetxt("./surfaces/"+self.name+"_A.csv", A,
-            #             fmt='%f',delimiter=',')
-            #     np.savetxt("./surfaces/"+self.name+"_B.csv", B,
-            #             fmt='%f',delimiter=',')
-            #     np.savetxt("./surfaces/"+self.name+"_A.txt", A,
-            #             fmt='%f',delimiter=',')
-            #     np.savetxt("./surfaces/"+self.name+"_B.txt", B,
-            #             fmt='%f',delimiter=',')
-            #     np.savetxt("./surfaces/"+self.name+"_A.sldcrv", A,
-            #             fmt='%f',delimiter=',')
-            #     np.savetxt("./surfaces/"+self.name+"_B.sldcrv", B,
-            #             fmt='%f',delimiter=',')
         else:
             print("Too early to call; please generate inner and outer surfaces before export")
+
+    def export_parameters(self):
+        
+        def convert_values(data):
+            for key, value in data.items():
+                if isinstance(value, np.ndarray):
+                    data[key] = value.tolist()  # Convert NumPy array to list
+                if isinstance(value, Path) or isinstance(value, Crsc) or isinstance(value, Material):
+                    data[key] = str(value)
+            return data
+        
+        pathParameters = convert_values(self.path.parameters)
+        crscParameters = convert_values(self.crsc.parameters)
+        sprgParameters = convert_values(self.parameters)
+        
+        lists = [pathParameters, crscParameters, sprgParameters]
+        names = ['_path', '_crsc', '_sprg']
+        currDir = os.getcwd()
+        ext = '.param'
+        import json
+        for i in range(len(lists)):
+            path = os.path.join(os.path.relpath(currDir),"springs",self.name+names[i]+ext)
+            with open(path, 'w') as fp:
+                json.dump(lists[i], fp)
 
 def determineFastestSolver(spring: Spring, torqueGain=1):
     testDeformLevel = spring.torqueCapacity*torqueGain

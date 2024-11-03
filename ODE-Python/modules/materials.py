@@ -6,7 +6,8 @@ psi2Pa = 6894.76
 # PSI
 
 class Material:
-    def __init__(self, E, yieldStress, poisson=0.33, fatigueStress=0):
+    def __init__(self, name, E, yieldStress, poisson=0.33, fatigueStress=0):
+        self.name=name
         self.E = E
         self.G = self.E/(2*(1+poisson))
         self.yieldStress = yieldStress
@@ -26,8 +27,8 @@ class Material:
 
 # Initialize other materials here
 
-Maraging300Steel = Material(27500000, 309700)
+Maraging300Steel = Material("Maraging300", 27500000, 309700)
 Maraging300Steel.ultimateStress_set(314600)
-TestMaterial     = Material(20000000, 200000)
+TestMaterial     = Material("FakeMaterial", 20000000, 200000)
 
 # Aluminum         = Material()

@@ -157,6 +157,8 @@ class LinearRnSpiral(Path):
                  startPoint: tuple = None, endPoint: tuple = None,
                  # OR Define both of these, OR Define all four
                  initialRadius: float = None, finalRadius: float = None):
+        self.parameters = {key: value for key, value in locals().items() if not key.startswith('__') and key != 'self'}
+        
         # Handle whenter rn were given 
         self.startPoint = startPoint
         self.endPoint   = endPoint
@@ -165,6 +167,8 @@ class LinearRnSpiral(Path):
         self.innerRadius = lin.norm(self.startPoint)
         self.outerRadius = lin.norm(self.endPoint)
         self.startingAngle = np.atan2(self.startPoint[1], self.startPoint[0])
+
+        self.parameters = self.to_dict()
 
     def calculate_geometryParams(self, arcLen, startPoint, endPoint, initialRadius, finalRadius):
         self.centerOfCurvature=(0,0)
@@ -253,11 +257,12 @@ class LinearRnSpiral(Path):
 class RadiallyEndedPolynomial(Path):
     def __init__(self, n: int, arcLen: float,
                  # whole bunch of default values:
-                 radii: float        = np.array([1.1,2.025,2.025,2.95]),
+                 radii: float        = np.array([1.1,2.025,2.025,2.5]),
                  ffradii: float      = np.array([1, 2.5]),
                  alphaAngles         = np.array([45,0])*deg2rad,
                  betaAngles          = np.array([0,50,100,150])*deg2rad, # FIRST VALUE IS ALWAYS 0 !!!!, same length as radii
                  XYFactors         = np.array([0.333,0.667])):
+        self.parameters = {key: value for key, value in locals().items() if not key.startswith('__') and key != 'self'}
         self.alphaAngles = alphaAngles
         self.init(n, arcLen, radii,
                   betaAngles, XYFactors)
@@ -281,7 +286,7 @@ class RadiallyEndedPolynomial(Path):
             i+=1
             SSProfile("reinit").toc()
         self.innerRadius=ffradii[0]
-        self.outerRadius=ffradii[0]
+        self.outerRadius=ffradii[1]
         
     def init(self,n,arcLen,radii,betaAngles,XYFactors):
 
@@ -514,6 +519,17 @@ class RadiallyEndedPolynomial(Path):
         if np.isnan(d2ads2):
             d2ads2 = 0
         return d2ads2
+
+
+
+
+
+
+
+
+
+
+
 
 ## LEGACY BELOW THIS POINT ##
 
