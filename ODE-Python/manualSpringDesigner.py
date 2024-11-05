@@ -35,8 +35,8 @@ OR = springData.loc[sizeName,'OR lim (in)']
 testTorque = springData.loc[sizeName,'Max Torque (in.lbs)']
 
 # Define these parameters first, hopefully variable names are clear
-numberOfArms                  = 6
-totalSweptAngle               = 30
+numberOfArms                  = 2
+totalSweptAngle               = 155
 beginningAndEndingAlphaAngles = np.array([20,0])*deg2rad
 
 # Define these parameters for the thickness profile
@@ -67,8 +67,8 @@ offsets[-1] = -offsets[-1]
 # radiiArcLens are the proportions of the springs arc length at which each 
 # intermediate radius/angle checkpoint will be enforced
 radiiValues = np.array([IR+offsets[0],(IR+OR)/2*.8,(IR+OR)/2*1.1,OR+offsets[1]])
-betaAngleValues = np.array([0,totalSweptAngle*.5,totalSweptAngle*.9,totalSweptAngle])*deg2rad
-radiiArcLens = np.array([0.3,0.85])
+betaAngleValues = np.array([0,totalSweptAngle*.333,totalSweptAngle*.666,totalSweptAngle])*deg2rad
+radiiArcLens = np.array([0.4,0.6])
 
 
 def defineSpring():
