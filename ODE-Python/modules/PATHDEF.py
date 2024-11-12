@@ -81,6 +81,10 @@ class Path(ABC):
         return centroidalSurface
 
     @abstractmethod
+    def get_parameters(self):
+        pass
+
+    @abstractmethod
     def get_dxi_n(self, point):
         pass
 
@@ -157,7 +161,7 @@ class LinearRnSpiral(Path):
                  startPoint: tuple = None, endPoint: tuple = None,
                  # OR Define both of these, OR Define all four
                  initialRadius: float = None, finalRadius: float = None):
-        self.parameters = {key: value for key, value in locals().items() if not key.startswith('__') and key != 'self'}
+        # self.parameters = {key: value for key, value in locals().items() if not key.startswith('__') and key != 'self'}
         
         # Handle whenter rn were given 
         self.startPoint = startPoint
@@ -168,7 +172,16 @@ class LinearRnSpiral(Path):
         self.outerRadius = lin.norm(self.endPoint)
         self.startingAngle = np.atan2(self.startPoint[1], self.startPoint[0])
 
-        self.parameters = self.to_dict()
+        self.parameters = self.get_parameters()
+
+    def get_parameters(self):
+        self.parameters = {"n": self.n,
+                           "arcLen": self.arcLen,
+                           "startPoint": self.startPoint,
+                           "endPoint": self.endPoint,
+                           "initialRadius": self.initialRadius,
+                           "finalRadius": self.finalRadius}
+        return self.parameters
 
     def calculate_geometryParams(self, arcLen, startPoint, endPoint, initialRadius, finalRadius):
         self.centerOfCurvature=(0,0)
@@ -287,7 +300,20 @@ class RadiallyEndedPolynomial(Path):
             SSProfile("reinit").toc()
         self.innerRadius=ffradii[0]
         self.outerRadius=ffradii[1]
+        self.ffradii = ffradii
+        self.prepare_rn_expr()
+
+    def get_parameters(self):
+        self.parameters = {"n": self.n,
+                           "arcLen": self.arcLen,
+                           "radii": self.radii,
+                           "ffradii": self.ffradii,
+                           "alphaAngles": self.alphaAngles,
+                           "betaAngles": self.betaAngles,
+                           "XYFactors": self.XYFactors}
         
+        return self.parameters
+
     def init(self,n,arcLen,radii,betaAngles,XYFactors):
 
         self.pts = np.empty((len(radii),2))
@@ -519,16 +545,6 @@ class RadiallyEndedPolynomial(Path):
         if np.isnan(d2ads2):
             d2ads2 = 0
         return d2ads2
-
-
-
-
-
-
-
-
-
-
 
 
 ## LEGACY BELOW THIS POINT ##

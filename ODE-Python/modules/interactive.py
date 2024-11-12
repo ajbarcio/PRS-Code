@@ -5,18 +5,32 @@ from matplotlib.widgets import Slider, Button, RadioButtons, CheckButtons, TextB
 
 import modules.PATHDEF as PATHDEF
 import modules.CRSCDEF as CRSCDEF
+from modules.spring import Spring
 from modules.utils import deg2rad
+import modules.materials as materials
 
-class DraggableSpring:
-    def __init__(self, path: PATHDEF.RadiallyEndedPolynomial, crsc: CRSCDEF.Piecewise_Ic_Control):
-        
+from typing import Optional
+from datetime import datetime
+
+class Interactive_Spring(Spring):
+    def __init__(self, path: PATHDEF.RadiallyEndedPolynomial, 
+                       crsc: CRSCDEF.Piecewise_Ic_Control, 
+                       matl: materials.Material,
+                       torqueCapacity=3000,
+                       name=None):
+        # print("YOU SHOULD SEE THIS")
+        self.version = 0
+        self.baseName = name
         self.stacker=0.03
         self.center = (1-0.25)/2
 
-        self.path = path
-        self.crsc = crsc
+        # self.path     = path
+        # self.crsc     = crsc
+        # self.material = matl
 
-        self.fig, self.ax = plt.subplots(figsize=(8,10))
+        super().__init__(path, crsc, matl, torqueCapacity=torqueCapacity, name=name)
+
+        self.fig, self.ax = plt.subplots(figsize=(15,15))
         
         self.adjusters = []
 
@@ -32,26 +46,37 @@ class DraggableSpring:
         # self.distance2 = np.sqrt((self.x[2]-self.x[1])**2+(self.y[2]-self.y[1])**2)
         self.initialize_plot()
 
+        self.sliderHeigths = []
         # Create the necessary adjustors
         for index, pathPt in np.ndenumerate(path.XYFactors):
             name = "arcLenStep"+str(index[0]+1)
-            a, b = self.add_adjuster(name, [0, 1], pathPt)
+            a, b = self.add_adjuster(name, [0, 1], pathPt, columns=[3, 0])
             setattr(self, name+"Slider", a)
             setattr(self, name+"Text", b)
         for index, IcPt in np.ndenumerate(self.crsc.IcFactors):
             name = "IcArcLen"+str(index[0]+1)
-            a, b = self.add_adjuster(name, [0, 1], IcPt)
+            a, b = self.add_adjuster(name, [0, 1], IcPt, columns=[3, 0])
             setattr(self, name+"Slider", a)
             setattr(self, name+"Text", b)
-        bottomIc = self.stacker
         self.IcSliders = []
+        self.sliderHeigths.append(self.stacker)
+        self.stacker = 0.03
         for index, IcVal in np.ndenumerate(self.crsc.IcPts):
             name = "IcValue"+str(index[0]+1)
             max = 3*IcVal
-            a, b = self.add_adjuster(name, [0, max], IcVal, scale='linear')
+            a, b = self.add_adjuster(name, [0, max], IcVal, scale='linear', columns=[3, 1])
             setattr(self, name+"Slider", a)
             setattr(self, name+"Text", b)
             self.IcSliders.append(self.adjusters[-1])
+            self.sliderHeigths.append(self.stacker)
+        self.sliderHeigths.append(self.stacker)
+        self.stacker = 0.03
+        for index, alphaVal in np.ndenumerate(self.path.alphaAngles):
+            name = "AlphaAngle"+str(index[0]+1)
+            max = 90*deg2rad
+            a, b = self.add_adjuster(name, [0, max], alphaVal, scale='linear', columns=[3,2])
+            setattr(self, name+"Slider", a)
+            setattr(self, name+"Text", b)
 
         # ax_checkbox=plt.axes([self.center-0.1, bottomIc, 0.1, self.stacker-bottomIc])
         # ax_checkbox.patch.set_alpha(0)
@@ -59,10 +84,10 @@ class DraggableSpring:
         # self.IcCheckBoxes.on_clicked(self.link_sliders)
 
         # Make room for however many adjustors you made
-        plt.subplots_adjust(bottom=self.stacker+0.03)
+        plt.subplots_adjust(bottom=np.max(self.sliderHeigths)+0.03)
 
         self.free_pts = [i for i in range(1, len(self.x) - 1)]
-        self.constr_pts = [len(self.x-1)]
+        self.constr_pts = [len(self.x)-1]
         self.dragging = False
         self.index = None
 
@@ -75,6 +100,58 @@ class DraggableSpring:
         self.print_button = Button(ax_button, 'Print Points')
         self.print_button.on_clicked(self.print_points)  # Connect to the print method
 
+        # Create the surface export button
+        ax_button1 = plt.axes([0.05, 0.84, 0.1, 0.05])  # Position of the button
+        self.export_button = Button(ax_button1, 'Export Surfaces')
+        self.export_button.on_clicked(self.export_surfaces)  # Connect to the export method
+
+        # Create the save spring button
+        ax_buttonS = plt.axes([0.05, 0.78, 0.1, 0.05])
+        self.save_button = Button(ax_buttonS, 'Save Spring')
+        self.save_button.on_clicked(self.export_parameters)  # Connect to the export method
+
+        # Create the deform button
+        ax_button2 = plt.axes([0.85, 0.9, 0.1,0.05])
+        self.deform_button = Button(ax_button2, 'Deform Spring')
+        self.deform_button.on_clicked(self.deform_interactive)
+
+        # Create deform output text boxes
+        ax_deform_text = plt.axes([0.8,0.8,0.1,0.03])
+        ax_stress_text = plt.axes([0.8,0.8-0.06,0.1,0.03])
+        self.deflection_textbox = TextBox(ax_deform_text, "deformation angle", initial=0)
+        self.max_stress_textbox = TextBox(ax_stress_text, "maximum stress   ", initial=0)
+        self.fig.text(0.8, 0.8-0.1, "design stress:"+str(self.designStress))
+
+    def export_surfaces(self, event):
+        # print("YOU SHOULD ALSO SEE THIS")
+        date = datetime.now().strftime("%Y%m%d")
+        self.name = date+self.baseName+str(self.version)
+        self.version+=1
+        # print(self.name)
+        self.A, self.B = self.crsc.get_outer_geometry(self.resl)
+        return super().export_surfaces()
+
+    def export_parameters(self):
+        date = datetime.now().strftime("%Y%m%d")
+        self.name = date+self.baseName+str(self.version)
+        return super().export_parameters()
+
+    def deform_interactive(self, event):
+        print("attempting to deform current spring")
+        print(self.torqueCapacity)
+        self.deform_by_torque_predict_forces(self.torqueCapacity, self.deform_ODE)
+        
+        print("Deflection:", self.dBeta/deg2rad)
+        self.update_text_box(self.dBeta/deg2rad, self.deflection_textbox)
+        # self.update_text_box(self.dBeta, self.deform_textbox)
+        if hasattr(self, "ax_deform_plot"):
+            self.ax_deform_plot.clear()
+            self.ax_deform_plot.remove()
+        self.ax_deform_plot = plt.axes([0.75, np.max(self.sliderHeigths)+0.03, 0.25-.03, 0.7-(np.max(self.sliderHeigths)+0.06)])
+        self.plot_deform(True, targetAxes=self.ax_deform_plot)
+        print("Max Stress:", self.maxStress)
+        self.update_text_box(self.maxStress, self.max_stress_textbox)
+
     def initialize_plot(self):
         curveMesh = np.linspace(0,self.path.arcLen,self.path.measureResolution)
 
@@ -84,20 +161,33 @@ class DraggableSpring:
         self.inner, = self.ax.plot(self.a_surface[:,0], self.a_surface[:,1])
         self.outer, = self.ax.plot(self.b_surface[:,0], self.b_surface[:,1])
 
+        self.ax.plot([0,self.outerRadius*np.cos(2*np.pi/self.n)],
+                     [0,self.outerRadius*np.sin(2*np.pi/self.n)],'k')
+        self.ax.plot([0,self.outerRadius],[0,0],'k')
+
         self.line, = self.ax.plot(self.x, self.y, 'o-')
+        outerCircle = plt.Circle([0,0],self.outerRadius,color ="k",fill=False)
+        innerCircle = plt.Circle([0,0],self.innerRadius,color ="k",fill=False)
+        self.ax.add_patch(outerCircle)
+        self.ax.add_patch(innerCircle)
         
         self.outerCircle = self.semicircle
         self.curveMesh = curveMesh
         
-    def add_adjuster(self, label, range, value, scale='linear'):
+    def add_adjuster(self, label, range, value, scale='linear', columns = None):
         
-        ax_slider = plt.axes([self.center, self.stacker, 0.25, 0.03])
+        if columns is None:
+            center = self.center
+        else:
+            center = (1-0.25*columns[0])/2+0.25*columns[1]
+
+        ax_slider = plt.axes([center, self.stacker, 0.10, 0.03])
         if scale=='log':
             slider = Sliderlog(ax_slider, label, range[0], range[1], valinit=value)
         else:
             slider = Slider(ax_slider, label, range[0], range[1], valinit=value)
         slider.valtext.set_visible(False)
-        ax_text = plt.axes([self.center+0.25+.02, self.stacker, .1, .03])
+        ax_text = plt.axes([center+0.10+.02, self.stacker, .05, .03])
         textbox = TextBox(ax_text, label, initial=str(slider.valinit))
         textbox.label.set_visible(False)
 
@@ -153,8 +243,9 @@ class DraggableSpring:
         
     def update_curve(self, _):
 
+        # print("YOU SHOULD SEE THIS")
         vals = [slider.val for slider in self.adjusters]
-        assert len(vals)==len(self.path.XYFactors)+len(self.crsc.IcFactors)+len(self.crsc.IcPts)
+        assert len(vals)==len(self.path.XYFactors)+len(self.crsc.IcFactors)+len(self.crsc.IcPts)+len(self.path.alphaAngles)
 
         # update control points based on drag
         for i in range(len(self.x)):
@@ -163,13 +254,18 @@ class DraggableSpring:
 
         # update distortion effects based on sliders
         for index in range(len(self.path.XYFactors)):
+            # print(self.path.XYParamLens)
             self.path.XYParamLens[index+1] = vals[index]*self.path.arcLen
+            # print(self.path.XYParamLens)
         # update Ic positions based on sliders
         for index in range(len(self.crsc.IcFactors)):
             self.crsc.IcParamLens[index+1] = vals[index+len(self.path.XYFactors)]*self.crsc.arcLen
         # update Ic locations based on sliders
         for index in range(len(self.crsc.IcPts)):
             self.crsc.IcPts[index] = vals[index+len(self.path.XYFactors)+len(self.crsc.IcFactors)]
+        # update alpha angles based on sliders
+        for index in range(len(self.path.alphaAngles)):
+            self.path.alphaAngles[index] = vals[index+len(self.path.XYFactors)+len(self.crsc.IcFactors)+len(self.crsc.IcPts)]
 
         # recalcualte necessary stuff for plotting
         self.path.XCoeffs, self.path.YCoeffs  = self.path.xy_poly()
@@ -201,19 +297,21 @@ class DraggableSpring:
     def on_motion(self, event):
         if self.dragging and self.index is not None:
             if self.index in self.constr_pts:
+                # print("you touched a constr point")
                 self.x[self.index] = event.xdata
-                self.y[self.index] = self.outerCircle(self.x[self.index])
+                self.y[self.index] = self.semicircle(self.x[self.index])
             else:
                 self.x[self.index] = event.xdata
                 self.y[self.index] = event.ydata
 
             self.line.set_data(self.x, self.y)
-            self.update_curve("piss")
+            self.update_curve("garbage")
             # self.ax.relim()  # Recompute limits
             # self.ax.autoscale_view()  # Autoscale the view
             self.fig.canvas.draw_idle()
 
     def semicircle(self, x):
+        # print("called")
         return np.sqrt(self.path.outerRadius**2-x**2)
 
 class Sliderlog(Slider):
@@ -240,28 +338,3 @@ class Sliderlog(Slider):
         self.val = val
         if self.eventson:
             self._observers.process('changed', 10**val)
-
-
-path = PATHDEF.RadiallyEndedPolynomial(2,1)
-crsc = CRSCDEF.Piecewise_Ic_Control(path, 0.375, IcPts=np.array([0.008,0.0005,0.008]), IcParamLens=np.array([0.6]))
-
-x=[]
-y=[]
-for i in range(len(path.pts)):
-    x.append(path.pts[i,0])
-    y.append(path.pts[i,1])
-
-# x = [1,0.5,.16,-1.5]
-# y = [0,0.5,1.52,2]
-
-# def dumbCurve(x):
-#     return abs(x)
-
-radius = path.outerRadius
-
-# plot = DraggableSpring(x, y, np.linspace(0,path.arcLen,500), [1, 2], [3], semicircle)
-plot = DraggableSpring(path, crsc)
-plot.ax.set_xlim(-radius*1.1,radius*1.1)
-plot.ax.set_ylim(-radius*1.1,radius*1.1)
-plot.ax.set_aspect('equal')
-plt.show()

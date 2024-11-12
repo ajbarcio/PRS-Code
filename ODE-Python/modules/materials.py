@@ -13,13 +13,14 @@ class Material:
         self.yieldStress = yieldStress
         if fatigueStress:
             self.fatigueStress = fatigueStress
+        self.reset_designStress()
     
     def ultimateStress_set(self, ultimateStress):
         self.ultimateStress = ultimateStress
         self.fatigueStress  = 0.5*ultimateStress
 
     def reset_designStress(self):
-        if self.ultimateStress:
+        if hasattr(self, "ultimateStress"):
             self.designStress=self.fatigueStress
         else:
             self.designStress=0.8*self.yieldStress

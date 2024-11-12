@@ -36,8 +36,8 @@ testTorque = springData.loc[sizeName,'Max Torque (in.lbs)']
 
 # Define these parameters first, hopefully variable names are clear
 numberOfArms                  = 2
-totalSweptAngle               = 155
-beginningAndEndingAlphaAngles = np.array([20,0])*deg2rad
+totalSweptAngle               = 165
+beginningAndEndingAlphaAngles = np.array([0,0])*deg2rad
 
 # Define these parameters for the thickness profile
 # Currently, a piecewise quadratic polynomial defines the second moment 
@@ -47,7 +47,7 @@ beginningAndEndingAlphaAngles = np.array([20,0])*deg2rad
 # Any middle values occur at the proportions of the spring's arc length outlined
 # in IcArcLens
 outOfPlaneThickness           = .375
-IcSetpoints                   = np.array([.00186, .00045, .000096, .00096, .00156])
+IcSetpoints                   = np.array([.00186, .00045, .000096, .00096, .00156])*2
 IcArcLens                     = np.array([.2,.5,.8])
 
 # These values are then calculated to account for the beginning and ending 
@@ -66,9 +66,9 @@ offsets[-1] = -offsets[-1]
 # checkpoints will be enforced
 # radiiArcLens are the proportions of the springs arc length at which each 
 # intermediate radius/angle checkpoint will be enforced
-radiiValues = np.array([IR+offsets[0],(IR+OR)/2*.8,(IR+OR)/2*1.1,OR+offsets[1]])
+radiiValues = np.array([IR+offsets[0],(IR+OR)/2*1.1,(IR+OR)/2,OR+offsets[1]])
 betaAngleValues = np.array([0,totalSweptAngle*.333,totalSweptAngle*.666,totalSweptAngle])*deg2rad
-radiiArcLens = np.array([0.4,0.6])
+radiiArcLens = np.array([0.333,0.6666])
 
 
 def defineSpring():

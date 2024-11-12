@@ -9,12 +9,14 @@ from abc import ABC, abstractmethod
 from typing import Optional
 
 
-## LEGACY BELOW ##
-
 class Crsc(ABC):
     def __init__(self, path: Path, t):
         self.path = path
         self.t    = t
+        pass
+
+    @abstractmethod
+    def get_parameters(self):
         pass
 
     @abstractmethod
@@ -52,7 +54,7 @@ class Crsc(ABC):
 
 class Constant_Ic(Crsc):
     def __init__(self, path: Path, t, h0=None, Ic0=None):
-        self.parameters = {key: value for key, value in locals().items() if not key.startswith('__') and key != 'self'}
+        # self.parameters = {key: value for key, value in locals().items() if not key.startswith('__') and key != 'self'}
         super().__init__(path, t)
         if h0 is None:
             self.Ic0 = Ic0
@@ -71,7 +73,16 @@ class Constant_Ic(Crsc):
 
         self.arcLen = self.path.arcLen
         self.returnValue = 1
+
+        self.parameters = self.get_parameters()
     
+    def get_parameters(self):
+        self.parameters = {"path": self.path,
+                           "t": self.t,
+                           "h0": self.h0,
+                           "Ic0": self.Ic0}
+        return self.parameters
+
     def l_a_l_b_rootfinding(self, coord, lABPrev, printBool=0):
 
         """
@@ -204,7 +215,7 @@ class Piecewise_Ic_Control(Crsc):
                  t           = 0.375,
                  IcPts       = np.array([0.008, 0.001, 0.008]),
                  IcParamLens = np.array([0.5])):
-        self.parameters = {key: value for key, value in locals().items() if not key.startswith('__') and key != 'self'}
+        # self.parameters = {key: value for key, value in locals().items() if not key.startswith('__') and key != 'self'}
         super().__init__(path, t)
 
         self.arcLen = self.path.arcLen
@@ -225,6 +236,14 @@ class Piecewise_Ic_Control(Crsc):
 
         self.IcCoeffs, self.domains = self.Ic_multiPoly()
 
+        self.parameters = self.get_parameters()
+    
+    def get_parameters(self):
+        self.parameters = {"path": self.path,
+                           "t": self.t,
+                           "IcPts": self.IcPts,
+                           "IcParamLens": self.IcParamLens}
+        return self.parameters
     def Ic_multiPoly(self):
 
         # Determine how many parabolas you need

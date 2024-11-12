@@ -16,38 +16,14 @@ from modules.CRSCDEF import Crsc
 import modules.materials as materials
 from modules.materials import Material
 
-class Optimized_Spring:
-    def __init__(self, pathDef, material: materials.Material, 
-                 resolution=200, 
-                 torqueCapacity=3000, 
-                 stiffness=52000, 
-                 useFatigue=False,
-                 name = None):
-        # Name the spring
-        self.name = name
-        # "inherit" the path definition
-        self.path=pathDef
-        # Assign Material
-        self.material = material
-        # Design intent
-        self.fullTorque   = torqueCapacity
-        self.desStiffness = stiffness
-        # Material
-        self.E = material.E
-        self.yieldStress = material.yieldStress
-        # Stress constraints
-        if useFatigue:
-            material.reset_designStress()
-        self.designStress = material.designStress
-
-        self.fullLength = pathDef
+import json
 
 class Spring:
     def __init__(self, path: Path, crsc: Crsc, material,
                  resolution = 200,
                  torqueCapacity = 3000,
                  name       = None):
-        self.parameters = {key: value for key, value in locals().items() if not key.startswith('__') and key != 'self'}
+        # self.parameters = {key: value for key, value in locals().items() if not key.startswith('__') and key != 'self'}
         self.name = name
         # Parameters and data structures from passed objects
         # Path accessor from path definition
@@ -60,7 +36,6 @@ class Spring:
         self.torqueCapacity = torqueCapacity
         # Geometry parameterization
         self.fullArcLength = path.arcLen
-        self.resl = resolution
         # thickness arg
         self.t = crsc.t
 
@@ -113,6 +88,18 @@ class Spring:
         except self.Error as e:
             print("path, cross section, or material definitions are missing \
                   \n standard attributes")
+            
+        self.parameters = self.get_parameters()
+            
+    def get_parameters(self):
+        self.parameters = {"path": self.path,
+                           "crsc": self.crsc,
+                           "material": self.material,
+                           "resolution": self.resl,
+                           "torqueCapacity": self.torqueCapacity,
+                           "name": self.name
+                           }
+        return self.parameters
 
     class Error(Exception):
         pass
@@ -185,7 +172,6 @@ class Spring:
             axis=np.array([0,1])
         if quad>=3:
             axis=axis*-1
-        
 
         Angle1 = np.arccos(min(ptInitial.dot(axis),1.0))
         Angle2 = np.arccos(min(ptFinal.dot(axis),1.0))
@@ -208,9 +194,10 @@ class Spring:
         # print("JACOBIAN SHIT HAPPENS HERE")
         # Jacobian is square because square matrix good
         Jac = np.empty((3,3))
-        # assign each row at a time
+        # Use these values for finite differences (TUNE)
         self.finiteDifferenceTorque=0.1*torqueTarg
         self.finiteDifferenceForce = self.finiteDifferenceTorque/lin.norm(self.path.momentArm)
+        # assign each row at a time
         for i in range(n):
             finiteDifference = np.zeros(len(SF))
             # decide based on whether you're using a force or torque which
@@ -234,7 +221,7 @@ class Spring:
     def deform_by_torque(self, torqueTarg, ODE,
                          SF=np.array([0,0,0]),
                          breakBool=False):
-
+        # print("called")
         """
         return self.res, self.solnSF, divergeFlag, i
 
@@ -337,6 +324,9 @@ class Spring:
         self.plot_deform(showBool=False)
 
     def deform_by_torque_predict_forces(self, torqueTarg, ODE, breakBool=False):
+        # print(torqueTarg, ODE)
+        # print(type(torqueTarg))
+        
         defBreakBool = breakBool
         steps = [torqueTarg*0.05, torqueTarg*0.2]
         Fxs   = []
@@ -481,7 +471,7 @@ class Spring:
 
         return self.maxStress, self.maxStresses
 
-    def plot_spring(self, showBool=False, trans=1):
+    def plot_spring(self, showBool=False, trans=1, targetAxes=None):
 
         self.A, self.B =    self.crsc.get_outer_geometry(self.resl)
         # print(self.A)
@@ -493,15 +483,20 @@ class Spring:
             pass
 
         # plot the principal leg
-        plt.figure("Graphic Results")
-        plt.plot(self.A[:,0],self.A[:,1],"k", alpha=trans)
-        plt.plot(self.B[:,0],self.B[:,1],"k", alpha=trans)
-        plt.plot(self.Sn[:,0],self.Sn[:,1],"--b",label="netural", alpha=trans)
+        if targetAxes is None:
+            plt.figure("Graphic Results")
+            ax = plt.gca()
+        else:
+            ax = targetAxes
+
+        ax.plot(self.A[:,0],self.A[:,1],"k", alpha=trans)
+        ax.plot(self.B[:,0],self.B[:,1],"k", alpha=trans)
+        ax.plot(self.Sn[:,0],self.Sn[:,1],"--b",label="netural", alpha=trans)
         if "self.Sc" in locals():
-            plt.plot(self.Sc[:,0],self.Sc[:,1],"--r",label="centroidal", alpha=trans)
-        plt.plot(self.path.pts[:,0],self.path.pts[:,1])
-        plt.axis("equal")
-        plt.legend()
+            ax.plot(self.Sc[:,0],self.Sc[:,1],"--r",label="centroidal", alpha=trans)
+        ax.plot(self.path.pts[:,0],self.path.pts[:,1])
+        ax.axis("equal")
+        ax.legend()
 
         # plot the other legs
         ang = 2*np.pi/self.n
@@ -513,10 +508,10 @@ class Spring:
             transformedSn = R.dot(self.Sn.T).T
             if "self.Sc" in locals():
                 transformedSc = R.dot(self.Sc.T).T
-                plt.plot(transformedSc[:,0],transformedSc[:,1],"--r", alpha=trans)
-            plt.plot(transformedA[:,0],transformedA[:,1],"k", alpha=trans)
-            plt.plot(transformedB[:,0],transformedB[:,1],"k", alpha=trans)
-            plt.plot(transformedSn[:,0],transformedSn[:,1],"--b", alpha=trans)
+                ax.plot(transformedSc[:,0],transformedSc[:,1],"--r", alpha=trans)
+            ax.plot(transformedA[:,0],transformedA[:,1],"k", alpha=trans)
+            ax.plot(transformedB[:,0],transformedB[:,1],"k", alpha=trans)
+            ax.plot(transformedSn[:,0],transformedSn[:,1],"--b", alpha=trans)
             
 
         # plot geometry of inner and outer rotor of spring
@@ -530,9 +525,11 @@ class Spring:
         if showBool:
             plt.show()
 
-    def plot_deform(self, showBool=True):
+        return ax
 
-        self.plot_spring(showBool=False, trans=0.25)
+    def plot_deform(self, showBool=True, targetAxes=None):
+
+        ax = self.plot_spring(showBool=False, trans=0.25, targetAxes=targetAxes)
 
         alpha = self.path.get_alpha(self.ximesh)
         self.la, self.lb = self.crsc.get_neutralDistances(self.resl)
@@ -556,8 +553,8 @@ class Spring:
                       self.normalizedInnerStress,cmap=plt.get_cmap('rainbow'))
 
             spot = self.outerRadius*np.sin(45*deg2rad)
-
-            plt.text(spot+.25, -(spot+.25), f"deformation: {self.dBeta/deg2rad:.2f}")
+            if targetAxes is None:
+                ax.text(spot+.25, -(spot+.25), f"deformation: {self.dBeta/deg2rad:.2f}")
 
             if showBool:
                 plt.show()
@@ -573,14 +570,18 @@ class Spring:
             surfaces     = ["_A", "_B"]
             surfacesData = [A,B]
             currDir = os.getcwd()
+            paths = []
             for ext in fileExtStrs:
                 i = 0
                 for surf in surfaces:
                     path = os.path.join(
                          os.path.relpath(currDir),"surfaces",self.name+surf+ext)
                     np.savetxt(path, surfacesData[i],fmt='%f',delimiter=',')
+                    paths.append(path)
+            return paths
         else:
             print("Too early to call; please generate inner and outer surfaces before export")
+        return float('nan')
 
     def export_parameters(self):
         
@@ -592,19 +593,382 @@ class Spring:
                     data[key] = str(value)
             return data
         
-        pathParameters = convert_values(self.path.parameters)
-        crscParameters = convert_values(self.crsc.parameters)
-        sprgParameters = convert_values(self.parameters)
+        pathParameters = convert_values(self.path.get_parameters())
+        crscParameters = convert_values(self.crsc.get_parameters())
+        sprgParameters = convert_values(self.get_parameters())
         
         lists = [pathParameters, crscParameters, sprgParameters]
         names = ['_path', '_crsc', '_sprg']
         currDir = os.getcwd()
         ext = '.param'
-        import json
+        paths = []
         for i in range(len(lists)):
             path = os.path.join(os.path.relpath(currDir),"springs",self.name+names[i]+ext)
             with open(path, 'w') as fp:
                 json.dump(lists[i], fp)
+            paths.append(path)
+        return paths
+
+    def load_values(self, paramFile):
+        with open(paramFile, 'r') as parameterFile:
+            parameters = json.load(parameterFile)
+        for key, value in parameters:
+            setattr(self, key, value)
+        # IN PROGRESS
+
+class Optimized_Spring(Spring):
+    def __init__(self, pathDef: Path, material: materials.Material, 
+                 t = 0.375,
+                 resolution=200, 
+                 torqueCapacity=3000, 
+                 stiffness=52000, 
+                 useFatigue=False,
+                 name = None):
+        # Name the spring
+        self.name = name
+        # "inherit" the path definition
+        self.path = pathDef
+        # Design intent
+        self.torqueCapacity   = torqueCapacity
+        self.desStiffness = stiffness
+        
+        # Assign Material
+        self.material = material
+        # Material info
+        self.E = material.E
+        self.yieldStress = material.yieldStress
+        # Stress constraints
+        if useFatigue:
+            material.reset_designStress()
+        self.designStress = material.designStress
+
+        # Geometry parameterization
+        self.fullArcLength = self.path.arcLen
+        self.t = t
+
+        # Mesh information
+        self.resl = resolution
+        self.len = self.resl+1
+        self.step = self.fullArcLength/self.resl
+        self.endIndex = self.len-1
+
+        self.ximesh = np.linspace(0,self.fullArcLength,self.len)
+
+        # Extract properties from passed objects
+        try:
+            # path properties:
+            self.x0 = self.path.startPoint[0]
+            self.y0 = self.path.startPoint[1]
+            self.xL = self.path.endPoint[0]
+            self.yL = self.path.endPoint[1]
+
+            self.momentArmX = self.path.momentArm[0]
+            self.momentArmY = self.path.momentArm[1]
+
+            self.n = self.path.n
+            if self.path.innerRadius is not None:
+                self.innerRadius = self.path.innerRadius
+                self.outerRadius = self.path.outerRadius
+            else:
+                self.innerRadius = lin.norm(self.path.startPoint)
+                self.outerRadius = lin.norm(self.path.endPoint)
+
+        except self.Error as e:
+            print("path definition is missing standard attributes")
+
+        # Weightings for straight vs curved behavior
+        self.weightingsPrepared = 0
+
+        # default values
+        self.threshold  = 50 # (in)
+        self.transition = 25 # Bigger transition is sharper
+
+        self.stressData = []
+        self.xiData = []
+        self.weightData = []
+
+    def prepare_weightings(self):
+        self.lambda1 = lambda x : self.threshold**self.transition/(x**self.transition+self.threshold**self.transition)
+        self.lambda2 = lambda x : 1-self.lambda1(x)
+
+        # self.lambda2 = lambda x : 1/np.pi*(np.arctan(transition*np.pi*(x-threshold))
+        #                                    -np.arctan(transition*np.pi*(-threshold)))
+        # self.lambda1 = lambda x : -self.lambda2(x) + 1
+
+        self.switching = lambda x : (-1)**x/2+1/2
+
+        self.weightingsPrepared = 1
+
+    def tune_weightings(self):
+        err = 1000
+        i = 0
+        gain = 1
+        while err > 10 and i < 100:
+            #
+            # print("ONE LOOP")
+            self.stressData = []
+            self.weightingsPrepared=0
+            threshold = self.threshold
+            transition = self.transition # load current
+            self.forward_integration(self.weighted_ODE, np.array([0,0,self.torqueCapacity]), self.torqueCapacity)
+            stressArray = np.array(self.stressData)
+            errVec = stressArray-np.ones_like(stressArray)*self.designStress
+            err = lin.norm(errVec)
+            # Finite difference:
+            # Forward
+            self.weightingsPrepared=0
+            self.threshold = threshold+0.01
+            self.transition = transition
+            self.forward_integration(self.weighted_ODE, np.array([0,0,self.torqueCapacity]), self.torqueCapacity)
+            stressArray = np.array(self.stressData)
+            errVec = stressArray-np.ones_like(stressArray)*self.designStress
+            errf = lin.norm(errVec)
+            # Backward
+            self.weightingsPrepared=0
+            self.threshold = threshold-0.01
+            self.transition = transition
+            self.forward_integration(self.weighted_ODE, np.array([0,0,self.torqueCapacity]), self.torqueCapacity)
+            stressArray = np.array(self.stressData)
+            errVec = stressArray-np.ones_like(stressArray)*self.designStress
+            errb = lin.norm(errVec)
+
+            derrdthresh = (errf-errb)/0.02
+
+            # Forward
+            self.weightingsPrepared=0
+            self.threshold = threshold
+            self.transition = transition+0.01
+            self.forward_integration(self.weighted_ODE, np.array([0,0,self.torqueCapacity]), self.torqueCapacity)
+            stressArray = np.array(self.stressData)
+            errVec = stressArray-np.ones_like(stressArray)*self.designStress
+            errf = lin.norm(errVec)
+            # Backward
+            self.weightingsPrepared=0
+            self.threshold = threshold
+            self.transition = transition-0.01
+            self.forward_integration(self.weighted_ODE, np.array([0,0,self.torqueCapacity]), self.torqueCapacity)
+            stressArray = np.array(self.stressData)
+            errVec = stressArray-np.ones_like(stressArray)*self.designStress
+            errb = lin.norm(errVec)
+
+            derrdtrans = (errf-errb)/0.02
+
+            self.threshold = threshold - err/derrdthresh*gain
+            self.transition = transition - err/derrdthresh*gain
+
+            print(self.threshold, self.transition, err)
+        print(i)
+        print(err)
+        self.threshold = threshold
+        self.transition = transition
+        return self.threshold, self.transition
+
+
+
+    def weighted_ODE(self, xi, states, *loads):
+        # print("----------------------------------")
+        # print(states)
+        # Repackage states
+        gamma, x, y, la, lb = states
+        # Repackage loads (IC)
+        Fx, Fy, dgds0 = loads
+        # Get distortion derivative
+        dxids = self.path.get_dxi_n(xi)
+        
+        alpha = self.path.get_alpha(xi)
+        # treating path as known (nominal)
+        rn = self.path.get_rn(xi)
+        drnds = self.path.get_drn(xi)
+
+        # Prepare moment dimensionalizer
+        if not lb==la:
+            Ic = self.t*rn/2*(lb**2-la**2)
+        else:
+            Ic = 1/12*self.t*(2*la)**3
+        Mdim = self.E*Ic
+
+        # T0 = dgds0*Mdim
+
+        LHS = np.empty(5)
+        # Solve deformation ODE (one step)
+        LHS[0] = (dgds0 + Fy/Mdim*(x-self.x0) - Fx/Mdim*(y-self.y0))
+        LHS[1] = np.cos(alpha+gamma)
+        LHS[2] = np.sin(alpha+gamma)
+
+        # check to make sure the math makes sense (I.C. satisfied)
+        if xi==0:
+            try:
+                assert(np.isclose(LHS[0],dgds0,rtol=1e-5))
+            except:
+                print(loads[0])
+                print(LHS[0], dgds0)
+                assert(False)
+
+        # Translate LHS of deformation ODE for use in geo ODE
+        dgammads = LHS[0]
+        dxds     = LHS[1]
+        dyds     = LHS[2]
+
+        # Prepare forcing function F* and its derivative
+        FStar    = Fy*(x-self.x0)-Fx*(y-self.y0)
+        dFStards = Fy*dxds - Fx*dyds
+
+        # Prepare weighting matrix W
+        if not self.weightingsPrepared:
+            self.prepare_weightings()
+        lam1 = self.lambda1(abs(rn))
+        lam2 = self.lambda2(abs(rn))
+        self.weightData.append(lam1)
+
+        W = np.array([[lam1, 0, 0, 0],[0, lam1, 0, 0],[0, 0, lam2, 0],[0, 0, 0, lam2]])
+        # print(rn, lam1, lam2)
+
+        # Determine stress case
+        innerStressFactor = abs(la/(rn-la))
+        outerStressFactor = abs(lb/(rn+lb))
+        dominantStressFactor = max(innerStressFactor, outerStressFactor)
+
+        if dominantStressFactor==innerStressFactor:
+            dDen  = rn-la
+            dSide = la
+            phi   = 0
+            # print("a case")
+        elif dominantStressFactor==outerStressFactor:
+            dDen  = rn+lb
+            dSide = lb
+            phi   = 1
+            # print("b case")
+        else:
+            print("OH MY GOD ~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+            assert(False)
+        
+        # Just give us nice, short symbols to use
+        sigma = self.designStress
+        t = self.t
+
+        # Prepare full system:
+        stressConstrDenominator = t*(dDen*sigma - dgds0*dSide)**2
+        stressConstrNumerator   = sigma*dSide*(FStar*drnds-dFStards*dDen)+dSide**2*dFStards*dgds0
+
+        if np.isinf(rn):
+            # print("should be finite:", stressConstrDenominator)
+            QFrac = FStar/(stressConstrDenominator)
+            if FStar==0:
+                stressConstrNumerator = 0 + dSide**2*dFStards*dgds0
+        else:
+            QFrac = FStar*sigma*rn/(stressConstrDenominator)
+
+        Q = np.array([[  la/(rn*(rn-la)),                 -lb/(rn*(rn+lb))               ], \
+                      [-(la+(QFrac)*self.switching(phi)),  lb+(QFrac)*self.switching(phi)]])
+        
+        P = np.array([[1,0],[-1,1]])
+        QP = np.vstack((Q,P))
+
+        qStar = np.array([[drnds*(1/(rn-la)-1/(rn+lb)-(la+lb)/(rn**2))],
+                          [stressConstrNumerator/stressConstrDenominator]])
+        pStar = np.array([[3/4*dFStards/la],[0]])
+        qStarPStar = np.vstack((qStar,pStar))
+        # print(drnds, rn)
+        # print(dFStards, FStar)
+        # print(qStarPStar)
+
+        # Solve geometry portion of ODE (one step)
+        if rn==float('inf'):
+            # print(states)
+            # print(la, lb, QFrac)
+            # print(Q, P)
+            # print(qStar, pStar)
+            # print("I'm at either end of the spring")
+            pass
+        qdot = lin.pinv(W.dot(QP)).dot(W).dot(qStarPStar)
+        # print(qdot)
+        LHS[3] = qdot[0]
+        LHS[4] = qdot[1]
+
+        # print(LHS)
+
+        # transfer back from s space to xi space
+        LHS = LHS/dxids
+
+        if np.isfinite(rn):
+            stress = abs(dgammads*self.E*rn*dominantStressFactor)
+        else:
+            # stress = 1/(dgds0*la)
+            stress = abs(dgammads*self.E*la)
+            pass
+        # print("stress:", stress)
+
+        # print("error:", stress-self.designStress)
+        self.stressData.append(stress)
+        self.xiData.append(xi)
+
+        return LHS
+
+    def forward_integration(self, ODE, SF, torqueTarg):
+        """
+        THIS FUNCTION:
+            Evaluates a spring's deflection under a certain loading condition
+            by integrating forward across a specified ODE (there is currently
+            only one supported)
+        """
+        ## Assume that rn0 = infinity
+        rn0 = self.path.get_rn(0)
+        # print(rn0)
+        if not rn0==float('inf'):
+            print("Not supported for optimization")
+            return 0
+        else:
+            # print(self.designStress)
+            h0 = np.sqrt(6*SF[2]/self.n/(self.t*self.designStress))
+            Ic0 = self.t*(h0)**3/12
+            print(h0)
+            la0=h0/2
+            lb0=la0
+            # print("init thickness:", la0)
+            print(Ic0)
+
+        # set up initial condition
+        self.dgds0 = (SF[2]/self.n + self.momentArmY*SF[0] - self.momentArmX*SF[1])/ \
+                      (self.E*Ic0)
+        # perform forward integration
+        # arguments: ODE, Initial Conditions, Mesh, args
+        self.res  = fixed_rk4(ODE, np.array([0,self.x0,self.y0,la0,lb0]), self.ximesh, (SF[0], SF[1], self.dgds0))
+        # calcualte error values (difference in pre-and post-iteration radii)
+        #                        (difference in final gamma and final beta)
+        Rinitial = lin.norm([self.xL,self.yL])
+        Rfinal   = lin.norm([self.res[1,-1],self.res[2,-1]])
+        # Calculate dBeta using arccos
+        ptInitial = np.array([self.xL, self.yL])/ \
+                                          lin.norm(np.array([self.xL, self.yL]))
+        ptFinal   = np.array([self.res[1,-1],self.res[2,-1]])/ \
+                             lin.norm(np.array([self.res[1,-1],self.res[2,-1]]))
+
+        quadInitial = identify_quadrant(ptInitial)
+        quadFinal   = identify_quadrant(ptFinal)
+
+        if quadFinal < quadInitial:
+            quad = quadFinal
+        else:
+            quad = quadInitial
+        
+        if quad%2:
+            axis=np.array([1,0])
+        else:
+            axis=np.array([0,1])
+        if quad>=3:
+            axis=axis*-1
+
+        Angle1 = np.arccos(min(ptInitial.dot(axis),1.0))
+        Angle2 = np.arccos(min(ptFinal.dot(axis),1.0))
+
+        # cosAngle = min(ptFinal.dot(ptInitial),1.0)
+        self.dBeta    = Angle2-Angle1
+        # Err = diff. in radius, diff between gamma(L) and beta(L), distance
+        #       from target torque (just to make matrix square) 
+        err = np.array([Rinitial-Rfinal, (self.res[0,-1])-(self.dBeta),
+                                                              SF[2]-torqueTarg])
+        return err, self.res
+    
 
 def determineFastestSolver(spring: Spring, torqueGain=1):
     testDeformLevel = spring.torqueCapacity*torqueGain
