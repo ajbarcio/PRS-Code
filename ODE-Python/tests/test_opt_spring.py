@@ -35,7 +35,7 @@ def test_optimization_class():
     # Initialize objects for test
     testPath = RadiallyEndedPolynomial(2,6)
     testCrsc = Piecewise_Ic_Control(testPath, IcPts=np.array([.008,.0008,.008]))
-    testSprg = Optimized_Spring(testPath, TestMaterial, resolution=500)
+    testSprg = Optimized_Spring(testPath, TestMaterial, threshold=20, transition=8, resolution=500)
 
     # Make sure this function runs without errors
     testSprg.prepare_weightings()
@@ -62,12 +62,12 @@ def test_optimization_class():
     # plt.plot(res.t, res.y.T[:,3])
     # plt.plot(res.t, res.y.T[:,4])
     # plt.show()
-
+    plt.figure("stress results")
     plt.plot(testSprg.xiData, testSprg.stressData, label="stress")
     plt.plot(testSprg.xiData, [i*testSprg.designStress for i in testSprg.weightData], label="curved behavior weight")
     plt.plot(testSprg.xiData, [(i+1-i)*testSprg.designStress for i in testSprg.weightData], label = "design stress")
     plt.legend()
-    plt.figure()
+    plt.figure("Geometry results")
     
     # la = res.y.T[:,3]
     # lb = res.y.T[:,4]
@@ -76,17 +76,17 @@ def test_optimization_class():
     lb = res[4,:]
     h = la+lb
 
-    plt.plot(testSprg.ximesh, la)
-    plt.plot(testSprg.ximesh, lb)
-    plt.plot(testSprg.ximesh, h)
+    plt.plot(testSprg.ximesh, la, label = "la")
+    plt.plot(testSprg.ximesh, lb, label = "lb")
+    plt.plot(testSprg.ximesh, h, label = "h")
+    plt.legend()
     
     rn = testSprg.path.get_rn(testSprg.ximesh)
     print(rn[0])
     Ic = testSprg.t*rn/2*(lb**2-la**2)
     
-    plt.figure()
+    plt.figure("Ic Result")
     plt.plot(testSprg.ximesh, Ic)
-    
     
     plt.show()
     # # # test forward integration in some reasonable forced case

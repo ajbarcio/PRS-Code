@@ -843,8 +843,21 @@ class Optimized_Spring(Spring):
             print("OH MY GOD ~~~~~~~~~~~~~~~~~~~~~~~~~~~")
             assert(False)
         
+        if np.isfinite(rn):
+            stress = abs(dgammads*self.E*rn*dominantStressFactor)
+        else:
+            # stress = 1/(dgds0*la)
+            stress = abs(dgammads*self.E*la)
+        # print("stress:", stress)
+
+        # print("error:", stress-self.designStress)
+        self.stressData.append(stress)
+        self.xiData.append(xi)
+
         # Just give us nice, short symbols to use
-        sigma = self.designStress
+        # sigma = self.designStress
+        # TEST: Try with actual updating stress
+        sigma = stress
         t = self.t
 
         # Prepare full system:
@@ -867,7 +880,7 @@ class Optimized_Spring(Spring):
 
         qStar = np.array([[drnds*(1/(rn-la)-1/(rn+lb)-(la+lb)/(rn**2))],
                           [stressConstrNumerator/stressConstrDenominator]])
-        pStar = np.array([[3/4*dFStards/la],[0]])
+        pStar = np.array([[3/4*dFStards/(la*t*sigma)],[0]])
         qStarPStar = np.vstack((qStar,pStar))
         # print(drnds, rn)
         # print(dFStards, FStar)
@@ -890,18 +903,6 @@ class Optimized_Spring(Spring):
 
         # transfer back from s space to xi space
         LHS = LHS/dxids
-
-        if np.isfinite(rn):
-            stress = abs(dgammads*self.E*rn*dominantStressFactor)
-        else:
-            # stress = 1/(dgds0*la)
-            stress = abs(dgammads*self.E*la)
-            pass
-        # print("stress:", stress)
-
-        # print("error:", stress-self.designStress)
-        self.stressData.append(stress)
-        self.xiData.append(xi)
 
         return LHS
 
