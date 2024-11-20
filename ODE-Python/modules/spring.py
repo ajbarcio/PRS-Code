@@ -618,6 +618,8 @@ class Spring:
 
 class Optimized_Spring(Spring):
     def __init__(self, pathDef: Path, material: materials.Material, 
+                 threshold = 5,
+                 transition = 4,
                  t = 0.375,
                  resolution=200, 
                  torqueCapacity=3000, 
@@ -680,8 +682,8 @@ class Optimized_Spring(Spring):
         self.weightingsPrepared = 0
 
         # default values
-        self.threshold  = 50 # (in)
-        self.transition = 25 # Bigger transition is sharper
+        self.threshold  = threshold # (in)
+        self.transition = transition # Bigger transition is sharper
 
         self.stressData = []
         self.xiData = []
@@ -763,14 +765,13 @@ class Optimized_Spring(Spring):
         self.transition = transition
         return self.threshold, self.transition
 
-
-
-    def weighted_ODE(self, xi, states, *loads):
+    def weighted_ODE(self, xi, states, loads):
         # print("----------------------------------")
         # print(states)
         # Repackage states
         gamma, x, y, la, lb = states
         # Repackage loads (IC)
+        # print(loads)
         Fx, Fy, dgds0 = loads
         # Get distortion derivative
         dxids = self.path.get_dxi_n(xi)
@@ -932,7 +933,7 @@ class Optimized_Spring(Spring):
                       (self.E*Ic0)
         # perform forward integration
         # arguments: ODE, Initial Conditions, Mesh, args
-        self.res  = fixed_rk4(ODE, np.array([0,self.x0,self.y0,la0,lb0]), self.ximesh, (SF[0], SF[1], self.dgds0))
+        self.res  = fixed_rk4(ODE, np.array([0,self.x0,self.y0,la0,lb0]), self.ximesh, np.array([SF[0], SF[1], self.dgds0]))
         # calcualte error values (difference in pre-and post-iteration radii)
         #                        (difference in final gamma and final beta)
         Rinitial = lin.norm([self.xL,self.yL])
