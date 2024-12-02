@@ -17,7 +17,7 @@ springData = pd.read_excel('Spring_Constraints.ods', engine='odf', index_col=0)
 
 IR = springData.loc['Size 6','IR lim (in)']
 OR = springData.loc['Size 6','OR lim (in)']
-testTorque = springData.loc['Size 6','Max Torque (in.lbs)']
+testTorque = springData.loc['Size 6','Max Torque (in.lbs)']*0.5
 # IR = 1.3
 # OR = 2.013
 
@@ -25,8 +25,8 @@ print(IR, OR)
 
 pren=2
 preDefT           = .375
-preDefIc          = np.array([.0032, .00032, .0032])
-preDefAlphaAngles = np.array([0,0])*deg2rad
+preDefIc          = np.array([.0028, .00002, .00002, .00015])
+preDefAlphaAngles = np.array([35,25])*deg2rad
 preDefBetaRange   = 175
 
 rootThk  = np.cbrt(12*preDefIc[0]/preDefT)
@@ -43,7 +43,7 @@ testPath = PATHDEF.Minimal_Polynomial_Definition4(n=pren, fullParamLength=3,
             XYFactors = np.array([0.3,0.6]))
 testCrsc = CRSCDEF.Piecewise_Ic_Control(pathDef=testPath,
                                         IcPts = preDefIc,
-                                        IcParamLens = np.array([.5]),
+                                        IcParamLens = np.array([.45, .5]),
                                         outPlaneThickness = preDefT)
 
 # testPath = PATHDEF.Minimal_Polynomial_Definition4(n=2, fullParamLength=4,
