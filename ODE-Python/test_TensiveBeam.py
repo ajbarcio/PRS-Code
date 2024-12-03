@@ -20,12 +20,17 @@ def test_tensive_straight_beam():
     # testCrsc = Constant_Ic(testPath, 0.375, Ic0=0.00125)
     testCrsc = Piecewise_Ic_Control(testPath, IcPts=np.array([1/120,1/120]), t=0.1)
     testSprg = Spring(testPath, testCrsc, TestMaterial)
-    
+
     testSprg.forward_integration(testSprg.deform_withTension_ODE, np.array([1000,0,0]), 0)
     testSprg.plot_deform(testSprg)
 
 def test_tensive_curved_beam():
-    testPath = RadiallyEndedPolynomial(1, 6, radii = np.array())
+    testPath = RadiallyEndedPolynomial(1, 6, radii = np.array([1, 3]), ffradii = np.array([1, 3]), alphaAngles=np.array([90,90])*deg2rad, betaAngles=np.array([0,180]), XYFactors=np.array([]))
+    testCrsc = Piecewise_Ic_Control(testPath, IcPts=np.array([1/120,1/120]), t=0.1)
+    testSprg = Spring(testPath, testCrsc, TestMaterial)
+
+    testSprg.forward_integration(testSprg.deform_withTension_ODE, np.array([-1000,0,0]), 0)
+    testSprg.plot_deform(testSprg)
 
 def main():
     test_tensive_straight_beam()
