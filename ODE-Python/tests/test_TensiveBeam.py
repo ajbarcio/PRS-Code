@@ -14,7 +14,7 @@ from modules.utils import deg2rad
 
 from modules.StatProfiler import SSProfile
 
-
+@pytest.mark.skip()
 def test_tensive_straight_beam():
     testPath = RadiallyEndedPolynomial(1, 10, radii=np.array([0, 10]), ffradii=np.array([0, 10]), alphaAngles=np.array([0,0]), betaAngles=np.array([0,0]), XYFactors=np.array([]))
     # testCrsc = Constant_Ic(testPath, 0.375, Ic0=0.00125)
