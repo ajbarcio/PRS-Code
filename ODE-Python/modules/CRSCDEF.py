@@ -33,6 +33,12 @@ class Crsc(ABC):
         lalb = self.get_lalb(coord, hasPrev=hasPrev)
         h = lalb[0]+lalb[1]
         return h
+    
+    @abstractmethod
+    def get_Area(self, coord, hasPrev=False):
+        h = self.get_Thk(coord, hasPrev=hasPrev)
+        A = h*self.t
+        return A
 
     @abstractmethod
     def get_lalb(self, coord, hasPrev=False):
@@ -151,6 +157,9 @@ class Constant_Ic(Crsc):
             print(err)
         return x    # here x is [la, lb]
 ##### Standard Interface #####
+
+    def get_Area(self, coord, hasPrev=False):
+        return super().get_Area(coord, hasPrev)
 
     def get_neutralDistances(self, resolution):
         return super().get_neutralDistances(resolution)
@@ -358,6 +367,9 @@ class Piecewise_Ic_Control(Crsc):
         return x    # here x is [la, lb]
 
 #### STANDARD INTERFACE ####
+
+    def get_Area(self, coord, hasPrev=False):
+        return super().get_Area(coord, hasPrev)
 
     def get_neutralDistances(self, resolution):
         return super().get_neutralDistances(resolution)
