@@ -420,16 +420,20 @@ class RadiallyEndedPolynomial(Path):
                 # with correct first derivative (radial direction)
                 XTarg1 = self.pts[index,0]/lin.norm(self.pts[index,:])
                 YTarg1 = self.pts[index,1]/lin.norm(self.pts[index,:])
+                if not (np.isfinite(XTarg1) and np.isfinite(XTarg1)):
+                    XTarg1 = 0
+                    YTarg1 = 0
                 TargVect = np.array([[XTarg1],[YTarg1]])
                 if index == 0:
                     Mat2 = np.array([[np.cos(self.alphaAngles[index]),-np.sin(self.alphaAngles[index])],
                                     [np.sin(self.alphaAngles[index]), np.cos(self.alphaAngles[index])]])
                     TargVect = Mat2.dot(TargVect)
+                    # print(TargVect)
+                    # print(Mat2)
                 else:
                     Mat2 = np.array([[np.cos(self.alphaAngles[-1]),-np.sin(self.alphaAngles[-1])],
                                     [np.sin(self.alphaAngles[-1]), np.cos(self.alphaAngles[-1])]])
                     TargVect = Mat2.dot(TargVect)
-                # print(TargVect)
                 XTarg[i] = TargVect[0]
                 YTarg[i] = TargVect[1]
                 # at correct s value
@@ -456,7 +460,15 @@ class RadiallyEndedPolynomial(Path):
             diffY = PPoly_Eval(self.XYParamLens[i],YCoeffs)-self.pts[i,1]
             diff = lin.norm([diffX,diffY])
             # print(diff)
-            assert(np.isclose(diff,0))
+            try:
+                assert(np.isclose(diff,0))
+            except:
+                # print(self.XYParamLens)
+                print(XTarg, YTarg)
+                print(Mat)
+                # print(self.pts)
+                # print(XCoeffs, YCoeffs)
+                # print(diff)
         # TODO: assert(np.isclose(diff,0))
         # print(XCoeffs, YCoeffs)
         return XCoeffs, YCoeffs

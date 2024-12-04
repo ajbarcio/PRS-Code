@@ -55,7 +55,7 @@ class Spring:
         self.finiteDifferenceTorque = 10
         self.finiteDifferenceIc     = 0.0001
         self.finiteDifferenceFactor = 0.001
-        
+
         self.differenceThreshold = 0.0006
 
         # Default deforming mode:
@@ -88,9 +88,9 @@ class Spring:
         except self.Error as e:
             print("path, cross section, or material definitions are missing \
                   \n standard attributes")
-            
+
         self.parameters = self.get_parameters()
-            
+
     def get_parameters(self):
         self.parameters = {"path": self.path,
                            "crsc": self.crsc,
@@ -104,24 +104,51 @@ class Spring:
     class Error(Exception):
         pass
 
+    def deform_withTension_ODE(self, xi, deforms, *args):
+
+        M, Fx, Fy, dgds0 = args[0]
+        gamma, x, y = deforms
+
+        alpha = self.path.get_alpha(xi)
+        Mdim = self.E*self.crsc.get_Ic(xi)
+        Area = self.crsc.get_Area(xi)
+        Fax = Fx*np.cos(alpha+gamma) + Fy*np.sin(alpha+gamma)
+
+        dxids = self.path.get_dxi_n(xi)
+
+        LHS = np.empty(3)
+        # Bending equation remains the same
+        LHS[0] = (dgds0 + Fy/Mdim*(deforms[1]-self.x0) -
+                                                   Fx/Mdim*(deforms[2]-self.y0))
+        # Coordinate equations change
+        # Combination of off-axis components and tensive components:
+        LHS[1] = np.cos(alpha+gamma)*(1+Fax/(self.E*Area))
+        LHS[2] = np.sin(alpha+gamma)*(1+Fax/(self.E*Area))
+
+        # check to make sure the math makes sense (I.C. satisfied)
+        if xi==0:
+            assert(np.isclose(LHS[0],dgds0,rtol=1e-5))
+
+        # transfer back from s space to xi space
+        LHS = LHS/dxids
+        return LHS
+
     def deform_ODE(self, xi, deforms, *args):
         # Deal with args in a way that is hopefully better
-
-        Fx, Fy, dgds0 = args[0]
+        M, Fx, Fy, dgds0 = args[0]
+        gamma, x, y = deforms
         # Prepare moment dimensionalizer
         Mdim = self.E*self.crsc.get_Ic(xi)
 
         dxids = self.path.get_dxi_n(xi)
 
-        dxds = self.path.get_dxdy_n(xi, 'x')*dxids
-        dyds = self.path.get_dxdy_n(xi, 'y')*dxids
-
         LHS = np.empty(3)
-
+        # LHS[0] = (M/self.n - (y-self.y0)*Fx + (x-self.x0)*Fy)/ \
+        #               (self.E*self.crsc.get_Ic(xi))
         LHS[0] = (dgds0 + Fy/Mdim*(deforms[1]-self.x0) -
                                                    Fx/Mdim*(deforms[2]-self.y0))
-        LHS[1] = np.cos(np.arctan2(dyds,dxds)+deforms[0])
-        LHS[2] = np.sin(np.arctan2(dyds,dxds)+deforms[0])
+        LHS[1] = np.cos(self.path.get_alpha(xi)+gamma)
+        LHS[2] = np.sin(self.path.get_alpha(xi)+gamma)
         # check to make sure the math makes sense (I.C. satisfied)
         if xi==0:
             assert(np.isclose(LHS[0],dgds0,rtol=1e-5))
@@ -141,13 +168,15 @@ class Spring:
         Ic0 = self.crsc.get_Ic(0)
 
         # set up initial condition
-        self.dgds0 = (SF[2]/self.n + self.momentArmY*SF[0] - self.momentArmX*SF[1])/ \
+        self.dgds0 = (SF[2]/self.n - self.momentArmY*SF[0] + self.momentArmX*SF[1])/ \
                       (self.E*Ic0)
+        # self.dgds0 = (SF[2] + self.momentArmY*SF[0] - self.momentArmX*SF[1])/ \
+        #               (self.E*Ic0)
         # perform forward integration
         # arguments: ODE, Initial Conditions, Mesh, args
         self.res  = fixed_rk4(ODE, np.array([0,self.x0,self.y0]), self.ximesh,
-                                            # (SF[2], 
-                                            (SF[0], SF[1], self.dgds0))
+                                            # (SF[2],
+                                            (SF[2], SF[0], SF[1], self.dgds0))
         # calcualte error values (difference in pre-and post-iteration radii)
         #                        (difference in final gamma and final beta)
         Rinitial = lin.norm([self.xL,self.yL])
@@ -165,7 +194,7 @@ class Spring:
             quad = quadFinal
         else:
             quad = quadInitial
-        
+
         if quad%2:
             axis=np.array([1,0])
         else:
@@ -179,7 +208,7 @@ class Spring:
         # cosAngle = min(ptFinal.dot(ptInitial),1.0)
         self.dBeta    = Angle2-Angle1
         # Err = diff. in radius, diff between gamma(L) and beta(L), distance
-        #       from target torque (just to make matrix square) 
+        #       from target torque (just to make matrix square)
         err = np.array([Rinitial-Rfinal, (self.res[0,-1])-(self.dBeta),
                                                               SF[2]-torqueTarg])
         return err, self.res
@@ -228,6 +257,8 @@ class Spring:
         THIS FUNCTION:
             Solves for a deformation given a certain torque loading condition
         """
+
+        print("Used Direct Torque Method")
 
         # the err is a two vector, so make it arbitrarily high to enter loop
         err = np.ones(2)*float('inf')
@@ -326,7 +357,9 @@ class Spring:
     def deform_by_torque_predict_forces(self, torqueTarg, ODE, breakBool=False):
         # print(torqueTarg, ODE)
         # print(type(torqueTarg))
-        
+
+        print("Used Predict Forces Method")
+
         defBreakBool = breakBool
         steps = [torqueTarg*0.05, torqueTarg*0.2]
         Fxs   = []
@@ -337,7 +370,7 @@ class Spring:
             solnSF[2] = step
             # print(solnSF)
             gres, solnSF, divergeFlag, i = self.deform_by_torque(step,
-                                                                 ODE, 
+                                                                 ODE,
                                                                  SF=solnSF,
                                                                  breakBool=defBreakBool)
             Fxs.append(solnSF[0])
@@ -377,6 +410,9 @@ class Spring:
         return res, solnSF, divergeFlag, i
 
     def deform_by_torque_predict_angle(self, torqueTarg, ODE, breakBool=False):
+
+        print("Used Predict Force Angle Method")
+
         defBreakBool = breakBool
         steps = [torqueTarg*0.05, torqueTarg*0.2]
         mags   = []
@@ -512,7 +548,7 @@ class Spring:
             ax.plot(transformedA[:,0],transformedA[:,1],"k", alpha=trans)
             ax.plot(transformedB[:,0],transformedB[:,1],"k", alpha=trans)
             ax.plot(transformedSn[:,0],transformedSn[:,1],"--b", alpha=trans)
-            
+
 
         # plot geometry of inner and outer rotor of spring
         outerCircle = plt.Circle([0,0],self.outerRadius,color ="k",fill=False)
@@ -555,6 +591,10 @@ class Spring:
             spot = self.outerRadius*np.sin(45*deg2rad)
             if targetAxes is None:
                 ax.text(spot+.25, -(spot+.25), f"deformation: {self.dBeta/deg2rad:.2f}")
+                ax.text(spot+.25, -(spot+.375), f"root thk: {self.h[0]:.2f}")
+                ax.text(spot+.25, -(spot+.625), f"tip thk: {self.h[-1]:.2f}")
+                # ax.text(spot+.25, -(spot+.875), f"min thk: {self.minThk:.2f}")
+                # ax.ylim((-(spot+.875)*1.2, self.outerRadius*1.2))
 
             if showBool:
                 plt.show()
@@ -584,7 +624,7 @@ class Spring:
         return float('nan')
 
     def export_parameters(self):
-        
+
         def convert_values(data):
             for key, value in data.items():
                 if isinstance(value, np.ndarray):
@@ -592,11 +632,11 @@ class Spring:
                 if isinstance(value, Path) or isinstance(value, Crsc) or isinstance(value, Material):
                     data[key] = str(value)
             return data
-        
+
         pathParameters = convert_values(self.path.get_parameters())
         crscParameters = convert_values(self.crsc.get_parameters())
         sprgParameters = convert_values(self.get_parameters())
-        
+
         lists = [pathParameters, crscParameters, sprgParameters]
         names = ['_path', '_crsc', '_sprg']
         currDir = os.getcwd()
@@ -617,13 +657,13 @@ class Spring:
         # IN PROGRESS
 
 class Optimized_Spring(Spring):
-    def __init__(self, pathDef: Path, material: materials.Material, 
+    def __init__(self, pathDef: Path, material: materials.Material,
                  threshold = 5,
                  transition = 4,
                  t = 0.375,
-                 resolution=200, 
-                 torqueCapacity=3000, 
-                 stiffness=52000, 
+                 resolution=200,
+                 torqueCapacity=3000,
+                 stiffness=52000,
                  useFatigue=False,
                  name = None):
         # Name the spring
@@ -633,7 +673,7 @@ class Optimized_Spring(Spring):
         # Design intent
         self.torqueCapacity   = torqueCapacity
         self.desStiffness = stiffness
-        
+
         # Assign Material
         self.material = material
         # Material info
@@ -775,7 +815,7 @@ class Optimized_Spring(Spring):
         Fx, Fy, dgds0 = loads
         # Get distortion derivative
         dxids = self.path.get_dxi_n(xi)
-        
+
         alpha = self.path.get_alpha(xi)
         # treating path as known (nominal)
         rn = self.path.get_rn(xi)
@@ -842,7 +882,7 @@ class Optimized_Spring(Spring):
         else:
             print("OH MY GOD ~~~~~~~~~~~~~~~~~~~~~~~~~~~")
             assert(False)
-        
+
         if np.isfinite(rn):
             stress = abs(dgammads*self.E*rn*dominantStressFactor)
         else:
@@ -874,7 +914,7 @@ class Optimized_Spring(Spring):
 
         Q = np.array([[  la/(rn*(rn-la)),                 -lb/(rn*(rn+lb))               ], \
                       [-(la+(QFrac)*self.switching(phi)),  lb+(QFrac)*self.switching(phi)]])
-        
+
         P = np.array([[1,0],[-1,1]])
         QP = np.vstack((Q,P))
 
@@ -952,7 +992,7 @@ class Optimized_Spring(Spring):
             quad = quadFinal
         else:
             quad = quadInitial
-        
+
         if quad%2:
             axis=np.array([1,0])
         else:
@@ -966,11 +1006,11 @@ class Optimized_Spring(Spring):
         # cosAngle = min(ptFinal.dot(ptInitial),1.0)
         self.dBeta    = Angle2-Angle1
         # Err = diff. in radius, diff between gamma(L) and beta(L), distance
-        #       from target torque (just to make matrix square) 
+        #       from target torque (just to make matrix square)
         err = np.array([Rinitial-Rfinal, (self.res[0,-1])-(self.dBeta),
                                                               SF[2]-torqueTarg])
         return err, self.res
-    
+
 
 def determineFastestSolver(spring: Spring, torqueGain=1):
     testDeformLevel = spring.torqueCapacity*torqueGain

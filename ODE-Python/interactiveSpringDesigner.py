@@ -53,8 +53,8 @@ beginningAndEndingAlphaAngles = np.array([0,0])*deg2rad
 # Any middle values occur at the proportions of the spring's arc length outlined
 # in IcArcLens
 outOfPlaneThickness           = .375
-IcSetpoints                   = np.array([.00186, .00045, .000096, .00096, .00156])*2
-IcArcLens                     = np.array([.2,.5,.8])
+IcSetpoints                   = np.array([.0032, .0032])
+IcArcLens                     = np.array([])
 
 # These values are then calculated to account for the beginning and ending 
 # alpha angles, thicknesses, and enforce the form factor constraints outlined 
@@ -91,6 +91,7 @@ radius = path.outerRadius
 
 # plot = DraggableSpring(x, y, np.linspace(0,path.arcLen,500), [1, 2], [3], semicircle)
 plot = Interactive_Spring(path, crsc, materials.Maraging300Steel, torqueCapacity=testTorque, name="Interactive")
+plot.deformMode = plot.deform_by_torque_predict_forces
 plot.ax.set_xlim(-radius*1.1,radius*1.1)
 plot.ax.set_ylim(-radius*1.1,radius*1.1)
 plot.ax.set_aspect('equal')

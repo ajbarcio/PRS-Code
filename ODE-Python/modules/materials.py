@@ -30,6 +30,6 @@ class Material:
 
 Maraging300Steel = Material("Maraging300", 27500000, 309700)
 Maraging300Steel.ultimateStress_set(314600)
-TestMaterial     = Material("FakeMaterial", 20000000, 200000)
-
+TestMaterial     = Material("FakeMaterial", 100000, 100000)
+Titanium5        = Material("Titanium5",113800*1e6/psi2Pa, 880*1e6/psi2Pa)
 # Aluminum         = Material()
