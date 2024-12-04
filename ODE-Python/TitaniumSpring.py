@@ -126,9 +126,9 @@ def main():
     thisSpring = defineSpring()
     deformSpring(thisSpring)
     showResults(thisSpring)
-    thisSpring.deformMode = thisSpring.deform_by_torque_predict_forces
-    deformSpring(thisSpring, ODE=thisSpring.deform_withTension_ODE)
-    showResults(thisSpring)
+    # thisSpring.deformMode = thisSpring.deform_by_torque_predict_forces
+    # deformSpring(thisSpring, ODE=thisSpring.deform_withTension_ODE)
+    # showResults(thisSpring)
     exportResults(thisSpring)
 
 if __name__ == "__main__":

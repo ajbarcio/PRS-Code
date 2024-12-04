@@ -10,11 +10,11 @@ from typing import Optional
 
 from modules.StatProfiler import SSProfile
 from modules.utils import fixed_rk4, numerical_fixed_mesh_diff, colorline, identify_quadrant, deg2rad
-from modules.PATHDEF import Path
-from modules.CRSCDEF import Crsc
+from modules.PATHDEF import Path, RadiallyEndedPolynomial
+from modules.CRSCDEF import Crsc, Piecewise_Ic_Control
 
 import modules.materials as materials
-from modules.materials import Material
+from modules.materials import Material, Titanium5, TestMaterial, Maraging300Steel
 
 import json
 
@@ -101,6 +101,36 @@ class Spring:
                            }
         return self.parameters
 
+    @classmethod
+    def from_param(cls, paramFile):
+        
+        # Access all three paramfiles
+        path_suffix = "_path.param"
+        crsc_suffix = "_crsc.param"
+        sprg_suffix = "_sprg.param"
+        
+        # Load spring params to dict
+        with open(paramFile+sprg_suffix, 'r') as file:
+            params = json.load(file)
+        # Extract names (strings) of path, crsc, and material objects
+        pathType = params.pop("path", None)
+        crscType = params.pop("crsc", None)
+        matlType = params.pop("material", None)
+        # nameNew  = params.pop("name", params["name"]+"1")
+
+        # Look through the globals() env to steal the content of the vars associated with the strings
+        # print(globals())
+        pathClass = globals()[pathType]
+        crscClass = globals()[crscType]
+        matlObjct = globals()[matlType]
+
+        # Create path and crsc objects with appropriate params to load to spring object
+        pathFromParams = pathClass.from_param(paramFile+path_suffix)
+        crscFromParams = crscClass.from_param(paramFile+crsc_suffix, pathFromParams)
+        
+        # Create a spring with appropriate parameters
+        return cls(path=pathFromParams, crsc=crscFromParams, material=matlObjct, **params)
+
     class Error(Exception):
         pass
 
@@ -145,7 +175,7 @@ class Spring:
         LHS = np.empty(3)
         # LHS[0] = (M/self.n - (y-self.y0)*Fx + (x-self.x0)*Fy)/ \
         #               (self.E*self.crsc.get_Ic(xi))
-        LHS[0] = (dgds0 + Fy/Mdim*(deforms[1]-self.x0) -
+        LHS[0] = (dgds0 - Fy/Mdim*(deforms[1]-self.x0) +
                                                    Fx/Mdim*(deforms[2]-self.y0))
         LHS[1] = np.cos(self.path.get_alpha(xi)+gamma)
         LHS[2] = np.sin(self.path.get_alpha(xi)+gamma)
@@ -629,8 +659,10 @@ class Spring:
             for key, value in data.items():
                 if isinstance(value, np.ndarray):
                     data[key] = value.tolist()  # Convert NumPy array to list
-                if isinstance(value, Path) or isinstance(value, Crsc) or isinstance(value, Material):
-                    data[key] = str(value)
+                if isinstance(value, Path) or isinstance(value, Crsc):
+                    data[key] = str(value.__class__.__name__)
+                if isinstance(value, Material):
+                    data[key] = value.name
             return data
 
         pathParameters = convert_values(self.path.get_parameters())

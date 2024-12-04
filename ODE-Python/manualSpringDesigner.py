@@ -12,9 +12,6 @@ from modules.utils import deg2rad
 
 import argparse
 
-# import os
-# import json
-
 parser = argparse.ArgumentParser(description='decide which form factor to use')
 parser.add_argument('-s', type=str, help='What form factor do you want to use? \
                                           Make this match any row title in  \

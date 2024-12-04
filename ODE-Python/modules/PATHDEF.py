@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import scipy
 import sympy as sp
 import warnings
+import json
 warnings.filterwarnings("ignore")
 
 from modules.utils import PPoly_Eval, numerical_fixed_mesh_diff, circle_intersection, deg2rad
@@ -35,7 +36,19 @@ class Path(ABC):
             raise NotImplementedError("Subclasses must implement either method_a or method_b.")
         if not (self.get_dxdy_n or self.get_dxdy_c):
             raise NotImplementedError("Subclasses must implement either method_a or method_b.")
-        
+    
+    @classmethod
+    def from_param(cls, paramFile):
+        with open(paramFile, 'r') as file:
+            params = json.load(file)
+        return cls(**params)
+
+    def plot_path_neutral(self):
+        mesh = np.linspace(0, self.arcLen, 200)
+        x = self.get_xy_n(mesh, 'x')
+        y = self.get_xy_n(mesh, 'y')
+        plt.plot(x, y)
+
     def calculate_startPoint(self):
         """Optional method, can be overridden by subclasses if applicable."""
         raise NotImplementedError("This method is not implemented for this path type.")
@@ -486,6 +499,9 @@ class RadiallyEndedPolynomial(Path):
         if dim=='y':
             out = PPoly_Eval(point, self.YCoeffs, deriv=1)
         return out
+
+    def plot_path_neutral(self):
+        return super().plot_path_neutral()
 
     def get_neutralSurface(self, resl):
         return super().get_neutralSurface(resl)

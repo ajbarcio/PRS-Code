@@ -1,6 +1,8 @@
 import numpy as np
 import numpy.linalg as lin
 
+import json
+
 from modules.utils import PPoly_Eval, deg2rad
 from modules.PATHDEF import Path
 from modules.StatProfiler import SSProfile
@@ -14,6 +16,14 @@ class Crsc(ABC):
         self.path = path
         self.t    = t
         pass
+
+    @classmethod
+    def from_param(cls, paramFile, path_exp):
+        with open(paramFile, 'r') as file:
+            params = json.load(file)
+        params.pop("path", None)
+        # print(params)
+        return cls(path=path_exp, **params)
 
     @abstractmethod
     def get_parameters(self):
@@ -251,8 +261,10 @@ class Piecewise_Ic_Control(Crsc):
         self.parameters = {"path": self.path,
                            "t": self.t,
                            "IcPts": self.IcPts,
-                           "IcParamLens": self.IcParamLens}
+                           "IcParamLens": self.IcFactors}
+        # print(self.IcFactors)
         return self.parameters
+    
     def Ic_multiPoly(self):
 
         # Determine how many parabolas you need

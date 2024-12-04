@@ -1,1 +1,1 @@
-{"path": "<modules.PATHDEF.RadiallyEndedPolynomial object at 0x0000022172BC1A90>", "crsc": "<modules.CRSCDEF.Piecewise_Ic_Control object at 0x0000022174DC4050>", "material": "<modules.materials.Material object at 0x000002216E32E2D0>", "resolution": 200, "torqueCapacity": 2274.5, "name": "Size_6_Special_Titanium5"}
+{"path": "RadiallyEndedPolynomial", "crsc": "Piecewise_Ic_Control", "material": "Titanium5", "resolution": 200, "torqueCapacity": 2274.5, "name": "Size_6_Special_Titanium5"}
