@@ -189,7 +189,7 @@ class Constant_Ic(Crsc):
                                              np.atleast_2d(self.lb*np.cos(alpha)).T))
         self.undeformedASurface = undeformedNeutralSurface + \
                                 np.hstack((np.atleast_2d(-self.la*np.sin(alpha)).T,
-                                           np.atleast_2d(self.get_dIcla*np.cos(alpha)).T))
+                                           np.atleast_2d(self.la*np.cos(alpha)).T))
 
         return self.undeformedASurface, self.undeformedBSurface
 

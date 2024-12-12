@@ -264,7 +264,7 @@ class LinearRnSpiral(Path):
 
     def measure_length(self):
         self.measureResolution = 200
-        ximesh            = np.linspace(0,self.arcLen,self.measureResolution+1)
+        ximesh                 = np.linspace(0,self.arcLen,self.measureResolution+1)
 
         # calcualte derivative of x and y with respect to xi (internal parameter)
         self.dxdxi = self.get_dxdy_n(ximesh, 'x')
@@ -554,6 +554,7 @@ class RadiallyEndedPolynomial(Path):
             return alphaList
 
     def get_dalpha(self, point):
+        # THIS IS WRONG BUT UNUSED
         if hasattr(point, "__len__"):
             alphaList = np.arctan2(PPoly_Eval(point, self.YCoeffs, deriv=1),
                                        PPoly_Eval(point, self.XCoeffs, deriv=1))

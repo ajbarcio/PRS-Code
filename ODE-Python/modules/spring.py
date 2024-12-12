@@ -179,6 +179,7 @@ class Spring:
                                                    Fx/Mdim*(deforms[2]-self.y0))
         LHS[1] = np.cos(self.path.get_alpha(xi)+gamma)
         LHS[2] = np.sin(self.path.get_alpha(xi)+gamma)
+        
         # check to make sure the math makes sense (I.C. satisfied)
         if xi==0:
             assert(np.isclose(LHS[0],dgds0,rtol=1e-5))
@@ -212,13 +213,16 @@ class Spring:
         Rinitial = lin.norm([self.xL,self.yL])
         Rfinal   = lin.norm([self.res[1,-1],self.res[2,-1]])
         # Calculate dBeta using arccos
-        ptInitial = np.array([self.xL, self.yL])/ \
+        ptInitial = np.array([self.xL, self.yL])
+        ptFinal   = np.array([self.res[1,-1],self.res[2,-1]])
+
+        ptInitialNormal = np.array([self.xL, self.yL])/ \
                                           lin.norm(np.array([self.xL, self.yL]))
-        ptFinal   = np.array([self.res[1,-1],self.res[2,-1]])/ \
+        ptFinalNormal   = np.array([self.res[1,-1],self.res[2,-1]])/ \
                              lin.norm(np.array([self.res[1,-1],self.res[2,-1]]))
 
-        quadInitial = identify_quadrant(ptInitial)
-        quadFinal   = identify_quadrant(ptFinal)
+        quadInitial = identify_quadrant(ptInitialNormal)
+        quadFinal   = identify_quadrant(ptFinalNormal)
 
         if quadFinal < quadInitial:
             quad = quadFinal
@@ -232,11 +236,12 @@ class Spring:
         if quad>=3:
             axis=axis*-1
 
-        Angle1 = np.arccos(min(ptInitial.dot(axis),1.0))
-        Angle2 = np.arccos(min(ptFinal.dot(axis),1.0))
+        Angle1 = np.arccos(min(ptInitialNormal.dot(axis),1.0))
+        Angle2 = np.arccos(min(ptFinalNormal.dot(axis),1.0))
 
         # cosAngle = min(ptFinal.dot(ptInitial),1.0)
         self.dBeta    = Angle2-Angle1
+        self.dist     = lin.norm(ptFinal-ptInitial)
         # Err = diff. in radius, diff between gamma(L) and beta(L), distance
         #       from target torque (just to make matrix square)
         err = np.array([Rinitial-Rfinal, (self.res[0,-1])-(self.dBeta),
@@ -560,7 +565,8 @@ class Spring:
         ax.plot(self.Sn[:,0],self.Sn[:,1],"--b",label="netural", alpha=trans)
         if "self.Sc" in locals():
             ax.plot(self.Sc[:,0],self.Sc[:,1],"--r",label="centroidal", alpha=trans)
-        ax.plot(self.path.pts[:,0],self.path.pts[:,1])
+        if hasattr(self.path, "pts"):
+            ax.plot(self.path.pts[:,0],self.path.pts[:,1])
         ax.axis("equal")
         ax.legend()
 

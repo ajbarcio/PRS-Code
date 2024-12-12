@@ -4,11 +4,13 @@ import re
 
 import pandas as pd
 
-import modules.materials as materials
+# import modules.materials as materials
+from modules.materials import Material, Maraging300Steel
 import modules.PATHDEF as PATHDEF
 import modules.CRSCDEF as CRSCDEF
 from modules.spring import Spring, determineFastestSolver
 from modules.utils import deg2rad
+
 
 import argparse
 
@@ -126,9 +128,9 @@ def main():
     thisSpring = defineSpring()
     deformSpring(thisSpring)
     showResults(thisSpring)
-    thisSpring.deformMode = thisSpring.deform_by_torque_predict_forces
-    deformSpring(thisSpring, ODE=thisSpring.deform_withTension_ODE)
-    showResults(thisSpring)
+    # thisSpring.deformMode = thisSpring.deform_by_torque_predict_forces
+    # deformSpring(thisSpring, ODE=thisSpring.deform_withTension_ODE)
+    # showResults(thisSpring)
     exportResults(thisSpring)
 
 if __name__ == "__main__":

@@ -12,9 +12,6 @@ from modules.utils import deg2rad
 
 import argparse
 
-# import os
-# import json
-
 parser = argparse.ArgumentParser(description='decide which form factor to use')
 parser.add_argument('-s', type=str, help='What form factor do you want to use? \
                                           Make this match any row title in  \
@@ -35,58 +32,23 @@ OR = springData.loc[sizeName,'OR lim (in)']
 testTorque = springData.loc[sizeName,'Max Torque (in.lbs)']/2
 
 # Define these parameters first, hopefully variable names are clear
-numberOfArms                  = 2
-totalSweptAngle               = 175
-beginningAndEndingAlphaAngles = np.array([35,25])*deg2rad
-
-# Define these parameters for the thickness profile
-# Currently, a piecewise quadratic polynomial defines the second moment
-# of area (I_c) which passes through the valeus of IcSetpoitns at certain points.
-# The first value in IcSetpoints is the root of the spring
-# The last  value in IcSetpoints is the tip  of the spring
-# Any middle values occur at the proportions of the spring's arc length outlined
-# in IcArcLens
-outOfPlaneThickness           = .375
-IcSetpoints                   = np.array([.0028, .00002, .00002, .00015])
-IcArcLens                     = np.array([.45,.5])
-
-# These values are then calculated to account for the beginning and ending
-# alpha angles, thicknesses, and enforce the form factor constraints outlined
-# in the .ods
-rootThk  = np.cbrt(12*IcSetpoints[0]/outOfPlaneThickness)
-tipThk   = np.cbrt(12*IcSetpoints[-1]/outOfPlaneThickness)
-thks = np.array(rootThk,tipThk)
-offsets = thks*np.sin(beginningAndEndingAlphaAngles)/2
-offsets[-1] = -offsets[-1]
-
-# Define these parameters for the path
-# radiiValues is a list of radii checkpoints through which the neutral surface
-# must pass
-# betaAngleValues are the angles from the positive x axis at which these radii
-# checkpoints will be enforced
-# radiiArcLens are the proportions of the springs arc length at which each
-# intermediate radius/angle checkpoint will be enforced
-radiiValues = np.array([IR+offsets[0],(IR+OR)/2,(IR+OR)/2*.85,OR+offsets[1]])
-betaAngleValues = np.array([0,totalSweptAngle*.3,totalSweptAngle*.75,totalSweptAngle])*deg2rad
-radiiArcLens = np.array([0.3,0.6])
-
+numberOfArms        = 3
+outOfPlaneThickness = 0.375
+inPlaneThickness    = 0.125
 
 def defineSpring():
     # Define a spring based on user-supplied parameters
-    pathDef = PATHDEF.RadiallyEndedPolynomial(n=numberOfArms, arcLen=6,
-                radii = radiiValues,
+    pathDef = PATHDEF.RadiallyEndedPolynomial(n=numberOfArms, arcLen=OR-IR,
+                radii = np.array([IR, OR]),
                 ffradii = np.array([IR, OR]),
-                alphaAngles = beginningAndEndingAlphaAngles,
-                betaAngles = betaAngleValues,
-                XYFactors = radiiArcLens)
-    crscDef = CRSCDEF.Piecewise_Ic_Control(path=pathDef,
-                                        t = outOfPlaneThickness,
-                                        IcPts = IcSetpoints,
-                                        IcParamLens = IcArcLens)
+                alphaAngles = np.array([0,0]),
+                betaAngles = np.array([0,0]),
+                XYFactors = np.array([]))
+    crscDef = CRSCDEF.Constant_Ic(path=pathDef, t = outOfPlaneThickness, h0 = inPlaneThickness)
     # Give it a material
-    materialDef = materials.Titanium5
+    materialDef = materials.Maraging300Steel
     # Format export name properly:
-    exportName = sizeName+" "+materialDef.name
+    exportName = sizeName+" "+materialDef.name+" straight"
     exportName = re.sub(' ', '_', exportName)
     # Initialize spring
     manualSpring = Spring(pathDef, crscDef, materialDef, resolution=200, torqueCapacity=testTorque,
@@ -124,10 +86,7 @@ def exportResults(spring: Spring):
 
 def main():
     thisSpring = defineSpring()
-    deformSpring(thisSpring)
-    showResults(thisSpring)
-    thisSpring.deformMode = thisSpring.deform_by_torque_predict_forces
-    deformSpring(thisSpring, ODE=thisSpring.deform_withTension_ODE)
+    deformSpring(thisSpring, ODE = thisSpring.deform_withTension_ODE)
     showResults(thisSpring)
     exportResults(thisSpring)
 
