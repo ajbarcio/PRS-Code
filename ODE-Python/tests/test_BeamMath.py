@@ -64,7 +64,7 @@ def test_bending_straight_beam():
     print("In this plot you should see a tip deflection of 1 inch")
     testSprg.plot_deform(testSprg)
 
-def test_bending_uniform_curved_beam():
+def test_moment_uniform_curved_beam():
     R = 1.4564
     M = 67.81002
     Ic = 0.005
@@ -103,3 +103,32 @@ def test_bending_uniform_curved_beam():
     assert(np.isclose(testSprg.dist, predictDist))
     assert(np.isclose(DX, predictDX))
     
+def test_force_uniform_curved_beam():
+    R = 1
+    
+    Ic = 0.005
+    
+    testPath = LinearRnSpiral(1, R*np.pi, startPoint=(R,0), endPoint=(-R,0),
+                                       initialRadius=R,  finalRadius=R)
+    testCrsc = Constant_Ic(testPath, 0.375, Ic0 = Ic)
+    testSprg = Spring(testPath, testCrsc, TestMaterial, resolution = 200)
+
+    Fy = -TestMaterial.E*Ic
+
+    alpha0 = testPath.get_alpha(0)
+
+    err, res = testSprg.forward_integration(testSprg.deform_ODE, np.array([0,Fy,0]), 0)
+
+    DX = res[1,-1]-testSprg.xL
+    DY = res[2,-1]-testSprg.yL
+
+    print(res[1,-1], res[2,-1])
+
+    print(DX, DY)
+
+    print(testSprg.dist)
+
+    testSprg.plot_deform(True)
+
+    # assert(np.isclose(testSprg.dist, predictDist))
+    # assert(np.isclose(DX, predictDX))
