@@ -148,7 +148,7 @@ class Spring:
 
         LHS = np.empty(3)
         # Bending equation remains the same
-        LHS[0] = (dgds0 + Fy/Mdim*(deforms[1] -self.x0) -
+        LHS[0] = (dgds0 - Fy/Mdim*(deforms[1] -self.x0) +
                                                    Fx/Mdim*(deforms[2]-self.y0))
         # Coordinate equations change
         # Combination of off-axis components and tensive components:
