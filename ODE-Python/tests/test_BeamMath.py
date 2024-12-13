@@ -10,6 +10,7 @@ from modules.CRSCDEF import Crsc, Constant_Ic, Piecewise_Ic_Control
 from modules.materials import TestMaterial
 from modules.spring import Spring, determineFastestSolver
 
+import modules.utils as utils
 from modules.utils import deg2rad
 
 from modules.StatProfiler import SSProfile
@@ -29,14 +30,14 @@ def test_tensive_straight_beam():
     
     testSprg.plot_deform(testSprg)
 
-@pytest.mark.skip()
-def test_tensive_curved_beam():
-    testPath = RadiallyEndedPolynomial(1, 6, radii = np.array([1, 3]), ffradii = np.array([1, 3]), alphaAngles=np.array([90,90])*deg2rad, betaAngles=np.array([0,180])*deg2rad, XYFactors=np.array([]))
-    testCrsc = Piecewise_Ic_Control(testPath, IcPts=np.array([1/120,1/120]), t=0.5)
-    testSprg = Spring(testPath, testCrsc, TestMaterial)
+# @pytest.mark.skip()
+# def test_tensive_curved_beam():
+#     testPath = RadiallyEndedPolynomial(1, 6, radii = np.array([1, 3]), ffradii = np.array([1, 3]), alphaAngles=np.array([90,90])*deg2rad, betaAngles=np.array([0,180])*deg2rad, XYFactors=np.array([]))
+#     testCrsc = Piecewise_Ic_Control(testPath, IcPts=np.array([1/120,1/120]), t=0.5)
+#     testSprg = Spring(testPath, testCrsc, TestMaterial)
 
-    testSprg.forward_integration(testSprg.deform_withTension_ODE, np.array([0,10,0]), 0)
-    testSprg.plot_deform(testSprg)
+#     testSprg.forward_integration(testSprg.deform_withTension_ODE, np.array([0,10,0]), 0)
+#     testSprg.plot_deform(testSprg)
 
 
 # @pytest.mark.skip()
@@ -64,6 +65,7 @@ def test_bending_straight_beam():
     print("In this plot you should see a tip deflection of 1 inch")
     testSprg.plot_deform(testSprg)
 
+# @pytest.mark.skip()
 def test_moment_uniform_curved_beam():
     R = 1.4564
     M = 67.81002
@@ -94,8 +96,8 @@ def test_moment_uniform_curved_beam():
     DX = res[1,-1]-testSprg.xL
     DY = res[2,-1]-testSprg.yL
 
+    print("Numerically calculated displacement")
     print(DX, DY)
-
     print(testSprg.dist)
 
     testSprg.plot_deform(False)
@@ -103,32 +105,50 @@ def test_moment_uniform_curved_beam():
     assert(np.isclose(testSprg.dist, predictDist))
     assert(np.isclose(DX, predictDX))
     
+# @pytest.mark.skip()
 def test_force_uniform_curved_beam():
+    
     R = 1
     
-    Ic = 0.005
+    Ic = 0.01
     
     testPath = LinearRnSpiral(1, R*np.pi, startPoint=(R,0), endPoint=(-R,0),
                                        initialRadius=R,  finalRadius=R)
     testCrsc = Constant_Ic(testPath, 0.375, Ic0 = Ic)
     testSprg = Spring(testPath, testCrsc, TestMaterial, resolution = 200)
 
-    Fy = -TestMaterial.E*Ic
+    # Fy = TestMaterial.E*Ic
+    # assert np.isclose(Fy/(TestMaterial.E*Ic),1)
+    Fy = -TestMaterial.E*Ic/10
+    Fx = 0
 
     alpha0 = testPath.get_alpha(0)
 
     err, res = testSprg.forward_integration(testSprg.deform_ODE, np.array([0,Fy,0]), 0)
 
-    DX = res[1,-1]-testSprg.xL
-    DY = res[2,-1]-testSprg.yL
+    def simplified_ODE(coord, states):
+        s = coord
+        gamma, x, y = states
+        LHS = np.empty(3)
+        LHS[0] = -Fy/(TestMaterial.E*Ic)*(x+R)
+        LHS[1] = np.cos(s/R+testPath.get_alpha(0)+gamma)
+        LHS[2] = np.sin(s/R+testPath.get_alpha(0)+gamma)
 
-    print(res[1,-1], res[2,-1])
+        return LHS
 
-    print(DX, DY)
+    SimplifiedSolution = utils.fixed_rk4(simplified_ODE, np.array([0,R,0]), testSprg.ximesh)
+    GSimplified = SimplifiedSolution[0,:]
+    XSimplified = SimplifiedSolution[1,:]
+    YSimplified = SimplifiedSolution[2,:]
+    
+    print("")
+    print("Attained Result:", res[:,-1])
+    print("Expected Result:", SimplifiedSolution[:,-1])
 
-    print(testSprg.dist)
+    assert(np.all(np.isclose(res[:,-1], SimplifiedSolution[:,-1])))
+    
 
-    testSprg.plot_deform(True)
+    testSprg.plot_deform(False)
 
     # assert(np.isclose(testSprg.dist, predictDist))
     # assert(np.isclose(DX, predictDX))
