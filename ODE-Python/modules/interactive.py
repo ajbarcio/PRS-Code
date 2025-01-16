@@ -237,7 +237,7 @@ class Interactive_Spring(Spring):
         self.angles = []
         for i in range(len(self.x)):
             self.radii.append(lin.norm([self.x[i],self.y[i]]))
-            self.angles.append(np.atan2(self.y[i],self.x[i]))
+            self.angles.append(np.arctan2(self.y[i],self.x[i]))
             # print(f'Point {i}: (radius {self.radii[i]}, at angle {self.angles[i]/deg2rad})')
         return self.radii, self.angles
         

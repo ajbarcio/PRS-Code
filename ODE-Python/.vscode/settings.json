@@ -1,5 +1,7 @@
 {
     "editor.rulers": [80,120,300
 
-    ]
+    ],
+    "python.analysis.typeCheckingMode": "basic",
+    "python.analysis.autoImportCompletions": true
 }

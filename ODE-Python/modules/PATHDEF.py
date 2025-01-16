@@ -183,7 +183,7 @@ class LinearRnSpiral(Path):
         super().__init__(n, self.arcLen, startPoint, endPoint)
         self.innerRadius = lin.norm(self.startPoint)
         self.outerRadius = lin.norm(self.endPoint)
-        self.startingAngle = np.atan2(self.startPoint[1], self.startPoint[0])
+        self.startingAngle = np.arctan2(self.startPoint[1], self.startPoint[0])
 
         self.parameters = self.get_parameters()
 
@@ -212,7 +212,7 @@ class LinearRnSpiral(Path):
         else:
             self.initialRadius=lin.norm(startPoint)
             self.finalRadius=lin.norm(endPoint)
-            self.arcLen = np.atan2(self.endPoint[1], self.endPoint[0])-np.atan2(self.startPoint[1], self.startPoint[0])
+            self.arcLen = np.arctan2(self.endPoint[1], self.endPoint[0])-np.arctan2(self.startPoint[1], self.startPoint[0])
          
     def calculate_startPoint(self):
         return (self.initialRadius, 0)
@@ -254,7 +254,7 @@ class LinearRnSpiral(Path):
     def get_alpha(self, point):
         dydxi = self.get_dxdy_n(point, 'y')
         dxdxi = self.get_dxdy_n(point, 'x')
-        return np.atan2(dydxi,dxdxi)
+        return np.arctan2(dydxi,dxdxi)
 
     def get_dalpha(self, point):
         return 1/self.get_rn(point)
@@ -761,7 +761,7 @@ class RadiallyEndedPolynomial(Path):
 #     def get_alpha(self, xi):
 #         dydxi = self.get_dxdy_n(xi, 'y')
 #         dxdxi = self.get_dxdy_n(xi, 'x')
-#         return np.atan2(dydxi,dxdxi)
+#         return np.arctan2(dydxi,dxdxi)
 
 #     def get_dalpha(self, xi):
 #         return 1

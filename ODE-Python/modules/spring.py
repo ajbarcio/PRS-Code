@@ -538,6 +538,7 @@ class Spring:
         # record the maximum stress along whole beam
         self.maxStress = np.nanmax([self.innerSurfaceStress, self.outerSurfaceStress])
         if self.maxStress>self.designStress:
+            print(self.maxStress)
             print("~~~~~~~~~~~ DESIGN STRESS EXCEEDED ~~~~~~~~~~~~")
 
         return self.maxStress, self.maxStresses
@@ -653,7 +654,9 @@ class Spring:
                     path = os.path.join(
                          os.path.relpath(currDir),"surfaces",self.name+surf+ext)
                     np.savetxt(path, surfacesData[i],fmt='%f',delimiter=',')
+                    # print(surfacesData[i])
                     paths.append(path)
+                    i+=1
             return paths
         else:
             print("Too early to call; please generate inner and outer surfaces before export")
