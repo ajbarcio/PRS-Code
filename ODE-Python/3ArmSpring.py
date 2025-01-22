@@ -36,9 +36,9 @@ OR = springData.loc[sizeName,'OR lim (in)']
 testTorque = springData.loc[sizeName,'Max Torque (in.lbs)']
 
 # Define these parameters first, hopefully variable names are clear
-numberOfArms                  = 2
-totalSweptAngle               = 163
-beginningAndEndingAlphaAngles = np.array([89,31])*deg2rad
+numberOfArms                  = 3
+totalSweptAngle               = 120
+beginningAndEndingAlphaAngles = np.array([90,0])*deg2rad
 
 # Define these parameters for the thickness profile
 # Currently, a piecewise quadratic polynomial defines the second moment
@@ -48,8 +48,8 @@ beginningAndEndingAlphaAngles = np.array([89,31])*deg2rad
 # Any middle values occur at the proportions of the spring's arc length outlined
 # in IcArcLens
 outOfPlaneThickness           = .375
-IcSetpoints                   = np.array([.0062, .00004, .00004, .003])
-IcArcLens                     = np.array([.45,.5])
+IcSetpoints                   = np.array([.0062, .00004, .00004, .003])/4
+IcArcLens                     = np.array([.51,.59])
 
 # These values are then calculated to account for the beginning and ending
 # alpha angles, thicknesses, and enforce the form factor constraints outlined
@@ -67,7 +67,7 @@ offsets[-1] = -offsets[-1]
 # checkpoints will be enforced
 # radiiArcLens are the proportions of the springs arc length at which each
 # intermediate radius/angle checkpoint will be enforced
-radiiValues = np.array([IR+offsets[0],(IR+OR)/2+.2,(IR+OR)/2*.9+.35,OR+offsets[1]])
+radiiValues = np.array([IR+offsets[0],(IR+OR)/2,(IR+OR)/2*.9,OR+offsets[1]])
 betaAngleValues = np.array([0,totalSweptAngle*.345,totalSweptAngle*.7,totalSweptAngle])*deg2rad
 radiiArcLens = np.array([0.3,0.6])
 
@@ -88,7 +88,7 @@ def defineSpring():
     materialDef = materials.Titanium5
     # Format export name properly:
     now = datetime.now()
-    exportName = sizeName+" "+materialDef.name+" "+now.strftime("%Y%m%d")+" V7"
+    exportName = sizeName+" "+materialDef.name+" "+now.strftime("%Y%m%d")+"3 Arm V1"
     exportName = re.sub(' ', '_', exportName)
     # Initialize spring
     manualSpring = Spring(pathDef, crscDef, materialDef, resolution=200, torqueCapacity=testTorque,
@@ -126,6 +126,7 @@ def exportResults(spring: Spring):
 
 def main():
     thisSpring = defineSpring()
+    thisSpring.plot_spring(showBool=True)
     thisSpring.deformMode = thisSpring.deform_by_torque_predict_forces
     deformSpring(thisSpring)
     showResults(thisSpring)
