@@ -32,4 +32,8 @@ Maraging300Steel = Material("Maraging300Steel", 27500000, 309700)
 Maraging300Steel.ultimateStress_set(314600)
 TestMaterial     = Material("TestMaterial", 100000, 100000)
 Titanium5        = Material("Titanium5",113800*1e6/psi2Pa, 880*1e6/psi2Pa)
+
+AL7075 = Material("AL7075", 72000*1000/psi2Pa, 505*1000/psi2Pa)
+Delrin = Material("Delrin", 3100*1000/psi2Pa, 78.5*1000/psi2Pa) # Should be most compliant
+AISI4340Tempered = Material("AISI4340Tempered", 200000*1000/psi2Pa, 862*1000/psi2Pa)
 # Aluminum         = Material()
