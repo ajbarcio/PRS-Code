@@ -33,7 +33,8 @@ Maraging300Steel.ultimateStress_set(314600)
 TestMaterial     = Material("TestMaterial", 100000, 100000)
 Titanium5        = Material("Titanium5",113800*1e6/psi2Pa, 880*1e6/psi2Pa)
 
-AL7075 = Material("AL7075", 72000*1000/psi2Pa, 505*1000/psi2Pa)
-Delrin = Material("Delrin", 3100*1000/psi2Pa, 78.5*1000/psi2Pa) # Should be most compliant
+AL7075 = Material("AL7075", 10442717, 73244.1)
+Delrin = Material("Delrin", 449617, 11385.46) # Should be most compliant
+AISI4640 = Material("AISI4640", 209000*1000000/psi2Pa,1103*1000000/psi2Pa)
 AISI4340Tempered = Material("AISI4340Tempered", 200000*1000/psi2Pa, 862*1000/psi2Pa)
 # Aluminum         = Material()

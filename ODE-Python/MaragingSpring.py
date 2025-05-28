@@ -34,7 +34,7 @@ springData = pd.read_excel('Spring_Constraints.ods', engine='odf', index_col=0)
 
 IR = springData.loc[sizeName,'IR lim (in)']
 OR = springData.loc[sizeName,'OR lim (in)']
-testTorque = springData.loc[sizeName,'Max Torque (in.lbs)']/2
+testTorque = springData.loc[sizeName,'Max Torque (in.lbs)']
 
 # Define these parameters first, hopefully variable names are clear
 numberOfArms                  = 2

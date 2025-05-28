@@ -16,12 +16,12 @@ from datetime import datetime
 # import os
 # import json
 
-parser = argparse.ArgumentParser(description='decide which form factor to use')
-parser.add_argument('-s', type=str, help='What form factor do you want to use? \
-                                          Make this match any row title in  \
-                                          Spring_Constraints.ods')
-args = parser.parse_args()
-sizeName = args.s
+# parser = argparse.ArgumentParser(description='decide which form factor to use')
+# parser.add_argument('-s', type=str, help='What form factor do you want to use? \
+#                                           Make this match any row title in  \
+#                                           Spring_Constraints.ods')
+# args = parser.parse_args()
+sizeName = 'Finger'
 
 print("trying to make a spring to fit:", sizeName)
 # Standard procedure: define a path, then define a thickness profile using the
@@ -34,11 +34,13 @@ springData = pd.read_excel('Spring_Constraints.ods', engine='odf', index_col=0)
 IR = springData.loc[sizeName,'IR lim (in)']
 OR = springData.loc[sizeName,'OR lim (in)']
 testTorque = springData.loc[sizeName,'Max Torque (in.lbs)']
+# testTorque = 5
+print("Torquing to: ", testTorque)
 
 # Define these parameters first, hopefully variable names are clear
-numberOfArms                  = 2
-totalSweptAngle               = 163
-beginningAndEndingAlphaAngles = np.array([89,31])*deg2rad
+numberOfArms                  = 3
+totalSweptAngle               = 100
+beginningAndEndingAlphaAngles = np.array([0,0])*deg2rad
 
 # Define these parameters for the thickness profile
 # Currently, a piecewise quadratic polynomial defines the second moment
@@ -47,9 +49,9 @@ beginningAndEndingAlphaAngles = np.array([89,31])*deg2rad
 # The last  value in IcSetpoints is the tip  of the spring
 # Any middle values occur at the proportions of the spring's arc length outlined
 # in IcArcLens
-outOfPlaneThickness           = .375
-IcSetpoints                   = np.array([.0062, .00004, .00004, .003])
-IcArcLens                     = np.array([.45,.5])
+outOfPlaneThickness           = 3/25.4
+IcSetpoints                   = np.array([.000032, .0000002, .0000002, .00002])/4
+IcArcLens                     = np.array([.45,.55])
 
 # These values are then calculated to account for the beginning and ending
 # alpha angles, thicknesses, and enforce the form factor constraints outlined
@@ -67,9 +69,9 @@ offsets[-1] = -offsets[-1]
 # checkpoints will be enforced
 # radiiArcLens are the proportions of the springs arc length at which each
 # intermediate radius/angle checkpoint will be enforced
-radiiValues = np.array([IR+offsets[0],(IR+OR)/2+.2,(IR+OR)/2*.9+.35,OR+offsets[1]])
-betaAngleValues = np.array([0,totalSweptAngle*.345,totalSweptAngle*.7,totalSweptAngle])*deg2rad
-radiiArcLens = np.array([0.3,0.6])
+radiiValues = np.array([IR+offsets[0],(IR+OR)/2*1.1,(IR+OR)/2*.9,OR+offsets[1]])
+betaAngleValues = np.array([0,totalSweptAngle*.23,totalSweptAngle*.75,totalSweptAngle])*deg2rad
+radiiArcLens = np.array([0.3333,0.6666])
 
 
 def defineSpring():
@@ -85,10 +87,13 @@ def defineSpring():
                                         IcPts = IcSetpoints,
                                         IcParamLens = IcArcLens)
     # Give it a material
-    materialDef = materials.Titanium5
+    materialDef = materials.AL7075
+    print("Material:", materialDef)
+    print("Young's Modulus", materialDef.E)
+    print("Yield Stress", materialDef.designStress)
     # Format export name properly:
     now = datetime.now()
-    exportName = sizeName+" "+materialDef.name+" "+now.strftime("%Y%m%d")+" REDO"
+    exportName = sizeName+" "+materialDef.name+" "+now.strftime("%Y%m%d")+"3 Arm V1"
     exportName = re.sub(' ', '_', exportName)
     # Initialize spring
     manualSpring = Spring(pathDef, crscDef, materialDef, resolution=200, torqueCapacity=testTorque,
@@ -126,7 +131,8 @@ def exportResults(spring: Spring):
 
 def main():
     thisSpring = defineSpring()
-    thisSpring.deformMode = thisSpring.deform_by_torque_predict_forces
+    thisSpring.plot_spring(showBool=True)
+    thisSpring.deformMode = thisSpring.deform_by_torque
     deformSpring(thisSpring)
     showResults(thisSpring)
     # deformSpring(thisSpring, ODE=thisSpring.deform_withTension_ODE)

@@ -168,6 +168,26 @@ class TestPath(Path):
     def measure_length(self):
         pass
 
+class ArchSpiral(Path):
+    def __init__(self, n: int, thMax, rIn, rOut, q=0.5):
+        self.n = n
+
+        self.thMax = thMax
+        self.rIn = rIn
+        self.rOut = rOut
+
+        self.q = q
+        self.c = (rOut-rIn)/thMax**q
+
+    def r_c(self, theta):
+        return self.c*theta**self.q+self.rIn
+
+    def get_xy_c(self, theta, dim):
+        if dim=='x':
+            return self.r_c(theta)*np.cos(theta)
+        if dim=='y':
+            return self.r_n(theta)*np.cos(theta)
+
 class LinearRnSpiral(Path):
     def __init__(self, n: int, arcLen: float,
                  # Define both of these

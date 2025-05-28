@@ -51,8 +51,8 @@ class Spring:
         self.finiteDifferenceLength = 0.125
         # self.path.arcLen/(2*self.resl)
         self.finiteDifferenceAngle  = 1*deg2rad
-        self.finiteDifferenceForce  = 5
-        self.finiteDifferenceTorque = 10
+        self.finiteDifferenceForce  = 1*10**-8
+        self.finiteDifferenceTorque = 1*10**-8
         self.finiteDifferenceIc     = 0.0001
         self.finiteDifferenceFactor = 0.001
 
@@ -259,8 +259,10 @@ class Spring:
         # Jacobian is square because square matrix good
         Jac = np.empty((3,3))
         # Use these values for finite differences (TUNE)
-        self.finiteDifferenceTorque=0.1*torqueTarg
-        self.finiteDifferenceForce = self.finiteDifferenceTorque/lin.norm(self.path.momentArm)
+        # self.finiteDifferenceTorque=0.1*torqueTarg
+        # self.finiteDifferenceForce = self.finiteDifferenceTorque/lin.norm(self.path.momentArm)
+        self.finiteDifferenceForce=1e-6
+        self.finiteDifferenceTorque=1e-6
         # assign each row at a time
         for i in range(n):
             finiteDifference = np.zeros(len(SF))
@@ -319,8 +321,8 @@ class Spring:
                 # print information on what is happening
                 print("torque deform diverging", i)
                 # print(J)
-                # print(err, errPrev)
-                # print(SF)
+                print(err, errPrev)
+                print(SF)
                 divergeFlag = 1
                 # If break bool is true, break if you diverge even once
                 # usually for debug purposes, I just let it run, and see if
@@ -632,6 +634,8 @@ class Spring:
                 ax.text(spot+.25, -(spot+.625), f"tip thk: {self.h[-1]:.2f}")
                 # ax.text(spot+.25, -(spot+.875), f"min thk: {self.minThk:.2f}")
                 # ax.ylim((-(spot+.875)*1.2, self.outerRadius*1.2))
+
+            plt.quiver(self.res[1,-1],self.res[2,-1],self.solnSF[0],self.solnSF[1],angles='xy', scale_units='xy', scale=10, color='r')
 
             if showBool:
                 plt.show()
