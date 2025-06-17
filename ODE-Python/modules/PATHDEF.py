@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import numpy as np
 import numpy.linalg as lin
 import matplotlib.pyplot as plt
@@ -5,6 +7,8 @@ import scipy
 import sympy as sp
 import warnings
 import json
+import random
+
 warnings.filterwarnings("ignore")
 
 from modules.utils import PPoly_Eval, numerical_fixed_mesh_diff, circle_intersection, deg2rad
@@ -12,6 +16,7 @@ from modules.StatProfiler import SSProfile
 
 from abc import ABC, abstractmethod
 from typing import Optional
+
 
 class Path(ABC):
     def __init__(self, n: int, arcLen: float,
@@ -33,10 +38,10 @@ class Path(ABC):
 
         # Check for existence of either CENTROIDAL or NEUTRAL radius definitions
         if not (self.get_xy_n or self.get_xy_c):
-            raise NotImplementedError("Subclasses must implement either method_a or method_b.")
+            raise NotImplementedError("Subclasses must implement either get_xy_n or get_xy_c.")
         if not (self.get_dxdy_n or self.get_dxdy_c):
-            raise NotImplementedError("Subclasses must implement either method_a or method_b.")
-    
+            raise NotImplementedError("Subclasses must implement either get_dxdy_n or get_dxdy_c.")
+
     @classmethod
     def from_param(cls, paramFile):
         with open(paramFile, 'r') as file:
@@ -108,7 +113,7 @@ class Path(ABC):
     @abstractmethod
     def get_drn(self, point):
         pass
-    
+
     @abstractmethod
     def get_alpha(self, point):
         pass
@@ -143,7 +148,7 @@ class TestPath(Path):
 
     def get_xy_n(self, point, dim):
         pass
-    
+
     def get_neutralSurface(self, resl):
         pass
 
@@ -195,8 +200,8 @@ class LinearRnSpiral(Path):
                  # OR Define both of these, OR Define all four
                  initialRadius: float = None, finalRadius: float = None):
         # self.parameters = {key: value for key, value in locals().items() if not key.startswith('__') and key != 'self'}
-        
-        # Handle whenter rn were given 
+
+        # Handle whenter rn were given
         self.startPoint = startPoint
         self.endPoint   = endPoint
         self.calculate_geometryParams(arcLen, startPoint, endPoint, initialRadius, finalRadius)
@@ -233,7 +238,7 @@ class LinearRnSpiral(Path):
             self.initialRadius=lin.norm(startPoint)
             self.finalRadius=lin.norm(endPoint)
             self.arcLen = np.arctan2(self.endPoint[1], self.endPoint[0])-np.arctan2(self.startPoint[1], self.startPoint[0])
-         
+
     def calculate_startPoint(self):
         return (self.initialRadius, 0)
 
@@ -245,7 +250,7 @@ class LinearRnSpiral(Path):
             return self.centerOfCurvature[0]+self.get_rn(point)*np.cos(point+self.startingAngle)
         if dim=='y':
             return self.centerOfCurvature[1]+self.get_rn(point)*np.sin(point+self.startingAngle)
-    
+
     def get_dxdy_n(self, point, dim):
         if dim=='x':
             return -self.get_rn(point)*np.sin(point+self.startingAngle)
@@ -344,7 +349,7 @@ class RadiallyEndedPolynomial(Path):
                            "alphaAngles": self.alphaAngles,
                            "betaAngles": self.betaAngles,
                            "XYFactors": self.XYFactors}
-        
+
         return self.parameters
 
     def init(self,n,arcLen,radii,betaAngles,XYFactors):
@@ -558,13 +563,13 @@ class RadiallyEndedPolynomial(Path):
         if np.isnan(out):
             out = 0
         return out
-    
+
     def get_alpha(self, point):
         point = np.atleast_1d(point)
         # print(point)
         alphaList = np.arctan2(PPoly_Eval(point, self.YCoeffs, deriv=1),
                                PPoly_Eval(point, self.XCoeffs, deriv=1))
-        
+
         for i in range(len(alphaList)):
             if alphaList[i]<0:
                 alphaList[i]=alphaList[i]+2*np.pi
@@ -596,6 +601,365 @@ class RadiallyEndedPolynomial(Path):
         return d2ads2
 
 
+class Point(object):
+    def __init__(self, x=0, y=0):
+        self.x = x
+        self.y = y
+
+    def __str__(self):
+        return f"{self.x}, {self.y}"
+
+    def random(self, min= 0, max= 1):
+        self.x = random.uniform(min,max)
+        self.y = random.uniform(min,max)
+
+    def random_in_annulus(self, minRadius=0, maxRadius=1):
+        direction = np.random.uniform(size=2)
+        scale     = np.random.uniform(minRadius, maxRadius)
+        radius = np.linalg.norm(direction)
+        if radius == 0:
+            self.x = 1
+            self.y = 0
+        else:
+            point = direction * scale / radius
+            self.x = point[0]
+            self.y = point[1]
+
+
+class ArbitBezierCurve(Path):
+    def __init__(self, points: list = None, numPoints: int = None, n: int):
+        arclen = 5
+        # self.initPoints = points
+        if points is not None:
+            self.numPoints = len(points)
+            for i in range(len(points)):
+                setattr(self, f"p{i}", Point(points[i][0], points[i][1]))
+            super().__init__(n, arclen, startPoint=(getattr(self, f"p0").x, getattr(self, f"p0").y)
+                                        endPoint  =(getattr(self, f"p{self.numPoints-1}").x, getattr(self, f"p{self.numPoints-1}").y))
+        elif numPoints is not None:
+            self.numPoints = numPoints
+            for i in range(numPoints):
+                setattr(self, f"p{i}", Point())
+                getattr(self, f"p{i}").random()
+
+        self.initPoints = self.get_points()
+        self.obstacles = []
+        self.limits    = []
+
+        self.constraints = [NonlinearConstraint(self.limits_and_obstacles_constraint, -0.5, 0.5)]
+
+    def get_points(self):
+        points=[]
+        for i in range(self.numPoints):
+            points.append([getattr(self, f"p{i}").x, getattr(self, f"p{i}").y])
+        return np.array(points)
+
+    def set_points_from_design_vector(self, x, targetObj=None):
+        if targetObj is None:
+            target = self
+        else:
+            target = targetObj
+        for i in range(self.numPoints):
+            if i==0 or i==self.numPoints-1:
+                pass
+            else:
+                point = getattr(target, f"p{i}")
+                new_x = (point.x + x[2*(i-1)])   # modify based on current x
+                new_y = (point.y + x[2*(i-1)+1]) # modify based on current y
+                setattr(point, "x", new_x)
+                setattr(point, "y", new_y)
+
+    def random_in_annulus(self, minRadius=0, maxRadius=1):
+        'Create a random cubic Bezier curve with control points within a certain annulus'
+        for i in range(self.numPoints):
+            getattr(self, f"p{i}").random_in_annulus(minRadius, maxRadius)
+
+    def random_spring_starting_point(self, minRadius=1, maxRadius=2):
+        self.random_in_annulus(minRadius, maxRadius)
+        self.p0 = Point(minRadius, 0)
+        setattr(self, f"p{self.numPoints-1}", Point(-maxRadius,0))
+
+    def random(self, min= 0, max= 1):
+        'Create a random cubic Bezier curve within [min, max] limits. Default [0,1].'
+        for i in range(self.numPoints):
+            getattr(self, f"p{i}").random(min, max)
+
+    def evaluate_curvature(self, granuality=100):
+        def bezier_derivative(control_points, num_points=granuality):
+            n = len(control_points) - 1
+            d_control = n * np.diff(control_points, axis=0)
+            return self.calc_curve(granuality=num_points, controlPoints=d_control)
+
+        def bezier_second_derivative(control_points, num_points=granuality):
+            n = len(control_points) - 1
+            dd_control = n * (n - 1) * np.diff(control_points, n=2, axis=0)
+            return self.calc_curve(granuality=num_points, controlPoints=dd_control)
+
+        controlPoints = self.get_points()
+
+        r_dot = bezier_derivative(controlPoints, granuality)
+        r_ddot = bezier_second_derivative(controlPoints, granuality)
+
+        dx, dy = r_dot[:, 0], r_dot[:, 1]
+        ddx, ddy = r_ddot[:, 0], r_ddot[:, 1]
+
+        numerator = np.abs(dx * ddy - dy * ddx)
+        denominator = (dx**2 + dy**2) ** 1.5
+        curvature = numerator / denominator
+        curvature[denominator == 0] = 0  # handle division by zero
+        return curvature
+
+    def curvature_norm(self, granuality=100, order=np.inf):
+        curvature = self.evaluate_curvature(granuality)
+        return np.linalg.norm(curvature,ord=order)
+
+    def calc_curve(self, granuality=100, controlPoints = None):
+        'Calculate the cubic Bezier curve with the given granuality.'
+        if controlPoints is None:
+            controlPoints = self.get_points()
+            # print(controlPoints)
+        # n = self.numPoints - 1
+        n = len(controlPoints) - 1
+        t = np.linspace(0, 1, granuality)
+        polynomial_array = np.array([comb(n, i) * (t ** i) * (1 - t) ** (n - i) for i in range(n + 1)])
+        curvePoints = np.dot(controlPoints.T, polynomial_array).T
+        return curvePoints
+
+    def plot(self, granuality=100, color='blue', plot_limits=True):
+        'Plot the cubic Bezier curve.'
+        # Plot the obstacles and limits
+        for i in range(len(self.obstacles)):
+            plt.gcf().gca().add_artist(plt.Circle((self.obstacles[i][0].x, self.obstacles[i][0].y), self.obstacles[i][1], color='r'))
+        for i in range(len(self.limits)):
+            plt.gcf().gca().add_artist(plt.Circle((self.limits[i][0].x, self.limits[i][0].y), self.limits[i][1], fill=False, edgecolor='red'))
+        # Plot the curve
+        B = self.calc_curve(granuality)
+        # print(B)
+        B = np.array(B)
+        plt.plot(B[:,0], B[:,1], color=color)
+        xCoords = []
+        yCoords = []
+        for i in range(self.numPoints):
+            xCoords.append(getattr(self, f"p{i}").x)
+            yCoords.append(getattr(self, f"p{i}").y)
+        plt.scatter(xCoords, yCoords, color=color)
+
+        plt.axis('equal')
+        # plt.show()
+
+    def arc_len(self, granuality=1000):
+        'Calculate the arc-length of the cubic Bezier curve.'
+        def bezier_derivative_eval(control_points, t):
+            n = len(control_points) - 1
+            # print(control_points)
+            # print(n)
+            # t = np.linspace(0, 1, granuality)
+            d_control = n * np.diff(control_points, axis=0)
+            n = len(d_control) - 1
+            # print(d_control)
+            # print(n)
+            polynomial_array = np.array([comb(n, i) * (t ** i) * (1 - t) ** (n - i) for i in range(n + 1)])
+            derivative = np.dot(d_control.T, polynomial_array)
+            return derivative
+        controlPoints = self.get_points()
+        # print(bezier_derivative_eval(controlPoints, 0)[0])
+        length = integrate.quad(lambda t: np.sqrt(bezier_derivative_eval(controlPoints, t)[0]**2+bezier_derivative_eval(controlPoints, t)[1]**2), 0, 1)[0]
+
+        # B = self.calc_curve(granuality=granuality, controlPoints=controlPoints)
+        # a_l = 0
+
+        # for i in range(1,len(B[0])):
+        #     a_l += math.sqrt((B[0][i]-B[0][i-1])**2 + (B[1][i]-B[1][i-1])**2)
+
+        return length
+
+    def limits_and_obstacles_constraint(self, x, granuality=100):
+        o = ArbitBezier(points=list(self.initPoints))
+        # print("called")
+        self.set_points_from_design_vector(x, targetObj=o)
+        B = np.array(o.calc_curve(granuality))
+        numPointsInvalid = 0
+        # plt.plot(B[:,0], B[:,1])
+        for i in range(len(B)):
+            invalidPoint = False
+            for j in range(len(self.obstacles)):
+                d = math.sqrt((B[i,0] - self.obstacles[j][0].x)**2 + (B[i,1] - self.obstacles[j][0].y)**2)
+                if d < self.obstacles[j][1]:
+                    invalidPoint = True
+            for k in range(len(self.limits)):
+                d = np.sqrt((B[i,0] - self.limits[k][0].x)**2 + (B[i,1] - self.limits[k][0].y)**2)
+                if d > self.limits[k][1]:
+                    invalidPoint = True
+            if invalidPoint:
+                # print(f"point with coordinates {B[i,:]} invalid")
+                numPointsInvalid +=1
+        return float(-numPointsInvalid)
+
+    def limits_and_obstacles_penalty(self, tempCurve, granuality, penaltyMultiplier):
+        penalty = 0
+        B = np.array(tempCurve.calc_curve(granuality))
+        for i in range(len(B)):
+            for j in range(len(self.obstacles)):
+                d = math.sqrt((B[i,0] - self.obstacles[j][0].x)**2 + (B[i,1] - self.obstacles[j][0].y)**2)
+                if d<self.obstacles[j][1]:
+                    penalty += penaltyMultiplier*(self.obstacles[j][1]-d)**2
+            for k in range(len(self.limits)):
+                d = np.sqrt((B[i,0] - self.limits[k][0].x)**2 + (B[i,1] - self.limits[k][0].y)**2)
+                if d>self.limits[k][1]:
+                    penalty += penaltyMultiplier*(d-self.limits[k][1])**2
+            if B[i,1]<0:
+                penalty += penaltyMultiplier*(-B[i,1])**2
+        return penalty
+
+    def optimize_k(self, granuality= 100, obs= True, penaltyMultiplier=100):
+        'Optimize the cubic Bezier curve to minimize the curvature. By setting obs=False, ignore the obstacles.'
+        x0 = [0.0] * (self.numPoints - 2) * 2
+        res = minimize(self.objective_k, x0, args= (granuality, obs, penaltyMultiplier), constraints=self.constraints, method='Nelder-Mead', tol=1e-7)
+        # print(res.success, res.message)
+        self.set_points_from_design_vector(res.x)
+        return res
+
+    def objective_k(self, x, *args):
+        'Curvature optimizer function.'
+        granuality = args[0]
+        obs = args[1]
+        penaltyMultiplier = args[2]
+        o = ArbitBezier(points=list(self.get_points()))
+        self.set_points_from_design_vector(x, targetObj=o)
+        # for i in range(self.numPoints):
+        #     if i==0 or i==self.numPoints-1:
+        #         pass
+        #     else:
+        #         point = getattr(o, f"p{i}")
+        #         new_x = (point.x + x[2*(i-1)])   # modify based on current x
+        #         new_y = (point.y + x[2*(i-1)+1]) # modify based on current y
+        #         setattr(point, "x", new_x)
+        #         setattr(point, "y", new_y)
+        penalty = 0
+        if obs:
+            penalty = self.limits_and_obstacles_penalty(o, granuality, penaltyMultiplier)
+        # return penalty
+        return o.curvature_norm(granuality, order=np.inf) + penalty
+
+    def optimize_l(self, granuality= 100, obs= True, penaltyMultiplier=100):
+        'Optimize the cubic Bezier curve to maximize the arc-length. By setting obs=False, ignore the obstacles.'
+        x0 = [0.0] * (self.numPoints - 2) * 2
+        res = minimize(self.objective_l, x0, args=(granuality, obs, penaltyMultiplier), constraints=self.constraints, method='Nelder-Mead', tol=1e-7)
+        # print(res.success, res.message)
+        self.set_points_from_design_vector(res.x)
+        return res
+
+    def objective_l(self, x, *args):
+        'Arc-length optimizer function.'
+        granuality = args[0]
+        obs = args[1]
+        penaltyMultiplier = args[2]
+        # print(self.initPoints)
+        o = ArbitBezier(points=list(self.get_points()))
+        # o.plot()
+        self.set_points_from_design_vector(x, targetObj=o)
+        penalty = 0
+        if obs:
+            penalty = self.limits_and_obstacles_penalty(o, granuality, penaltyMultiplier)
+        return -o.arc_len(granuality) + penalty
+        # return penalty
+
+    def optimize_global(self, granuality=1000, obs=True, l_multiplier=50, k_multiplier=1):
+        """
+        Optimize the cubic Bezier curve to simultaniously minimize the arc-lenght and the curvature.
+        Setting obs=False ignores the obstacles. l_multiplier and k_multiplier multiplies
+        the outputs of their respective optimizer functions.
+        """
+        x0 = [0.0] * (self.numPoints - 2) * 2
+        bounds = [(-1e3,1e3)] * (self.numPoints - 2) * 2
+        res = differential_evolution(self.objective_combined, bounds, args=(granuality, obs, l_multiplier, k_multiplier), constraints=self.constraints)
+        print(res.x)
+        print(res.success, res.message)
+        for i in range(self.numPoints):
+            if i==0 or i==self.numPoints-1:
+                pass
+            else:
+                point = getattr(self, f"p{i}")
+                new_x = (point.x + res.x[2*(i-1)])   # modify based on current x
+                new_y = (point.y + res.x[2*(i-1)+1]) # modify based on current y
+                setattr(point, "x", new_x)
+                setattr(point, "y", new_y)
+
+        return res
+
+    def optimize(self, granuality=1000, obs=True, l_multiplier=1, k_multiplier=1):
+        """
+        Optimize the cubic Bezier curve to simultaniously minimize the arc-lenght and the curvature.
+        Setting obs=False ignores the obstacles. l_multiplier and k_multiplier multiplies
+        the outputs of their respective optimizer functions.
+        """
+        cmap = get_cmap('hsv')
+        iteration = 0
+        maxIter = 1000
+        def progression_plot(xk):
+            nonlocal iteration
+            color = cmap(iteration % (25) / 25)
+            p = ArbitBezier(points=list(self.get_points()))
+            self.set_points_from_design_vector(xk, targetObj=p)
+            p.plot(color=color, plot_limits=False)
+            iteration += 1
+            # print(xk)
+
+        x0 = [0.0] * (self.numPoints - 2) * 2
+        res = minimize(self.objective_combined, x0, args=(granuality, obs, l_multiplier, k_multiplier),
+                    #    constraints=self.constraints,
+                    #    callback=progression_plot,
+                       options={'maxiter': maxIter},
+                       method=globalMethod, tol=1e-7)
+        # print(res.success, res.message)
+        l_output = self.objective_l(res.x, granuality, False, 1000)
+        k_output = self.objective_k(res.x, granuality, False, 1000)
+        self.set_points_from_design_vector(res.x)
+
+        return res, l_output, k_output
+
+    def objective_combined(self,x,*args):
+        'Optimizer function of the arc-length and curvature simultanious optimization.'
+        granuality = args[0]
+        obs = args[1]
+        l_multiplier = args[2]
+        k_multiplier = args[3]
+        # print(self.objective_l(x, granuality, obs, 1000)*l_multiplier, self.objective_k(x, granuality, obs, 1000)*k_multiplier)
+        # print(x)
+        return self.objective_l(x, granuality, obs, 1000) * l_multiplier + self.objective_k(x, granuality, obs, 1000) * k_multiplier
+
+    def add_limit(self,x=0,y=0, radius=0):
+        'Add a limit (circular bound) to the cubic Bezier curve'
+        self.limits.append([Point(x,y), radius])
+
+    def add_obstacle(self, x=0, y=0, radius=0):
+        'Add an obstacle to the cubic Bezier curve.'
+        self.obstacles.append([Point(x,y), radius])
+
+    def add_random_obstacle(self, min_x= 1, max_x= 0, min_y=1, max_y=0, min_radius=0.3, max_radius = 0.0):
+        """Add a random obstacle to the cubic Bezier curve. The obstacle will not cover the p0 and p3 points
+        of the Bezier curve.
+        """
+        radius = random.uniform(min_radius,max_radius)
+
+        d = 0
+        x = 0
+        y = 0
+        while d<radius:
+            x = random.uniform(min_x,max_x)
+            y = random.uniform(min_y,max_y)
+            d1 = math.sqrt((x - self.p0.x)**2 + (y - self.p0.y)**2)
+            d2 = math.sqrt((x - self.p3.x) ** 2 + (y - self.p3.y) ** 2)
+            d = min(d1,d2)
+
+        self.obstacles.append([Point(x, y), radius])
+
+    def clear(self):
+        'Re-initialize the curve.'
+        self.__init__(numPoints=self.numPoints)
+
+
+
 ## LEGACY BELOW THIS POINT ##
 
 """
@@ -606,7 +970,7 @@ class RadiallyEndedPolynomial(Path):
 #
 #   get_crscRef(crscRef):
 #           crscRef as a CRSCDEF object
-#   
+#
 #   get_xy_n(coord, dim):
 #           coord as scalar or vector float
 #           dim as str 'x' or 'y'
@@ -687,23 +1051,23 @@ class RadiallyEndedPolynomial(Path):
 
 #     def get_drn(self, xi):
 #         return self.returnValue
-    
+
 #     def get_dxi_n(self, xi):
 #         # what am I going to do here
 #         return 1
-    
+
 #     def get_alpha(self, xi):
 #         return self.returnValue
 
 #     def get_dalpha(self, xi):
 #         return self.returnValue
-    
+
 #     def get_d2alpha(self, xi):
 #         return self.returnValue
-    
+
 #     def get_neutralSurface(self, resolution):
 #         return self.returnValue
-    
+
 #     def get_centroidalSurface(self):
 #         return self.returnValue
 
@@ -771,13 +1135,13 @@ class RadiallyEndedPolynomial(Path):
 
 #     def get_drn(self, xi):
 #         return self.drndxi
-    
+
 #     def get_dxi_n(self, xi):
 #         dxdxi = self.get_dxdy_n(xi, 'x')
 #         dydxi = self.get_dxdy_n(xi, 'y')
 #         dxids = 1/np.sqrt(dxdxi**2+dydxi**2)
 #         return dxids
-    
+
 #     def get_alpha(self, xi):
 #         dydxi = self.get_dxdy_n(xi, 'y')
 #         dxdxi = self.get_dxdy_n(xi, 'x')
@@ -785,17 +1149,17 @@ class RadiallyEndedPolynomial(Path):
 
 #     def get_dalpha(self, xi):
 #         return 1
-    
+
 #     def get_d2alpha(self, xi):
 #         return 0
-    
+
 #     def get_neutralSurface(self, resolution):
 #         ximesh = np.linspace(0,self.xiRange,resolution+1)
 #         self.undeformedNeutralSurface = np.hstack(
 #                                   (np.atleast_2d(self.get_xy_n(ximesh, 'x')).T,
 #                                    np.atleast_2d(self.get_xy_n(ximesh, 'y')).T))
 #         return self.undeformedNeutralSurface
-    
+
 #     def get_centroidalSurface(self, resolution):
 #         ximesh = np.linspace(0,self.fullParamLength,resolution+1)
 #         Ic = self.crsc.get_Ic(ximesh)

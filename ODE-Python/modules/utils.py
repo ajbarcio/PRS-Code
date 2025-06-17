@@ -7,6 +7,13 @@ import matplotlib.pyplot as plt
 
 deg2rad = np.pi/180
 
+def line_of_action(SF, point):
+    F = np.sqrt(SF[0]**2+SF[1]**2)
+    M = SF[2]
+    r = -M/F
+    center = [point[0]+SF[0]/F*r, point[1]+SF[1]/F*r]
+    return center, [SF[0], SF[1]]
+
 def identify_quadrant(point):
     if point[0] >= 0 and point[1] > 0:
         quadrant = 1
