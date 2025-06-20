@@ -2,6 +2,7 @@ import numpy as np
 import scipy as scp
 import scipy.stats as stat
 import scipy.special as spec
+from scipy.integrate import solve_ivp
 import numpy.linalg as lin
 import matplotlib.pyplot as plt
 import os
@@ -701,6 +702,98 @@ class Spring:
             setattr(self, key, value)
         # IN PROGRESS
 
+
+class Spring2():
+    def __init__(self, pathDef: Path, crscDef: Crsc, material: materials.Material,
+                 name = None):
+        self.name     = name
+        self.path     = pathDef
+        self.crsc     = crscDef
+        self.t        = self.crsc.t
+        self.material = material
+        
+    def ODE_S(self, s, states, loads):
+        gamma, x, y = states
+        Fx, Fy, M, dgds0 = loads
+        
+        xi = self.path.theta(s)
+        Mdim = self.material.E*self.crsc.get_Ic(xi)
+
+        LHS = np.empty(3)
+        LHS[0] = (dgds0 - Fy/Mdim*(x-self.path.startPoint[0]) + Fx/Mdim*(y-self.path.startPoint[1]))
+        LHS[1] = np.cos(self.path.get_alpha(xi)+gamma)
+        LHS[2] = np.sin(self.path.get_alpha(xi)+gamma)
+
+        return LHS
+
+    def spring_forward_solve(self, ODE, SF):
+        Fx, Fy, M = SF
+        Ic0 = self.crsc.get_Ic(0)
+        dgds0 = (SF[2]/self.path.n - self.path.momentArm[1]*SF[0] + self.path.momentArm[0]*SF[1])/ \
+                      (self.material.E*Ic0)
+        soln = solve_ivp(ODE, (0,self.path.arcLen), [0, self.path.startPoint[0], self.path.startPoint[1]], args=([Fx, Fy, M, dgds0],), dense_output=True)
+        print(soln.status)
+        return soln.t, soln.y, soln.sol
+
+
+    def plot_spring(self, resl, showBool=False, trans=1, targetAxes=None):
+
+        self.A, self.B =    self.crsc.get_outer_geometry(resl)
+        # print(self.A)
+        # print(self.B)
+        self.Sn        =    self.path.get_neutralSurface(resl)
+        try:
+            self.Sc    = self.path.get_centroidalSurface(resl)
+        except:
+            pass
+
+        # plot the principal leg
+        if targetAxes is None:
+            plt.figure("Graphic Results")
+            ax = plt.gca()
+        else:
+            ax = targetAxes
+
+        ax.plot(self.A[:,0],self.A[:,1],"k", alpha=trans)
+        ax.plot(self.B[:,0],self.B[:,1],"k", alpha=trans)
+        ax.plot(self.Sn[:,0],self.Sn[:,1],"--b",label="netural", alpha=trans)
+        if "self.Sc" in locals():
+            ax.plot(self.Sc[:,0],self.Sc[:,1],"--r",label="centroidal", alpha=trans)
+        if hasattr(self.path, "pts"):
+            ax.plot(self.path.pts[:,0],self.path.pts[:,1])
+        ax.axis("equal")
+        ax.legend()
+
+        # plot the other legs
+        ang = 2*np.pi/self.path.n
+        for j in np.linspace(1,self.path.n-1,self.path.n-1):
+            th = ang*(j)
+            R = np.array([[np.cos(th),-np.sin(th)],[np.sin(th),np.cos(th)]])
+            transformedA = R.dot(self.A.T).T
+            transformedB = R.dot(self.B.T).T
+            transformedSn = R.dot(self.Sn.T).T
+            if "self.Sc" in locals():
+                transformedSc = R.dot(self.Sc.T).T
+                ax.plot(transformedSc[:,0],transformedSc[:,1],"--r", alpha=trans)
+            ax.plot(transformedA[:,0],transformedA[:,1],"k", alpha=trans)
+            ax.plot(transformedB[:,0],transformedB[:,1],"k", alpha=trans)
+            ax.plot(transformedSn[:,0],transformedSn[:,1],"--b", alpha=trans)
+
+
+        # plot geometry of inner and outer rotor of spring
+        outerCircle = plt.Circle([0,0],self.path.outerRadius,color ="k",fill=False)
+        innerCircle = plt.Circle([0,0],self.path.innerRadius,color ="k",fill=False)
+        fig = plt.gcf()
+        ax = fig.gca()
+        ax.add_patch(outerCircle)
+        ax.add_patch(innerCircle)
+
+        if showBool:
+            plt.show()
+
+        return ax
+
+
 class Optimized_Spring(Spring):
     def __init__(self, pathDef: Path, material: materials.Material,
                  threshold = 5,
@@ -1055,6 +1148,7 @@ class Optimized_Spring(Spring):
         err = np.array([Rinitial-Rfinal, (self.res[0,-1])-(self.dBeta),
                                                               SF[2]-torqueTarg])
         return err, self.res
+
 
 
 def determineFastestSolver(spring: Spring, torqueGain=1):

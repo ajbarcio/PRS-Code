@@ -15,6 +15,8 @@ from modules.utils import deg2rad
 
 from modules.StatProfiler import SSProfile
 
+from matplotlib.patches import Circle
+
 # @pytest.mark.skip()
 def test_tensive_straight_beam():
 
@@ -33,7 +35,7 @@ def test_tensive_straight_beam():
     # Ensure the beam has elongated by one inch
     assert np.isclose(res[1,-1], 11)
     
-    # testSprg.plot_deform(testSprg)
+    testSprg.plot_deform(testSprg)
 
 # @pytest.mark.skip()
 def test_bending_straight_beam():
@@ -53,6 +55,7 @@ def test_bending_straight_beam():
 
     tipDeflection = P*L**3/(3*E*I)
     # Output theoretical tip deflection
+    print("")
     print(tipDeflection)
     
     # Deform the beam
@@ -65,6 +68,85 @@ def test_bending_straight_beam():
 
     # print("In this plot you should see a tip deflection of 1 inch")
     # testSprg.plot_deform(testSprg)
+
+def test_bending_two_beams():
+
+    """ This test ensures that a pair of straignt beams (no tensive component) bend according to theory under the simulator 
+        This test uses a pure force at the tip"""
+
+    # Define a straight beam with uniform second moment of area (therefore, thickness)
+    testPath = RadiallyEndedPolynomial(2, 10, radii=np.array([0, 10]), ffradii=np.array([0, 10]), alphaAngles=np.array([0,0]), betaAngles=np.array([0,0]), XYFactors=np.array([]))
+    testCrsc = Piecewise_Ic_Control(testPath, IcPts=np.array([0.1,0.1]), t=0.1)
+    testSprg = Spring(testPath, testCrsc, TestMaterial, resolution=1000)
+
+    # Calculate tip deflection indicated by beam theory
+    L = (testPath.measure_length())
+    P = 30
+    E = TestMaterial.E
+    I = 0.1
+
+    tipDeflection = P*L**3/(3*E*I)
+    # Output theoretical tip deflection
+    print("")
+    print(tipDeflection)
+    
+    # Deform the beam
+    err, res = testSprg.forward_integration(testSprg.deform_ODE, np.array([0,30,0]), 0)
+
+    # Output simulator tip deflection in y direction
+    print(res[2,-1])
+
+    assert np.isclose(res[2,-1], tipDeflection, rtol=0.01) # relatively large tolerance due to hard assumptions in EB beam theory 
+
+    # print("In this plot you should see a tip deflection of 1 inch")
+    # testSprg.plot_deform(testSprg)
+
+def test_moment_straight_beam():
+    # Define a straight beam with uniform second moment of area (therefore, thickness)
+    testPath = RadiallyEndedPolynomial(1, 10, radii=np.array([0, 10]), ffradii=np.array([0, 10]), alphaAngles=np.array([0,0]), betaAngles=np.array([0,0]), XYFactors=np.array([]))
+    testCrsc = Piecewise_Ic_Control(testPath, IcPts=np.array([0.1,0.1]), t=0.1)
+    testSprg = Spring(testPath, testCrsc, TestMaterial, resolution=1000)
+
+    err, res = testSprg.forward_integration(testSprg.deform_ODE, np.array([0,0,300]), 0)
+
+    rho = testSprg.E*0.1/300
+    print(rho)
+    print(res[2,-1])
+
+    
+
+    print("^^ ----------------------------------------------------")
+
+    # print("In this plot you should see a tip deflection of 1 inch")
+    testSprg.plot_deform(showBool=False)    
+
+    circle = Circle((0,rho), rho, facecolor="none", edgecolor = "black")
+    ax = plt.gca()
+    ax.add_patch(circle)
+
+    plt.show()
+
+def test_moment_two_beams():
+    # Define a straight beam with uniform second moment of area (therefore, thickness)
+    testPath = RadiallyEndedPolynomial(2, 10, radii=np.array([0, 10]), ffradii=np.array([0, 10]), alphaAngles=np.array([0,0]), betaAngles=np.array([0,0]), XYFactors=np.array([]))
+    testCrsc = Piecewise_Ic_Control(testPath, IcPts=np.array([0.1,0.1]), t=0.1)
+    testSprg = Spring(testPath, testCrsc, TestMaterial, resolution=1000)
+
+    err, res = testSprg.forward_integration(testSprg.deform_ODE, np.array([0,0,300]), 0)
+
+    rho = (testSprg.E*0.1/(300/2))
+    print(rho)
+    print(res[2,-1])
+    print("^^ ----------------------------------------------------")
+
+    # print("In this plot you should see a tip deflection of 1 inch")
+    testSprg.plot_deform(showBool=False)    
+
+    circle = Circle((0,rho), rho, facecolor="none", edgecolor = "black")
+    ax = plt.gca()
+    ax.add_patch(circle)
+
+    plt.show()
 
 # @pytest.mark.skip()
 def test_moment_uniform_curved_beam():

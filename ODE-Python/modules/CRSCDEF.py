@@ -176,7 +176,11 @@ class Constant_Ic(Crsc):
 
     def get_outer_geometry(self, resolution):        
         undeformedNeutralSurface = self.path.get_neutralSurface(resolution)
-        ximesh = np.linspace(0,self.arcLen,resolution+1)
+        if hasattr(self.path, 'theta'):
+            smesh = np.linspace(0,self.arcLen,resolution+1)
+            ximesh = self.path.theta(smesh)
+        else:
+            ximesh = np.linspace(0,self.arcLen,resolution+1)
 
         lalb = self.get_lalb(ximesh)
         self.la = lalb[0,:]
@@ -210,8 +214,8 @@ class Constant_Ic(Crsc):
         for value in coord:
             lAB = self.l_a_l_b_rootfinding(value, lABPrev)
             lABPrev = lAB
-            la[i] = lAB[0]
-            lb[i] = lAB[1]
+            la[i] = (lAB[0])
+            lb[i] = (lAB[1])
             i+=1
         lalb = np.array([la, lb])
         return lalb
